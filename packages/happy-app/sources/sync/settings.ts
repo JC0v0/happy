@@ -43,9 +43,6 @@ export const SettingsSchema = z.object({
     expImageUpload: z.boolean().describe('Enable experimental image upload in chat'),
     reviewPromptAnswered: z.boolean().describe('Whether the review prompt has been answered'),
     reviewPromptLikedApp: z.boolean().nullish().describe('Whether user liked the app when asked'),
-    voiceAssistantLanguage: z.string().nullable().describe('Preferred language for voice assistant (null for auto-detect)'),
-    voiceCustomAgentId: z.string().nullable().describe('Custom ElevenLabs agent ID (null to use Happy default)'),
-    voiceBypassToken: z.boolean().describe('Bypass Happy server token and connect directly to ElevenLabs (requires custom agent ID)'),
     preferredLanguage: z.string().nullable().describe('Preferred UI language (null for auto-detect from device locale)'),
     recentMachinePaths: z.array(z.object({
         machineId: z.string(),
@@ -85,6 +82,18 @@ export const SettingsSchema = z.object({
 
 const SettingsSchemaPartial = SettingsSchema.partial();
 
+const REMOVED_VOICE_SETTING_KEYS = [
+    'voiceAssistantLanguage',
+    'voiceCustomAgentId',
+    'voiceBypassToken',
+] as const;
+
+function removeLegacyVoiceSettings(settings: Record<string, unknown>) {
+    for (const key of REMOVED_VOICE_SETTING_KEYS) {
+        delete settings[key];
+    }
+}
+
 export type Settings = z.infer<typeof SettingsSchema>;
 
 //
@@ -119,9 +128,6 @@ export const settingsDefaults: Settings = {
     expImageUpload: false,
     reviewPromptAnswered: false,
     reviewPromptLikedApp: null,
-    voiceAssistantLanguage: null,
-    voiceCustomAgentId: null,
-    voiceBypassToken: false,
     preferredLanguage: null,
     recentMachinePaths: [],
     lastUsedAgent: null,
@@ -149,6 +155,7 @@ export function settingsParse(settings: unknown): Settings {
         // Remove all known schema fields from unknownFields
         const knownFields = Object.keys(SettingsSchema.shape);
         knownFields.forEach(key => delete unknownFields[key]);
+        removeLegacyVoiceSettings(unknownFields);
         return { ...settingsDefaults, ...unknownFields };
     }
 
@@ -162,6 +169,7 @@ export function settingsParse(settings: unknown): Settings {
     const unknownFields = { ...(settings as any) };
     // Remove known fields from unknownFields to preserve only the unknown ones
     Object.keys(parsed.data).forEach(key => delete unknownFields[key]);
+    removeLegacyVoiceSettings(unknownFields);
 
     return { ...settingsDefaults, ...parsed.data, ...unknownFields };
 }
@@ -187,6 +195,7 @@ export function applySettings(settings: Settings, delta: Partial<Settings>): Set
 
 export function settingsToSyncPayload(settings: Settings): Partial<Settings> {
     const result: Partial<Settings> = { ...settings };
+    removeLegacyVoiceSettings(result as Record<string, unknown>);
     const compactAgentOverrides = Object.fromEntries(
         Object.entries(settings.agentDefaultOverrides ?? {}).filter(([, value]) => (
             value && typeof value === 'object' && Object.keys(value).length > 0

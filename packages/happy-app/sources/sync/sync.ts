@@ -47,8 +47,6 @@ import { config } from '@/config';
 import { log } from '@/log';
 import { gitStatusSync } from './gitStatusSync';
 import { AsyncLock } from '@/utils/lock';
-import { voiceHooks } from '@/realtime/hooks/voiceHooks';
-import { Message } from './typesMessage';
 import { EncryptionCache } from './encryption/encryptionCache';
 import { systemPrompt } from './prompt/systemPrompt';
 import { fetchArtifact, fetchArtifacts, createArtifact, updateArtifact } from './apiArtifacts';
@@ -295,11 +293,6 @@ class Sync {
         // Also invalidate git status sync for this session
         gitStatusSync.getSync(sessionId).invalidate();
 
-        // Notify voice assistant about session visibility
-        const session = storage.getState().sessions[sessionId];
-        if (session) {
-            voiceHooks.onSessionFocus(sessionId, session.metadata || undefined);
-        }
     }
 
     private getMessagesSync(sessionId: string): InvalidateSync {
@@ -1008,7 +1001,7 @@ class Sync {
         }
 
         // Apply to storage
-        this.applySessions(decryptedSessions);
+        storage.getState().applySessions(decryptedSessions);
         log.log(`📥 fetchSessions completed - processed ${decryptedSessions.length} sessions`);
 
     }
@@ -2139,9 +2132,8 @@ class Sync {
             this.friendsSync.invalidate();
             this.friendRequestsSync.invalidate();
             this.feedSync.invalidate();
-            // Messages are fetched lazily per-session via onSessionVisible (called by SessionView
-            // when realtimeStatus changes). Session metadata + agentState (including permission
-            // requests) are already refreshed by sessionsSync.invalidate() above.
+            // Messages are fetched lazily per-session via onSessionVisible. Session metadata and
+            // agentState (including permission requests) are refreshed above.
             for (const sync of this.sendSync.values()) {
                 sync.invalidate();
             }
@@ -2216,7 +2208,7 @@ class Sync {
                     // Update session
                     const session = storage.getState().sessions[updateData.body.sid];
                     if (session) {
-                        this.applySessions([{
+                        storage.getState().applySessions([{
                             ...session,
                             updatedAt: updateData.createdAt,
                             seq: updateData.seq,
@@ -2303,7 +2295,7 @@ class Sync {
                     ? await sessionEncryption.decryptMetadata(updateData.body.metadata.version, updateData.body.metadata.value)
                     : session.metadata;
 
-                this.applySessions([{
+                storage.getState().applySessions([{
                     ...session,
                     agentState,
                     agentStateVersion: updateData.body.agentState
@@ -2320,14 +2312,6 @@ class Sync {
                 // Invalidate git status when agent state changes (files may have been modified)
                 if (updateData.body.agentState) {
                     gitStatusSync.invalidate(updateData.body.id);
-
-                    // Check for new permission requests and notify voice assistant
-                    if (agentState?.requests && Object.keys(agentState.requests).length > 0) {
-                        const requestIds = Object.keys(agentState.requests);
-                        const firstRequest = agentState.requests[requestIds[0]];
-                        const toolName = firstRequest?.tool;
-                        voiceHooks.onPermissionRequested(updateData.body.id, requestIds[0], toolName, firstRequest?.arguments);
-                    }
 
                     // Re-fetch messages on control handoff so the newly active
                     // side catches up on messages exchanged while it was passive.
@@ -2694,7 +2678,7 @@ class Sync {
 
         if (sessions.length > 0) {
             // console.log('flushing activity updates ' + sessions.length);
-            this.applySessions(sessions);
+            storage.getState().applySessions(sessions);
             // log.log(`🔄 Activity updates flushed - updated ${sessions.length} sessions`);
         }
     }
@@ -2746,48 +2730,11 @@ class Sync {
 
     private applyMessages = (sessionId: string, messages: NormalizedMessage[]) => {
         const result = storage.getState().applyMessages(sessionId, messages);
-        let m: Message[] = [];
-        for (let messageId of result.changed) {
-            const message = storage.getState().sessionMessages[sessionId].messagesMap[messageId];
-            if (message) {
-                m.push(message);
-            }
-        }
-        if (m.length > 0) {
-            voiceHooks.onMessages(sessionId, m);
-        }
-        if (result.hasReadyEvent) {
-            voiceHooks.onReady(sessionId);
-        }
         if (result.enteredPlanMode) {
             // The EnterPlanMode auto-switch only wrote the local mirror; push
             // it into synced metadata so other devices see plan mode and the
             // next inbound metadata update doesn't revert it (#1492)
             sessionSetAgentModes(sessionId, { permissionMode: 'plan' });
-        }
-    }
-
-    private applySessions = (sessions: (Omit<Session, "presence"> & {
-        presence?: "online" | number;
-    })[]) => {
-        const active = storage.getState().getActiveSessions();
-        storage.getState().applySessions(sessions);
-        const newActive = storage.getState().getActiveSessions();
-        this.applySessionDiff(active, newActive);
-    }
-
-    private applySessionDiff = (active: Session[], newActive: Session[]) => {
-        let wasActive = new Set(active.map(s => s.id));
-        let isActive = new Set(newActive.map(s => s.id));
-        for (let s of active) {
-            if (!isActive.has(s.id)) {
-                voiceHooks.onSessionOffline(s.id, s.metadata ?? undefined);
-            }
-        }
-        for (let s of newActive) {
-            if (!wasActive.has(s.id)) {
-                voiceHooks.onSessionOnline(s.id, s.metadata ?? undefined);
-            }
         }
     }
 

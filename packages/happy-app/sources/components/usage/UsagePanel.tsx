@@ -10,7 +10,7 @@ import { UsageBar } from './UsageBar';
 import { getUsageForPeriod, calculateTotals, UsageDataPoint } from '@/sync/apiUsage';
 import { Ionicons } from '@expo/vector-icons';
 import { HappyError } from '@/utils/errors';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 
 type TimePeriod = 'today' | '7days' | '30days';
 
@@ -134,7 +134,7 @@ export const UsagePanel: React.FC<{ sessionId?: string }> = ({ sessionId }) => {
     
     const loadUsageData = async () => {
         if (!auth.credentials) {
-            setError('Not authenticated');
+            setError(localizedText('Not authenticated', '尚未登录', '尚未登入'));
             return;
         }
         
@@ -148,9 +148,9 @@ export const UsagePanel: React.FC<{ sessionId?: string }> = ({ sessionId }) => {
         } catch (err) {
             console.error('Failed to load usage data:', err);
             if (err instanceof HappyError) {
-                setError(err.message);
+                setError(localizedText(err.message, '加载使用数据失败', '載入使用資料失敗'));
             } else {
-                setError('Failed to load usage data');
+                setError(localizedText('Failed to load usage data', '加载使用数据失败', '載入使用資料失敗'));
             }
         } finally {
             setLoading(false);

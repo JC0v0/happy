@@ -198,9 +198,6 @@ describe('settings', () => {
                 expImageUpload: false,
                 reviewPromptAnswered: false,
                 reviewPromptLikedApp: null,
-                voiceAssistantLanguage: null,
-                voiceCustomAgentId: null,
-                voiceBypassToken: false,
                 preferredLanguage: null,
                 recentMachinePaths: [],
                 lastUsedAgent: null,
@@ -215,6 +212,23 @@ describe('settings', () => {
             const parsed = settingsParse(settingsDefaults);
             expect(parsed).toEqual(settingsDefaults);
         });
+    });
+
+    it('drops settings left behind by the removed voice assistant', () => {
+        const parsed = settingsParse({
+            ...settingsDefaults,
+            voiceAssistantLanguage: 'zh-CN',
+            voiceCustomAgentId: 'agent_test',
+            voiceBypassToken: true,
+        });
+
+        expect(parsed).not.toHaveProperty('voiceAssistantLanguage');
+        expect(parsed).not.toHaveProperty('voiceCustomAgentId');
+        expect(parsed).not.toHaveProperty('voiceBypassToken');
+        const payload = settingsToSyncPayload(parsed);
+        expect(payload).not.toHaveProperty('voiceAssistantLanguage');
+        expect(payload).not.toHaveProperty('voiceCustomAgentId');
+        expect(payload).not.toHaveProperty('voiceBypassToken');
     });
 
     describe('settingsToSyncPayload', () => {

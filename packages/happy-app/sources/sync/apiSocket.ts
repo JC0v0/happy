@@ -221,10 +221,19 @@ class ApiSocket {
             ...options?.headers
         };
 
-        return fetch(url, {
+        const response = await fetch(url, {
             ...options,
             headers
         });
+        if (!response.ok) {
+            try {
+                const body = await response.clone().text();
+                console.log(`[apiSocket] ${options?.method || 'GET'} ${path} -> ${response.status}: ${body.slice(0, 500)}`);
+            } catch {
+                console.log(`[apiSocket] ${options?.method || 'GET'} ${path} -> ${response.status} (no body)`);
+            }
+        }
+        return response;
     }
 
     //

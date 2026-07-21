@@ -44,8 +44,6 @@ This document describes how to deploy the Happy backend (`packages/happy-server`
 - GitHub OAuth/App: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_APP_ID`, `GITHUB_PRIVATE_KEY`, `GITHUB_WEBHOOK_SECRET`, plus redirect URL/URI.
   - `GITHUB_REDIRECT_URL` is used by the OAuth callback handler.
   - `GITHUB_REDIRECT_URI` is used by the GitHub App initializer.
-- Voice: `ELEVENLABS_API_KEY` (required for `/v1/voice/conversations` in production).
-- Subscriptions: `REVENUECAT_API_KEY` (server-side RevenueCat key, required for voice subscription checks).
 - Debug logging: `DANGEROUSLY_LOG_TO_SERVER_FOR_AI_AUTO_DEBUGGING` (enables file logging + dev log endpoint).
 
 ## Docker image
@@ -64,6 +62,16 @@ The deployment config expects:
 - Prometheus scraping annotations on port `9090`.
 - A secret named `handy-secrets` populated by ExternalSecrets.
 - A service mapping port `3000` to container port `3005`.
+
+### Voice assistant removal
+
+Migration `20260721000000_remove_voice_conversation` permanently drops the old
+`VoiceConversation` table. Roll it out after clients without the voice feature
+are available and unsupported older clients are blocked or upgraded: deploy the
+server code first without running the migration, wait until every old server
+replica has stopped, back up the table, and then run the migration separately.
+Rolling back server code after the table is dropped is unsafe because an old
+replica can still query the removed table.
 
 ## Local dev helpers
 The server package includes scripts for local infrastructure:

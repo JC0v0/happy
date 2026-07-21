@@ -10,7 +10,7 @@ import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { Modal } from '@/modal';
-import { t } from '@/text';
+import { getCurrentLanguage, localizedText, t } from '@/text';
 import { layout } from '@/components/layout';
 import { useSettingMutable, useProfile } from '@/sync/storage';
 import { sync } from '@/sync/sync';
@@ -35,34 +35,54 @@ import {
 
 function formatPushPermissionLabel(permission: PushPermissionInfo | null): string {
     if (!permission) {
-        return 'Loading';
+        return localizedText('Loading', '加载中', '載入中');
     }
     if (permission.status === 'unsupported') {
-        return 'Unavailable';
+        return localizedText('Unavailable', '不可用', '無法使用');
     }
     if (permission.granted) {
-        return 'Allowed';
+        return localizedText('Allowed', '已允许', '已允許');
     }
     if (permission.status === 'denied') {
-        return 'Denied';
+        return localizedText('Denied', '已拒绝', '已拒絕');
     }
-    return 'Not requested';
+    return localizedText('Not requested', '尚未请求', '尚未要求');
 }
 
 function formatPushPermissionSubtitle(permission: PushPermissionInfo | null): string {
     if (!permission) {
-        return 'Checking push notification permissions for this device.';
+        return localizedText(
+            'Checking push notification permissions for this device.',
+            '正在检查此设备的推送通知权限。',
+            '正在檢查此裝置的推播通知權限。',
+        );
     }
     if (permission.status === 'unsupported') {
-        return 'Push notification permissions are only managed on mobile devices.';
+        return localizedText(
+            'Push notification permissions are only managed on mobile devices.',
+            '推送通知权限只能在移动设备上管理。',
+            '推播通知權限只能在行動裝置上管理。',
+        );
     }
     if (permission.granted) {
-        return 'This device can receive push notifications.';
+        return localizedText(
+            'This device can receive push notifications.',
+            '此设备可以接收推送通知。',
+            '此裝置可以接收推播通知。',
+        );
     }
     if (permission.canAskAgain) {
-        return 'The system prompt can still be shown again from the app.';
+        return localizedText(
+            'The system prompt can still be shown again from the app.',
+            'App 仍可再次显示系统权限提示。',
+            'App 仍可再次顯示系統權限提示。',
+        );
     }
-    return 'iOS has stopped prompting. Open system settings to enable notifications again.';
+    return localizedText(
+        'iOS has stopped prompting. Open system settings to enable notifications again.',
+        'iOS 不会再次弹出权限提示，请到系统设置中重新开启通知。',
+        'iOS 不會再次顯示權限提示，請到系統設定中重新開啟通知。',
+    );
 }
 
 function formatPushTokenFingerprint(token: string): string {
@@ -74,7 +94,7 @@ function formatPushTokenFingerprint(token: string): string {
 }
 
 function formatPushTimestamp(timestamp: number): string {
-    return new Date(timestamp).toLocaleString();
+    return new Date(timestamp).toLocaleString(getCurrentLanguage());
 }
 
 function buildPushTokenSubtitle(pushToken: PushToken, options: {
@@ -83,6 +103,7 @@ function buildPushTokenSubtitle(pushToken: PushToken, options: {
     currentAppLabel: string | null;
 }): string {
     const lines: string[] = [];
+    const separator = localizedText(': ', '：', '：');
 
     if (options.isCurrentDevice) {
         lines.push(options.currentDeviceLabel);
@@ -90,13 +111,13 @@ function buildPushTokenSubtitle(pushToken: PushToken, options: {
             lines.push(options.currentAppLabel);
         }
     } else {
-        lines.push('Other device or stale registration');
+        lines.push(localizedText('Other device or stale registration', '其他设备或已失效的注册记录', '其他裝置或已失效的註冊記錄'));
     }
 
-    lines.push(`Registered: ${formatPushTimestamp(pushToken.createdAt)}`);
-    lines.push(`Last seen: ${formatPushTimestamp(pushToken.updatedAt)}`);
-    lines.push(`Server ID: ${pushToken.id}`);
-    lines.push(`Token: ${formatPushTokenFingerprint(pushToken.token)}`);
+    lines.push(`${localizedText('Registered', '注册时间', '註冊時間')}${separator}${formatPushTimestamp(pushToken.createdAt)}`);
+    lines.push(`${localizedText('Last seen', '最后活跃', '最後活躍')}${separator}${formatPushTimestamp(pushToken.updatedAt)}`);
+    lines.push(`${localizedText('Server ID', '服务器 ID', '伺服器 ID')}${separator}${pushToken.id}`);
+    lines.push(`${localizedText('Token', '令牌', '權杖')}${separator}${formatPushTokenFingerprint(pushToken.token)}`);
     return lines.join('\n');
 }
 
@@ -146,7 +167,11 @@ export default React.memo(() => {
         } catch (error) {
             console.error('Failed to load push notification settings:', error);
             if (showError) {
-                Modal.alert(t('common.error'), 'Failed to load push notification settings.');
+                Modal.alert(t('common.error'), localizedText(
+                    'Failed to load push notification settings.',
+                    '加载推送通知设置失败。',
+                    '載入推播通知設定失敗。',
+                ));
             }
         } finally {
             setLoadingPushSettings(false);
@@ -236,21 +261,40 @@ export default React.memo(() => {
             if (result.granted) {
                 await syncCurrentPushToken(auth.credentials);
                 await loadPushSettings();
-                Modal.alert(t('common.success'), 'Push notifications are enabled for this device.');
+                Modal.alert(t('common.success'), localizedText(
+                    'Push notifications are enabled for this device.',
+                    '此设备已开启推送通知。',
+                    '此裝置已開啟推播通知。',
+                ));
                 return;
             }
 
             await loadPushSettings();
 
             if (result.openedSettings) {
-                Modal.alert('Open Settings', 'The system will not show the permission prompt again, so Happy opened Settings instead.');
+                Modal.alert(
+                    localizedText('Open Settings', '打开系统设置', '開啟系統設定'),
+                    localizedText(
+                        'The system will not show the permission prompt again, so Happy opened Settings instead.',
+                        '系统不会再次显示权限提示，Happy 已为您打开系统设置。',
+                        '系統不會再次顯示權限提示，Happy 已為您開啟系統設定。',
+                    ),
+                );
                 return;
             }
 
-            Modal.alert(t('common.error'), 'Push notification permission was not granted.');
+            Modal.alert(t('common.error'), localizedText(
+                'Push notification permission was not granted.',
+                '未获得推送通知权限。',
+                '未取得推播通知權限。',
+            ));
         } catch (error) {
             console.error('Failed to request push permission:', error);
-            Modal.alert(t('common.error'), 'Failed to request push notification permission.');
+            Modal.alert(t('common.error'), localizedText(
+                'Failed to request push notification permission.',
+                '请求推送通知权限失败。',
+                '要求推播通知權限失敗。',
+            ));
         } finally {
             setRequestingPushPermission(false);
         }
@@ -268,14 +312,26 @@ export default React.memo(() => {
             await loadPushSettings();
 
             if (!result.permission.granted) {
-                Modal.alert(t('common.error'), 'Push notifications are not enabled for this device yet.');
+                Modal.alert(t('common.error'), localizedText(
+                    'Push notifications are not enabled for this device yet.',
+                    '此设备尚未开启推送通知。',
+                    '此裝置尚未開啟推播通知。',
+                ));
                 return;
             }
 
-            Modal.alert(t('common.success'), 'This device push token was refreshed.');
+            Modal.alert(t('common.success'), localizedText(
+                'This device push token was refreshed.',
+                '此设备的推送令牌已刷新。',
+                '此裝置的推播權杖已重新整理。',
+            ));
         } catch (error) {
             console.error('Failed to refresh push token:', error);
-            Modal.alert(t('common.error'), 'Failed to refresh this device push token.');
+            Modal.alert(t('common.error'), localizedText(
+                'Failed to refresh this device push token.',
+                '刷新此设备的推送令牌失败。',
+                '重新整理此裝置的推播權杖失敗。',
+            ));
         } finally {
             setRefreshingPushToken(false);
         }
@@ -287,8 +343,12 @@ export default React.memo(() => {
         }
 
         const confirmed = await Modal.confirm(
-            'Delete Push Token',
-            `Remove ${formatPushTokenFingerprint(pushToken.token)} from your account?`,
+            localizedText('Delete Push Token', '删除推送令牌', '刪除推播權杖'),
+            localizedText(
+                `Remove ${formatPushTokenFingerprint(pushToken.token)} from your account?`,
+                `要从账户中删除 ${formatPushTokenFingerprint(pushToken.token)} 吗？`,
+                `要從帳戶中刪除 ${formatPushTokenFingerprint(pushToken.token)} 嗎？`,
+            ),
             { confirmText: t('common.delete'), destructive: true }
         );
 
@@ -302,7 +362,11 @@ export default React.memo(() => {
             await loadPushSettings();
         } catch (error) {
             console.error('Failed to delete push token:', error);
-            Modal.alert(t('common.error'), 'Failed to delete push token.');
+            Modal.alert(t('common.error'), localizedText(
+                'Failed to delete push token.',
+                '删除推送令牌失败。',
+                '刪除推播權杖失敗。',
+            ));
         } finally {
             setDeletingPushToken(null);
         }
@@ -503,11 +567,15 @@ export default React.memo(() => {
                 </ItemGroup>
 
                 <ItemGroup
-                    title="Push Notifications"
-                    footer="Shows every push token registered on your account. Tap an old token to delete it."
+                    title={localizedText('Push Notifications', '推送通知', '推播通知')}
+                    footer={localizedText(
+                        'Shows every push token registered on your account. Tap an old token to delete it.',
+                        '这里会显示账户中注册过的所有推送令牌。点击旧令牌即可删除。',
+                        '這裡會顯示帳戶中註冊過的所有推播權杖。點按舊權杖即可刪除。',
+                    )}
                 >
                     <Item
-                        title="Permission"
+                        title={localizedText('Permission', '通知权限', '通知權限')}
                         detail={formatPushPermissionLabel(pushPermission)}
                         subtitle={formatPushPermissionSubtitle(pushPermission)}
                         icon={<Ionicons name="notifications-outline" size={29} color="#007AFF" />}
@@ -515,12 +583,24 @@ export default React.memo(() => {
                         showChevron={false}
                     />
                     <Item
-                        title="Request Permission Again"
+                        title={localizedText('Request Permission Again', '重新请求通知权限', '重新要求通知權限')}
                         subtitle={pushPermission?.status === 'unsupported'
-                            ? 'Push notification permissions are only available on iPhone and Android.'
+                            ? localizedText(
+                                'Push notification permissions are only available on iPhone and Android.',
+                                '推送通知权限仅适用于 iPhone 和 Android。',
+                                '推播通知權限僅適用於 iPhone 和 Android。',
+                            )
                             : pushPermission?.canAskAgain
-                            ? 'Shows the system prompt again if iOS still allows it.'
-                            : 'Opens system settings when iOS will not prompt again.'}
+                            ? localizedText(
+                                'Shows the system prompt again if iOS still allows it.',
+                                '如果 iOS 允许，将再次显示系统权限提示。',
+                                '如果 iOS 允許，將再次顯示系統權限提示。',
+                            )
+                            : localizedText(
+                                'Opens system settings when iOS will not prompt again.',
+                                '如果 iOS 不再弹出提示，将直接打开系统设置。',
+                                '如果 iOS 不再顯示提示，將直接開啟系統設定。',
+                            )}
                         icon={<Ionicons name="shield-checkmark-outline" size={29} color="#34C759" />}
                         onPress={handlePushPermissionRequest}
                         loading={requestingPushPermission}
@@ -528,10 +608,18 @@ export default React.memo(() => {
                         showChevron={false}
                     />
                     <Item
-                        title="Re-register This Device"
+                        title={localizedText('Re-register This Device', '重新注册此设备', '重新註冊此裝置')}
                         subtitle={currentPushToken
-                            ? `Current token ${formatPushTokenFingerprint(currentPushToken)}`
-                            : 'Fetches the current Expo token and registers it again.'}
+                            ? localizedText(
+                                `Current token ${formatPushTokenFingerprint(currentPushToken)}`,
+                                `当前令牌：${formatPushTokenFingerprint(currentPushToken)}`,
+                                `目前權杖：${formatPushTokenFingerprint(currentPushToken)}`,
+                            )
+                            : localizedText(
+                                'Fetches the current Expo token and registers it again.',
+                                '重新获取当前 Expo 推送令牌并完成注册。',
+                                '重新取得目前 Expo 推播權杖並完成註冊。',
+                            )}
                         icon={<Ionicons name="refresh-outline" size={29} color="#FF9500" />}
                         onPress={handleRefreshCurrentPushToken}
                         loading={refreshingPushToken}
@@ -541,13 +629,25 @@ export default React.memo(() => {
                 </ItemGroup>
 
                 <ItemGroup
-                    title={`Registered Tokens (${pushTokens.length})`}
-                    footer="Current-device metadata comes from this phone. Older tokens use their token fingerprint plus server timestamps."
+                    title={localizedText(
+                        `Registered Tokens (${pushTokens.length})`,
+                        `已注册的令牌（${pushTokens.length}）`,
+                        `已註冊的權杖（${pushTokens.length}）`,
+                    )}
+                    footer={localizedText(
+                        'Current-device metadata comes from this phone. Older tokens use their token fingerprint plus server timestamps.',
+                        '当前设备信息来自这台手机；旧令牌会显示令牌摘要和服务器记录时间。',
+                        '目前裝置資訊來自這支手機；舊權杖會顯示權杖摘要和伺服器記錄時間。',
+                    )}
                 >
                     {pushTokens.length === 0 ? (
                         <Item
-                            title="No registered push tokens"
-                            subtitle="Once this device is registered, it will appear here."
+                            title={localizedText('No registered push tokens', '暂无已注册的推送令牌', '暫無已註冊的推播權杖')}
+                            subtitle={localizedText(
+                                'Once this device is registered, it will appear here.',
+                                '此设备注册成功后会显示在这里。',
+                                '此裝置註冊成功後會顯示在這裡。',
+                            )}
                             showChevron={false}
                         />
                     ) : (
@@ -558,11 +658,13 @@ export default React.memo(() => {
                                     <Item
                                         key={pushToken.id}
                                         title={formatPushTokenFingerprint(pushToken.token)}
-                                        detail={isCurrentDevice ? 'This device' : undefined}
+                                        detail={isCurrentDevice ? localizedText('This device', '当前设备', '目前裝置') : undefined}
                                         subtitle={buildPushTokenSubtitle(pushToken, {
                                             isCurrentDevice,
                                             currentDeviceLabel: currentPushDevice.deviceLabel,
-                                            currentAppLabel: currentPushDevice.appLabel,
+                                            currentAppLabel: currentPushDevice.appLabel
+                                                ?.replace('build ', `${localizedText('build', '构建', '建置')} `)
+                                                .replace('simulator', localizedText('simulator', '模拟器', '模擬器')) ?? null,
                                         })}
                                         subtitleLines={0}
                                         icon={(

@@ -3,6 +3,7 @@ import { View, ScrollView, Pressable } from 'react-native';
 import { Text } from '@/components/StyledText';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { UsageDataPoint } from '@/sync/apiUsage';
+import { getCurrentLanguage, t } from '@/text';
 
 interface UsageChartProps {
     data: UsageDataPoint[];
@@ -68,7 +69,9 @@ export const UsageChart: React.FC<UsageChartProps> = ({
     if (!data || data.length === 0) {
         return (
             <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>No usage data available</Text>
+                <Text style={styles.emptyText}>
+                    {t('usage.noData')}
+                </Text>
             </View>
         );
     }
@@ -91,9 +94,9 @@ export const UsageChart: React.FC<UsageChartProps> = ({
         const isToday = date.toDateString() === now.toDateString();
         
         if (isToday) {
-            return date.toLocaleTimeString('en-US', { hour: 'numeric' });
+            return date.toLocaleTimeString(getCurrentLanguage(), { hour: 'numeric' });
         } else {
-            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            return date.toLocaleDateString(getCurrentLanguage(), { month: 'short', day: 'numeric' });
         }
     };
     

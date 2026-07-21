@@ -6,11 +6,10 @@ Happy Coder is an open-source mobile app that lets developers control AI coding 
 
 - Control Claude Code from iOS, Android, or web browser
 - Runs on YOUR hardware (laptop, desktop, server, Raspberry Pi)
-- No subscription fees or cloud costs - completely free (you still need to pay your AI model provider for Claude Code, Codex, Text to Speech, Speach to Text, etc..)
+- No subscription fees or cloud costs - completely free (you still need to pay your AI model provider for Claude Code, Codex, Gemini CLI, etc.)
 - Push notifications when agents need input or hit errors
 - End-to-end encrypted connection between devices
 - Run multiple coding agents in parallel
-- Voice input for hands-free control
 - Works with your existing dev setup and tools
 
 ## Key Value Props

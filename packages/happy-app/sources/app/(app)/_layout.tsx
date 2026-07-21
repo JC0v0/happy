@@ -6,7 +6,7 @@ import { createHeader } from '@/components/navigation/Header';
 import { Platform, TouchableOpacity, Text } from 'react-native';
 import { isRunningOnMac } from '@/utils/platform';
 import { useUnistyles } from 'react-native-unistyles';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 
 export const unstable_settings = {
     initialRouteName: 'index',
@@ -114,13 +114,25 @@ export default function RootLayout() {
             <Stack.Screen
                 name="settings/agents"
                 options={{
-                    headerTitle: 'Agent Defaults',
+                    headerTitle: localizedText('Agent Defaults', '智能体默认设置', '智慧體預設設定'),
                 }}
             />
             <Stack.Screen
                 name="settings/features"
                 options={{
                     headerTitle: t('settings.features'),
+                }}
+            />
+            <Stack.Screen
+                name="settings/language"
+                options={{
+                    headerTitle: t('settingsLanguage.title'),
+                }}
+            />
+            <Stack.Screen
+                name="settings/usage"
+                options={{
+                    headerTitle: t('settings.usage'),
                 }}
             />
             <Stack.Screen
@@ -234,63 +246,101 @@ export default function RootLayout() {
             <Stack.Screen
                 name="dev/index"
                 options={{
-                    headerTitle: 'Developer Tools',
+                    headerTitle: t('settings.developerTools'),
                 }}
             />
 
             <Stack.Screen
                 name="dev/list-demo"
                 options={{
-                    headerTitle: 'List Components Demo',
+                    headerTitle: localizedText('List Components Demo', '列表组件演示', '清單元件示範'),
                 }}
             />
             <Stack.Screen
                 name="dev/typography"
                 options={{
-                    headerTitle: 'Typography',
+                    headerTitle: localizedText('Typography', '字体排版', '字型排版'),
                 }}
             />
             <Stack.Screen
                 name="dev/colors"
                 options={{
-                    headerTitle: 'Colors',
+                    headerTitle: localizedText('Colors', '颜色', '顏色'),
                 }}
             />
             <Stack.Screen
                 name="dev/tools2"
                 options={{
-                    headerTitle: 'Tool Views Demo',
-                }}
-            />
-            <Stack.Screen
-                name="dev/masked-progress"
-                options={{
-                    headerTitle: 'Masked Progress',
+                    headerTitle: localizedText('Tool Views Demo', '工具视图演示', '工具檢視示範'),
                 }}
             />
             <Stack.Screen
                 name="dev/shimmer-demo"
                 options={{
-                    headerTitle: 'Shimmer View Demo',
+                    headerTitle: localizedText('Shimmer View Demo', '微光加载演示', '微光載入示範'),
                 }}
             />
             <Stack.Screen
                 name="dev/multi-text-input"
                 options={{
-                    headerTitle: 'Multi Text Input',
+                    headerTitle: localizedText('Multi Text Input', '多行文本输入', '多行文字輸入'),
                 }}
             />
             <Stack.Screen
                 name="dev/session-composer"
                 options={{
-                    headerTitle: 'Session Composer',
+                    headerTitle: localizedText('Session Composer', '会话编辑器', '工作階段編輯器'),
                 }}
             />
             <Stack.Screen
                 name="dev/rig-preview"
                 options={{
-                    headerTitle: 'Rig Preview',
+                    headerTitle: localizedText('Rig Preview', 'Rig 预览', 'Rig 預覽'),
                 }}
+            />
+            <Stack.Screen
+                name="dev/logs"
+                options={{ headerTitle: localizedText('Logs', '日志', '日誌') }}
+            />
+            <Stack.Screen
+                name="dev/device-info"
+                options={{ headerTitle: localizedText('Device Info', '设备信息', '裝置資訊') }}
+            />
+            <Stack.Screen
+                name="dev/messages-demo"
+                options={{ headerTitle: localizedText('Messages Demo', '消息列表演示', '訊息清單示範') }}
+            />
+            <Stack.Screen
+                name="dev/inverted-list"
+                options={{ headerTitle: localizedText('Inverted List Test', '倒序列表测试', '倒序清單測試') }}
+            />
+            <Stack.Screen
+                name="dev/input-styles"
+                options={{ headerTitle: localizedText('Input Styles', '输入框样式', '輸入框樣式') }}
+            />
+            <Stack.Screen
+                name="dev/modal-demo"
+                options={{ headerTitle: localizedText('Modal Demo', '弹窗演示', '彈窗示範') }}
+            />
+            <Stack.Screen
+                name="dev/tests"
+                options={{ headerTitle: localizedText('Tests', '单元测试', '單元測試') }}
+            />
+            <Stack.Screen
+                name="dev/unistyles-demo"
+                options={{ headerTitle: localizedText('Unistyles Demo', 'Unistyles 演示', 'Unistyles 示範') }}
+            />
+            <Stack.Screen
+                name="dev/qr-test"
+                options={{ headerTitle: localizedText('QR Code Test', '二维码测试', 'QR Code 測試') }}
+            />
+            <Stack.Screen
+                name="dev/purchases"
+                options={{ headerTitle: localizedText('Purchases', '购买信息', '購買資訊') }}
+            />
+            <Stack.Screen
+                name="dev/expo-constants"
+                options={{ headerTitle: localizedText('Expo Constants', 'Expo 配置信息', 'Expo 設定資訊') }}
             />
             <Stack.Screen
                 name="session/recent"
@@ -304,7 +354,7 @@ export default function RootLayout() {
                 name="settings/connect/claude"
                 options={{
                     headerShown: true,
-                    headerTitle: 'Connect to Claude',
+                    headerTitle: localizedText('Connect to Claude', '连接 Claude', '連接 Claude'),
                     headerBackTitle: t('common.back'),
                     // headerStyle: {
                     //     backgroundColor: Platform.OS === 'web' ? theme.colors.header.background : '#1F1E1C',

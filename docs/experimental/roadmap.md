@@ -6,8 +6,6 @@ This file is the cross-product execution plan for the current Happy push.
 
 - wrap up current improvements NO NEW SCOPE - focus on stabilizing features, not new features
 - release beta / test on main
-- start charging for voice - find the branch somewhere / figure out how to test this exactly on prod build?
-  - How to configure 
 - ship new app build
 - share talk to 
 

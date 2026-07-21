@@ -267,7 +267,6 @@ Emitted 'error' event on ReadStream instance at:
 - Coordinator agent - will ensure claude keeps working at max token usage - juice the most out of it
 - Social component
 - Notifications
-- Real time voice
 
 # Archive July 18
 
@@ -350,4 +349,3 @@ Blocking
 
 - e2e single tests
   - Would be nice to be able to run the whole thing - including pty to emulate a simple scenario and make sure a single multi step happy path works fine
-

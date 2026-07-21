@@ -60,10 +60,6 @@ Missing the concept of **workspace** (aka project) that spans multiple machines,
 - Software factories / maintenance factory
   - Repeatable agent pipelines
   - Own repo as first customer — self-maintaining
-- Voice
-  - Dispatch agents by talking
-  - Voice as the control layer
-
 ## Talk to Users & Community
 
 - Reach out to 5 users directly
@@ -115,5 +111,4 @@ Current state: server stores bare Expo push tokens per account with no device me
   - sprites — same
 - Linear
 - GitHub — PR reviews
-
 

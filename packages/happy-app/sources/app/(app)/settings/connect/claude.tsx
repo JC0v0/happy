@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { OAuthView } from '@/components/OAuthView';
 import { buildAuthorizationUrl, ClaudeAuthTokens, exchangeCodeForTokens } from '@/utils/oauth';
 import { Modal } from '@/modal';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '@/auth/AuthContext';
 import { connectService } from '@/sync/apiServices';
@@ -72,9 +72,15 @@ const OAuthViewUnsupported = React.memo((props: {
 
     return (
         <View style={styles.unsupportedContainer}>
-            <Text style={styles.unsupportedTitle}>Connect {props.name}</Text>
+            <Text style={styles.unsupportedTitle}>
+                {localizedText(`Connect ${props.name}`, `连接 ${props.name}`, `連接 ${props.name}`)}
+            </Text>
             <Text style={styles.unsupportedText}>
-                Run the following command in your terminal:
+                {localizedText(
+                    'Run the following command in your terminal:',
+                    '请在终端中运行以下命令：',
+                    '請在終端機中執行以下命令：',
+                )}
             </Text>
             <View style={styles.terminalContainer}>
                 <Text style={styles.terminalCommand}>

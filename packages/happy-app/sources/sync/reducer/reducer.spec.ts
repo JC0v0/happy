@@ -3001,7 +3001,7 @@ describe('reducer', () => {
     });
 
     describe('session protocol lifecycle and subagent sidechains', () => {
-        it('sets hasReadyEvent for ready events without creating visible messages', () => {
+        it('hides ready events while marking them as processed', () => {
             const state = createReducer();
             const result = reducer(state, [{
                 id: 'ready-1',
@@ -3013,7 +3013,7 @@ describe('reducer', () => {
             }]);
 
             expect(result.messages).toHaveLength(0);
-            expect(result.hasReadyEvent).toBe(true);
+            expect(state.messageIds.has('ready-1')).toBe(true);
         });
 
         it('hides turn-start lifecycle messages', () => {

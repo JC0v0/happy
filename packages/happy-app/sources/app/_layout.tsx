@@ -20,7 +20,6 @@ import { PostHogProvider } from 'posthog-react-native';
 import { tracking } from '@/track/tracking';
 import { syncRestore } from '@/sync/sync';
 import { useTrackScreens } from '@/track/useTrackScreens';
-import { RealtimeProvider } from '@/realtime/RealtimeProvider';
 import { FaviconPermissionIndicator } from '@/components/web/FaviconPermissionIndicator';
 import { CommandPaletteProvider } from '@/components/CommandPalette/CommandPaletteProvider';
 import { StatusBarProvider } from '@/components/StatusBarProvider';
@@ -31,7 +30,6 @@ import { useUnistyles } from 'react-native-unistyles';
 import { AsyncLock } from '@/utils/lock';
 import { getSessionRouteFromNotificationResponse } from '@/utils/notificationRouting';
 import { navigateToSession } from '@/hooks/useNavigateToSession';
-import { applyVoiceUpsellOverride } from '@/realtime/voiceExperiment';
 import { useTauriZoom } from '@/hooks/useTauriZoom';
 import { useTauriDrag } from '@/hooks/useTauriDrag';
 import { BrowserNavigationShortcuts } from '@/hooks/useBrowserNavigationShortcuts';
@@ -361,18 +359,9 @@ export default function RootLayout() {
 
     // Sync console output toggle from Dev screen
     const consoleLoggingEnabled = useLocalSetting('consoleLoggingEnabled');
-    const devModeEnabled = __DEV__ || useLocalSetting('devModeEnabled');
-    const voiceUpsellOverride = useLocalSetting('voiceUpsellOverride');
     React.useEffect(() => {
         setConsoleOutputEnabled(consoleLoggingEnabled);
     }, [consoleLoggingEnabled]);
-
-    React.useEffect(() => {
-        if (!devModeEnabled || !voiceUpsellOverride) {
-            return;
-        }
-        applyVoiceUpsellOverride(voiceUpsellOverride);
-    }, [devModeEnabled, voiceUpsellOverride]);
 
     //
     // Not inited
@@ -396,11 +385,9 @@ export default function RootLayout() {
                             <ModalProvider>
                                 <BrowserNavigationShortcuts />
                                 <CommandPaletteProvider>
-                                    <RealtimeProvider>
-                                        <HorizontalSafeAreaWrapper>
-                                            <SidebarNavigator />
-                                        </HorizontalSafeAreaWrapper>
-                                    </RealtimeProvider>
+                                    <HorizontalSafeAreaWrapper>
+                                        <SidebarNavigator />
+                                    </HorizontalSafeAreaWrapper>
                                 </CommandPaletteProvider>
                             </ModalProvider>
                         </ThemeProvider>

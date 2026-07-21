@@ -21,7 +21,7 @@ import {
     type AgentDefaultField,
     type AgentKey,
 } from '@/sync/agentDefaults';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 
 type ExpandedField = {
     agent: AgentKey;
@@ -44,9 +44,71 @@ const agentLabels: Record<AgentKey, string> = {
     agy: 'Agy',
 };
 
+function localizeEffortLevel(level: string): string {
+    switch (level.toLowerCase()) {
+        case 'low':
+            return localizedText('low', '低', '低');
+        case 'medium':
+            return localizedText('medium', '中', '中');
+        case 'high':
+            return localizedText('high', '高', '高');
+        case 'xhigh':
+            return localizedText('xhigh', '超高', '超高');
+        case 'max':
+            return localizedText('max', '最高', '最高');
+        case 'thinking':
+            return localizedText('thinking', '思考', '思考');
+        default:
+            return level;
+    }
+}
+
+function localizeOptionName(name: string): string {
+    switch (name.toLowerCase()) {
+        case 'default':
+            return localizedText('default', '默认', '預設');
+        case 'default model':
+            return localizedText('default model', '默认模型', '預設模型');
+        case 'low':
+        case 'medium':
+        case 'high':
+        case 'xhigh':
+        case 'max':
+        case 'thinking':
+            return localizeEffortLevel(name);
+    }
+
+    return name.replace(/\((low|medium|high|xhigh|max|thinking)\)$/i, (_, level: string) => (
+        `(${localizeEffortLevel(level)})`
+    ));
+}
+
+function localizeOptionDescription(description: string | null | undefined): string | undefined {
+    if (!description) {
+        return undefined;
+    }
+    switch (description.toLowerCase()) {
+        case 'latest & most capable':
+            return localizedText('latest & most capable', '最新且能力最强', '最新且能力最強');
+        case 'latest & fast':
+            return localizedText('latest & fast', '最新且速度快', '最新且速度快');
+        case 'latest & fastest':
+            return localizedText('latest & fastest', '最新且速度最快', '最新且速度最快');
+        case 'most capable':
+            return localizedText('most capable', '能力最强', '能力最強');
+        case 'fast & efficient':
+            return localizedText('fast & efficient', '速度快且高效', '速度快且高效');
+        case 'fastest':
+            return localizedText('fastest', '速度最快', '速度最快');
+        default:
+            return description;
+    }
+}
+
 function optionName(options: ModeOption[], key: string | null | undefined): string {
-    if (!key) return 'none';
-    return options.find((option) => option.key === key)?.name ?? key;
+    if (!key) return localizedText('none', '无', '無');
+    const name = options.find((option) => option.key === key)?.name ?? key;
+    return localizeOptionName(name);
 }
 
 export default function AgentDefaultsSettingsScreen() {
@@ -90,7 +152,7 @@ export default function AgentDefaultsSettingsScreen() {
         const isExpanded = expanded?.agent === agent && expanded.field === config.field;
         const detail = hasOverride
             ? optionName(config.options, overrideValue)
-            : `Default (${optionName(config.options, effectiveValue)})`;
+            : `${localizedText('Default', '默认', '預設')} (${optionName(config.options, effectiveValue)})`;
         const codeDefaultLabel = optionName(config.options, config.codeDefaultKey);
 
         return (
@@ -106,7 +168,7 @@ export default function AgentDefaultsSettingsScreen() {
                         {renderOption(
                             agent,
                             config.field,
-                            'Use code default',
+                            localizedText('Use code default', '使用代码默认值', '使用程式碼預設值'),
                             codeDefaultLabel ? codeDefaultLabel : undefined,
                             !hasOverride,
                             null,
@@ -114,8 +176,8 @@ export default function AgentDefaultsSettingsScreen() {
                         {config.options.map((option) => renderOption(
                             agent,
                             config.field,
-                            option.name,
-                            option.description ?? undefined,
+                            localizeOptionName(option.name),
+                            localizeOptionDescription(option.description),
                             hasOverride && overrideValue === option.key,
                             option.key,
                         ))}
@@ -128,11 +190,15 @@ export default function AgentDefaultsSettingsScreen() {
     return (
         <ItemList style={{ paddingTop: 0 }}>
             <ItemGroup
-                title="Agent Defaults"
+                title={localizedText('Agent Defaults', '智能体默认设置', '智慧體預設設定')}
             >
                 <Item
-                    title="Clear Overrides"
-                    subtitle="Return every agent to code defaults"
+                    title={localizedText('Clear Overrides', '清除自定义设置', '清除自訂設定')}
+                    subtitle={localizedText(
+                        'Return every agent to code defaults',
+                        '让所有智能体恢复代码中的默认值',
+                        '讓所有智慧體恢復程式碼中的預設值',
+                    )}
                     icon={<Ionicons name="refresh-outline" size={29} color="#FF9500" />}
                     onPress={() => setAgentDefaultOverrides({})}
                     disabled={Object.keys(agentDefaultOverrides).length === 0}
@@ -149,21 +215,21 @@ export default function AgentDefaultsSettingsScreen() {
                 const fields: FieldConfig[] = [
                     {
                         field: 'permissionMode',
-                        title: 'Permission',
+                        title: localizedText('Permission', '权限', '權限'),
                         icon: 'shield-checkmark-outline',
                         options: permissionOptions,
                         codeDefaultKey: codeDefaults.permissionMode,
                     },
                     ...(modelOptions.length > 0 ? [{
                         field: 'modelMode' as const,
-                        title: 'Model',
+                        title: localizedText('Model', '模型', '模型'),
                         icon: 'hardware-chip-outline' as const,
                         options: modelOptions,
                         codeDefaultKey: codeDefaults.modelMode,
                     }] : []),
                     ...(effortOptions.length > 0 ? [{
                         field: 'effortLevel' as const,
-                        title: 'Effort',
+                        title: localizedText('Effort', '思考强度', '思考強度'),
                         icon: 'speedometer-outline' as const,
                         options: effortOptions,
                         codeDefaultKey: codeDefaults.effortLevel,

@@ -248,7 +248,6 @@ export type ReducerResult = {
         contextSize: number;
         contextWindow?: number;
     };
-    hasReadyEvent?: boolean;
 };
 
 function updateLatestTodos(state: ReducerState, value: unknown, timestamp: number) {
@@ -278,7 +277,6 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
 
     let newMessages: Message[] = [];
     let changed: Set<string> = new Set();
-    let hasReadyEvent = false;
 
     // First, trace all messages to identify sidechains
     const tracedMessages = traceMessages(state.tracerState, messages);
@@ -312,7 +310,6 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
         if (msg.role === 'event' && msg.content.type === 'ready') {
             // Mark as processed to prevent duplication but don't add to messages
             state.messageIds.set(msg.id, msg.id);
-            hasReadyEvent = true;
             continue;
         }
 
@@ -1156,7 +1153,6 @@ export function reducer(state: ReducerState, messages: NormalizedMessage[], agen
             contextSize: state.latestUsage.contextSize,
             ...(state.latestUsage.contextWindow ? { contextWindow: state.latestUsage.contextWindow } : {}),
         } : undefined,
-        hasReadyEvent: hasReadyEvent || undefined
     };
 }
 

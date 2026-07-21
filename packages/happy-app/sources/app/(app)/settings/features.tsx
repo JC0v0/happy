@@ -5,7 +5,7 @@ import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
 import { Switch } from '@/components/Switch';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 
 export default function FeaturesSettingsScreen() {
     const [experiments, setExperiments] = useSettingMutable('experiments');
@@ -24,12 +24,16 @@ export default function FeaturesSettingsScreen() {
         <ItemList style={{ paddingTop: 0 }}>
             {/* Interface */}
             <ItemGroup
-                title="Interface"
-                footer="Optional panels and layout elements."
+                title={localizedText('Interface', '界面', '介面')}
+                footer={localizedText('Optional panels and layout elements.', '控制可选面板和界面布局。', '控制可選面板和介面配置。')}
             >
                 <Item
-                    title="File Diffs Sidebar"
-                    subtitle="Show git changes next to the chat on desktop"
+                    title={localizedText('File Diffs Sidebar', '文件差异侧边栏', '檔案差異側邊欄')}
+                    subtitle={localizedText(
+                        'Show git changes next to the chat on desktop',
+                        '在桌面端聊天旁显示 Git 文件改动',
+                        '在桌面端聊天旁顯示 Git 檔案變更',
+                    )}
                     icon={<Ionicons name="git-branch-outline" size={29} color="#5AC8FA" />}
                     rightElement={
                         <Switch
@@ -52,8 +56,12 @@ export default function FeaturesSettingsScreen() {
                     showChevron={false}
                 />
                 <Item
-                    title="Sort by Recent Activity"
-                    subtitle="Order the session list by last activity instead of creation date"
+                    title={localizedText('Sort by Recent Activity', '按最近活动排序', '依最近活動排序')}
+                    subtitle={localizedText(
+                        'Order the session list by last activity instead of creation date',
+                        '按最后活动时间排列会话，而不是按创建时间',
+                        '依最後活動時間排列工作階段，而不是依建立時間',
+                    )}
                     icon={<Ionicons name="swap-vertical-outline" size={29} color="#FF9500" />}
                     rightElement={
                         <Switch
@@ -107,8 +115,12 @@ export default function FeaturesSettingsScreen() {
                     showChevron={false}
                 />
                 <Item
-                    title="Resume Session"
-                    subtitle="Resume disconnected Claude Code and Codex sessions via the machine daemon"
+                    title={localizedText('Resume Session', '恢复会话', '恢復工作階段')}
+                    subtitle={localizedText(
+                        'Resume disconnected Claude Code and Codex sessions via the machine daemon',
+                        '通过设备后台服务恢复已断开的 Claude Code 和 Codex 会话',
+                        '透過裝置背景服務恢復已中斷的 Claude Code 和 Codex 工作階段',
+                    )}
                     icon={<Ionicons name="play-circle-outline" size={29} color="#30D158" />}
                     rightElement={
                         <Switch

@@ -40,7 +40,7 @@ Every issue should start with a **one-paragraph summary** of the problem. Don't 
 
 - **Show proof it works.** Screenshots, screen recordings, or actual log output demonstrating the fix in a real running app. Unit tests passing is not enough — show it working end-to-end.
 - Links to the issue it fixes (if one exists)
-- Short, clear title (`fix: voice session stuck in connecting state` not `Update voice.ts`)
+- Short, clear title (`fix: session stuck while reconnecting` not `Update sync.ts`)
 - No unrelated changes, no drive-by refactors
 
 ## Development Setup

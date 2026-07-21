@@ -22,11 +22,11 @@ RN 0.81 is out of the 3-version support window (0.82, 0.83, 0.84 supported). SDK
 - expo-widgets — iOS home screen widgets without native code
 - Jetpack Compose beta — Material3 components
 - expo-brownfield package for mixed-codebase apps
-- expo-av removed from Expo Go (we use expo-audio, so fine)
+- expo-av removed from Expo Go
 
 ## Upgrade order
 
-1. Safe patches first (reanimated 4.2.3, livekit, socket.io, zustand) — no native rebuild
+1. Safe patches first (reanimated 4.2.3, socket.io, zustand) — no native rebuild
 2. JS-only minors (flash-list 2.3, posthog, purchases) — no native rebuild
 3. **Expo SDK 54 -> 55** via `npx expo install --fix` — native rebuild required
 4. keyboard-controller 1.21, skia 2.5.3, unistyles 3.1.1, gesture-handler 2.30

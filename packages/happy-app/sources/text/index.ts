@@ -213,3 +213,22 @@ export function t<K extends TranslationKey>(
 export function getCurrentLanguage(): SupportedLanguage {
     return currentLanguage;
 }
+
+/**
+ * Localize newly added interface copy without forcing every existing locale to
+ * duplicate an English fallback. Prefer `t()` when a shared translation key
+ * already exists.
+ */
+export function localizedText(
+    english: string,
+    simplifiedChinese: string,
+    traditionalChinese: string,
+): string {
+    if (currentLanguage === 'zh-Hans') {
+        return simplifiedChinese;
+    }
+    if (currentLanguage === 'zh-Hant') {
+        return traditionalChinese;
+    }
+    return english;
+}

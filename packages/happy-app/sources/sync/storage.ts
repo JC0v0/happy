@@ -27,16 +27,11 @@ import { isAgentModePushPending } from "./agentModesPending";
 import type { CustomerInfo } from './revenueCat/types';
 import React from "react";
 import { sync } from "./sync";
-import { getCurrentRealtimeSessionId, getVoiceSession } from '@/realtime/RealtimeSession';
 import { isMutableTool } from "@/components/tools/knownTools";
 import { DecryptedArtifact } from "./artifactTypes";
 import { FeedItem } from "./feedTypes";
 import { getRigActivityIndicators, getRigIdentity } from './rig';
 import { indexSessionsById } from './sessionIdentity';
-
-// Debounce timer for realtimeMode changes
-let realtimeModeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-const REALTIME_MODE_DEBOUNCE_MS = 150;
 
 /**
  * Centralized session online state resolver
@@ -181,9 +176,6 @@ interface StorageState {
     feedHasMore: boolean;
     feedLoaded: boolean;  // True after initial feed fetch
     friendsLoaded: boolean;  // True after initial friends fetch
-    realtimeStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
-    realtimeMode: 'idle' | 'agent-speaking' | 'user-speaking';
-    voiceSessionGeneration: number;
     socketStatus: 'disconnected' | 'connecting' | 'connected' | 'error';
     socketLastConnectedAt: number | null;
     socketLastDisconnectedAt: number | null;
@@ -194,7 +186,7 @@ interface StorageState {
     deleteMachine: (machineId: string) => void;
     applyLoaded: () => void;
     applyReady: () => void;
-    applyMessages: (sessionId: string, messages: NormalizedMessage[]) => { changed: string[], hasReadyEvent: boolean, enteredPlanMode: boolean };
+    applyMessages: (sessionId: string, messages: NormalizedMessage[]) => { enteredPlanMode: boolean };
     applyMessagesLoaded: (sessionId: string) => void;
     applyOlderMessagesPagination: (sessionId: string, info: { hasMore: boolean }) => void;
     applyOlderMessagesLoading: (sessionId: string, isLoading: boolean) => void;
@@ -210,10 +202,6 @@ interface StorageState {
     applyFileCache: (sessionId: string, filePath: string, content: string | null, diff: string | null, isBinary: boolean) => void;
     applyNativeUpdateStatus: (status: { available: boolean; updateUrl?: string } | null) => void;
     isMutableToolCall: (sessionId: string, callId: string) => boolean;
-    setRealtimeStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void;
-    setRealtimeMode: (mode: 'idle' | 'agent-speaking' | 'user-speaking', immediate?: boolean) => void;
-    clearRealtimeModeDebounce: () => void;
-    incrementVoiceSessionGeneration: () => void;
     setSocketStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void;
     getActiveSessions: () => Session[];
     updateSessionDraft: (sessionId: string, draft: string | null) => void;
@@ -374,9 +362,6 @@ export const storage = create<StorageState>()((set, get) => {
         pathGitStatusFiles: {},
         pathProjectFiles: {},
         sessionFileCache: {},
-        realtimeStatus: 'disconnected',
-        realtimeMode: 'idle',
-        voiceSessionGeneration: 0,
         socketStatus: 'disconnected',
         socketLastConnectedAt: null,
         socketLastDisconnectedAt: null,
@@ -508,36 +493,6 @@ export const storage = create<StorageState>()((set, get) => {
                 if (existingSessionMessages && newSession.agentState &&
                     (!oldSession || newSession.agentStateVersion > (oldSession.agentStateVersion || 0))) {
 
-                    // Check for NEW permission requests before processing
-                    const currentRealtimeSessionId = getCurrentRealtimeSessionId();
-                    const voiceSession = getVoiceSession();
-
-                    // console.log('[REALTIME DEBUG] Permission check:', {
-                    //     currentRealtimeSessionId,
-                    //     sessionId: session.id,
-                    //     match: currentRealtimeSessionId === session.id,
-                    //     hasVoiceSession: !!voiceSession,
-                    //     oldRequests: Object.keys(oldSession?.agentState?.requests || {}),
-                    //     newRequests: Object.keys(newSession.agentState?.requests || {})
-                    // });
-
-                    if (currentRealtimeSessionId === session.id && voiceSession) {
-                        const oldRequests = oldSession?.agentState?.requests || {};
-                        const newRequests = newSession.agentState?.requests || {};
-
-                        // Find NEW permission requests only
-                        for (const [requestId, request] of Object.entries(newRequests)) {
-                            if (!oldRequests[requestId]) {
-                                // This is a NEW permission request
-                                const toolName = request.tool;
-                                // console.log('[REALTIME DEBUG] Sending permission notification for:', toolName);
-                                voiceSession.sendTextMessage(
-                                    `Claude is requesting permission to use the ${toolName} tool`
-                                );
-                            }
-                        }
-                    }
-
                     // Process new AgentState through reducer
                     const reducerResult = reducer(existingSessionMessages.reducerState, [], newSession.agentState);
                     const processedMessages = reducerResult.messages;
@@ -620,9 +575,6 @@ export const storage = create<StorageState>()((set, get) => {
             isDataReady: true
         })),
         applyMessages: (sessionId: string, messages: NormalizedMessage[]) => {
-            let changed = new Set<string>();
-            let hasReadyEvent = false;
-
             // Track plan mode transitions through the batch in order.
             // Set true on EnterPlanMode, false on ExitPlanMode. The final value
             // tells us whether the batch ends with an unresolved plan entry.
@@ -665,12 +617,6 @@ export const storage = create<StorageState>()((set, get) => {
                 // Run reducer with agentState
                 const reducerResult = reducer(existingSession.reducerState, normalizedMessages, agentState);
                 const processedMessages = reducerResult.messages;
-                for (let message of processedMessages) {
-                    changed.add(message.id);
-                }
-                if (reducerResult.hasReadyEvent) {
-                    hasReadyEvent = true;
-                }
 
                 // Merge messages
                 const mergedMessagesMap = { ...existingSession.messagesMap };
@@ -720,7 +666,7 @@ export const storage = create<StorageState>()((set, get) => {
                 };
             });
 
-            return { changed: Array.from(changed), hasReadyEvent, enteredPlanMode: shouldEnterPlanMode };
+            return { enteredPlanMode: shouldEnterPlanMode };
         },
         applyMessagesLoaded: (sessionId: string) => set((state) => {
             const existingSession = state.sessionMessages[sessionId];
@@ -925,39 +871,6 @@ export const storage = create<StorageState>()((set, get) => {
         applyNativeUpdateStatus: (status: { available: boolean; updateUrl?: string } | null) => set((state) => ({
             ...state,
             nativeUpdateStatus: status
-        })),
-        setRealtimeStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => set((state) => ({
-            ...state,
-            realtimeStatus: status
-        })),
-        setRealtimeMode: (mode: 'idle' | 'agent-speaking' | 'user-speaking', immediate?: boolean) => {
-            if (immediate) {
-                // Clear any pending debounce and set immediately
-                if (realtimeModeDebounceTimer) {
-                    clearTimeout(realtimeModeDebounceTimer);
-                    realtimeModeDebounceTimer = null;
-                }
-                set((state) => ({ ...state, realtimeMode: mode }));
-            } else {
-                // Debounce mode changes to avoid flickering
-                if (realtimeModeDebounceTimer) {
-                    clearTimeout(realtimeModeDebounceTimer);
-                }
-                realtimeModeDebounceTimer = setTimeout(() => {
-                    realtimeModeDebounceTimer = null;
-                    set((state) => ({ ...state, realtimeMode: mode }));
-                }, REALTIME_MODE_DEBOUNCE_MS);
-            }
-        },
-        clearRealtimeModeDebounce: () => {
-            if (realtimeModeDebounceTimer) {
-                clearTimeout(realtimeModeDebounceTimer);
-                realtimeModeDebounceTimer = null;
-            }
-        },
-        incrementVoiceSessionGeneration: () => set((state) => ({
-            ...state,
-            voiceSessionGeneration: state.voiceSessionGeneration + 1
         })),
         setSocketStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => set((state) => {
             const now = Date.now();
@@ -1453,18 +1366,6 @@ export function useArtifactsCount(): number {
 
 export function useEntitlement(id: KnownEntitlements): boolean {
     return storage(useShallow((state) => state.purchases.entitlements[id] ?? false));
-}
-
-export function useRealtimeStatus(): 'disconnected' | 'connecting' | 'connected' | 'error' {
-    return storage(useShallow((state) => state.realtimeStatus));
-}
-
-export function useRealtimeMode(): 'idle' | 'agent-speaking' | 'user-speaking' {
-    return storage(useShallow((state) => state.realtimeMode));
-}
-
-export function useVoiceSessionGeneration(): number {
-    return storage(useShallow((state) => state.voiceSessionGeneration));
 }
 
 export function useSocketStatus() {

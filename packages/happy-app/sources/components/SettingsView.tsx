@@ -28,7 +28,7 @@ import { disconnectService } from '@/sync/apiServices';
 import { useProfile } from '@/sync/storage';
 import { getDisplayName, getAvatarUrl, getBio } from '@/sync/profile';
 import { Avatar } from '@/components/Avatar';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 
 type BuildConfig = {
     buildCommitSha?: unknown;
@@ -66,7 +66,9 @@ function formatBuildSubtitle(buildConfig: BuildConfig): string | undefined {
     }
 
     return [
-        commitTimestamp ? `Commit ${commitTimestamp}` : 'Commit',
+        commitTimestamp
+            ? `${localizedText('Commit', '提交', '提交')} ${commitTimestamp}`
+            : localizedText('Commit', '提交', '提交'),
         commitSha,
     ].filter(Boolean).join(' / ');
 }
@@ -80,7 +82,7 @@ export const SettingsView = React.memo(function SettingsView() {
         : undefined;
     const versionDetail = [
         appVersion,
-        runtimeVersion ? `runtime ${runtimeVersion}` : undefined,
+        runtimeVersion ? `${localizedText('runtime', '运行版本', '執行版本')} ${runtimeVersion}` : undefined,
     ].filter(Boolean).join(' / ');
     const versionSubtitle = formatBuildSubtitle(getBuildConfig());
     const auth = useAuth();
@@ -313,7 +315,7 @@ export const SettingsView = React.memo(function SettingsView() {
                 <ItemGroup title={t('settings.machines')}>
                     {visibleMachines.map((machine) => {
                         const isOnline = isMachineOnline(machine);
-                        const host = machine.metadata?.host || 'Unknown';
+                        const host = machine.metadata?.host || localizedText('Unknown', '未知', '未知');
                         const displayName = machine.metadata?.displayName;
                         const platform = machine.metadata?.platform || '';
 
@@ -377,14 +379,12 @@ export const SettingsView = React.memo(function SettingsView() {
                     onPress={() => router.push('/settings/appearance')}
                 />
                 <Item
-                    title={t('settings.voiceAssistant')}
-                    subtitle={t('settings.voiceAssistantSubtitle')}
-                    icon={<Ionicons name="mic-outline" size={29} color="#34C759" />}
-                    onPress={() => router.push('/settings/voice')}
-                />
-                <Item
-                    title="Agent Defaults"
-                    subtitle="Default model, effort, and permissions"
+                    title={localizedText('Agent Defaults', '智能体默认设置', '智慧體預設設定')}
+                    subtitle={localizedText(
+                        'Default model, effort, and permissions',
+                        '设置默认模型、思考强度和权限',
+                        '設定預設模型、思考強度和權限',
+                    )}
                     icon={<Ionicons name="options-outline" size={29} color="#5AC8FA" />}
                     onPress={() => router.push('/settings/agents' as any)}
                 />
