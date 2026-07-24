@@ -281,6 +281,7 @@ export class ApiSessionClient extends EventEmitter {
             }
             this.rpcHandlerManager.onSocketConnect(this.socket);
             this.receiveSync.invalidate();
+            this.emit('connected');
         })
 
         // Set up global RPC request handler
@@ -291,6 +292,7 @@ export class ApiSessionClient extends EventEmitter {
         this.socket.on('disconnect', (reason) => {
             logger.debug(`[API] Socket disconnected: ${reason}`);
             this.rpcHandlerManager.onSocketDisconnect();
+            this.emit('disconnected', reason);
             this.startSmartReconnect();
         })
 
@@ -869,6 +871,21 @@ export class ApiSessionClient extends EventEmitter {
      */
     sendSessionDeath() {
         this.socket.emit('session-end', { sid: this.sessionId, time: Date.now() });
+    }
+
+    /**
+     * Relay one encrypted terminal output chunk to the session's clients.
+     *
+     * `payload` is a plaintext TerminalOutput object (see happy-wire
+     * terminal.ts); it is encrypted here with the session key/variant so the
+     * server only ever sees ciphertext. Emitted volatile (fire-and-forget,
+     * dropped while the socket is down) because terminal chunks are
+     * high-frequency and terminal sessions destroy themselves after a short
+     * disconnect grace period anyway.
+     */
+    sendTerminalOutput(payload: unknown) {
+        const c = encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, payload));
+        this.socket.volatile.emit('terminal-output', { sid: this.sessionId, c });
     }
 
     /**

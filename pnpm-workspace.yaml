@@ -6,3 +6,15 @@ packages:
   - "packages/happy-wire"
   - "packages/happy-app-logs"
   - "packages/codium"
+
+onlyBuiltDependencies:
+  - "@more-tech/react-native-libsodium"
+  - "@prisma/client"
+  - "@prisma/engines"
+  - "@shopify/react-native-skia"
+  - "@tailwindcss/oxide"
+  - electron
+  - esbuild
+  - node-pty
+  - prisma
+  - sharp

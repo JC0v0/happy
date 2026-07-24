@@ -61,12 +61,13 @@ import { getAgentPickerItems, getModePickerItems } from '@/utils/newSessionPicke
 import { resolveAgentDefaultConfig } from '@/sync/agentDefaults';
 
 // Agent icon assets
-const agentIcons = {
+const agentIcons: Partial<Record<NewSessionAgentType, number>> = {
     claude: require('@/assets/images/icon-claude.png'),
     codex: require('@/assets/images/icon-gpt.png'),
     openclaw: require('@/assets/images/icon-openclaw.png'),
     gemini: require('@/assets/images/icon-gemini.png'),
     agy: require('@/assets/images/icon-agy.png'),
+    // terminal has no brand asset — falls back to an Ionicons glyph
 };
 
 type AgentKey = NewSessionAgentType;
@@ -76,6 +77,7 @@ const ALL_AGENTS: { key: AgentKey; label: string }[] = [
     { key: 'openclaw', label: 'openclaw' },
     { key: 'gemini', label: 'gemini (deprecated)' },
     { key: 'agy', label: 'agy' },
+    { key: 'terminal', label: 'terminal' },
 ];
 
 type PickerItem = { key: string; label: string; subtitle?: string; dimmed?: boolean };
@@ -730,11 +732,13 @@ function NewSessionScreen() {
         }
     }, [worktreeItems, worktreeKey]);
 
-    // Filter available agents based on CLI availability from machine metadata
+    // Filter available agents based on CLI availability from machine metadata.
+    // Terminal is always offered — older CLIs predate cliAvailability entries
+    // for it and the daemon-side spawn decides support.
     const availableAgents = React.useMemo(() => {
         const availability = selectedMachine?.metadata?.cliAvailability;
         if (!availability) return ALL_AGENTS;
-        return ALL_AGENTS.filter(a => availability[a.key]);
+        return ALL_AGENTS.filter(a => a.key === 'terminal' || availability[a.key as Exclude<AgentKey, 'terminal'>]);
     }, [selectedMachine]);
 
     // If current agent not available on this machine, switch to first available
@@ -1005,7 +1009,8 @@ function NewSessionScreen() {
                     if (permissionOverride !== null) modesPatch.permissionMode = permissionOverride;
                     if (modelOverride !== null) modesPatch.modelMode = modelOverride;
                     if (effortOverride !== null) modesPatch.effortLevel = effortOverride;
-                    if (Object.keys(modesPatch).length > 0) {
+                    // Terminal sessions have no agent modes to sync
+                    if (selectedAgent !== 'terminal' && Object.keys(modesPatch).length > 0) {
                         sessionSetAgentModes(result.sessionId, modesPatch);
                     }
 
@@ -1016,8 +1021,9 @@ function NewSessionScreen() {
                     const trimmedPrompt = draftState.input.trim();
                     draftState.setInput('');
 
-                    // Send initial message if provided
-                    if (trimmedPrompt) {
+                    // Send initial message if provided (not for terminal
+                    // sessions — raw ptys have no message channel)
+                    if (trimmedPrompt && selectedAgent !== 'terminal') {
                         await sync.sendMessage(result.sessionId, trimmedPrompt, { source: 'new_session' });
                     }
 
@@ -1194,11 +1200,15 @@ function NewSessionScreen() {
                                     onPress={() => togglePicker('agent')}
                                     style={(p) => [styles.configInlineField, p.pressed && styles.configRowPressed]}
                                 >
-                                    <RNImage
-                                        source={agentIcons[agent.key]}
-                                        style={[styles.agentIcon, { tintColor: theme.colors.textSecondary }]}
-                                        resizeMode="contain"
-                                    />
+                                    {agentIcons[agent.key] ? (
+                                        <RNImage
+                                            source={agentIcons[agent.key]}
+                                            style={[styles.agentIcon, { tintColor: theme.colors.textSecondary }]}
+                                            resizeMode="contain"
+                                        />
+                                    ) : (
+                                        <Ionicons name="terminal-outline" size={16} color={theme.colors.textSecondary} />
+                                    )}
                                     <Text style={[styles.configLabel, styles.configInlineText]} numberOfLines={1}>
                                         {agent.label}
                                     </Text>
@@ -1304,11 +1314,15 @@ function NewSessionScreen() {
                                 hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
                                 style={(p) => [styles.collapsedIconButton, p.pressed && styles.configRowPressed]}
                             >
-                                <RNImage
-                                    source={agentIcons[agent.key]}
-                                    style={[styles.collapsedAgentIcon, { tintColor: theme.colors.textSecondary }]}
-                                    resizeMode="contain"
-                                />
+                                {agentIcons[agent.key] ? (
+                                    <RNImage
+                                        source={agentIcons[agent.key]}
+                                        style={[styles.collapsedAgentIcon, { tintColor: theme.colors.textSecondary }]}
+                                        resizeMode="contain"
+                                    />
+                                ) : (
+                                    <Ionicons name="terminal-outline" size={14} color={theme.colors.textSecondary} />
+                                )}
                             </Pressable>
 
                             {showPermission && (

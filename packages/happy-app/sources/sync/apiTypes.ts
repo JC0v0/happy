@@ -222,11 +222,21 @@ export const ApiEphemeralSessionEventUpdateSchema = z.object({
     timestamp: z.number(),
 });
 
+// Raw pty output relayed by the server for terminal sessions. `c` is the
+// session-key-encrypted TerminalOutput JSON (base64). Never persisted by the
+// server — mid-session attaches must RPC `terminal-attach` for the snapshot.
+export const ApiEphemeralTerminalOutputUpdateSchema = z.object({
+    type: z.literal('terminal-output'),
+    sessionId: z.string(),
+    c: z.string(),
+});
+
 export const ApiEphemeralUpdateSchema = z.union([
     ApiEphemeralActivityUpdateSchema,
     ApiEphemeralUsageUpdateSchema,
     ApiEphemeralMachineActivityUpdateSchema,
     ApiEphemeralSessionEventUpdateSchema,
+    ApiEphemeralTerminalOutputUpdateSchema,
 ]);
 
 export type ApiEphemeralActivityUpdate = z.infer<typeof ApiEphemeralActivityUpdateSchema>;

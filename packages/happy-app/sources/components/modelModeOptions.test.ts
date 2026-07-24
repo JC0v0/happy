@@ -9,6 +9,11 @@ import {
     getDefaultEffortKey,
     getDefaultModelKey,
     getDefaultPermissionModeKey,
+    getEffortLevelsForModel,
+    getHardcodedEffortLevels,
+    getHardcodedModelModes,
+    getHardcodedPermissionModes,
+    getSupportsWorktree,
     mapMetadataOptions,
     resolveCurrentOption,
 } from './modelModeOptions';
@@ -194,6 +199,37 @@ describe('modelModeOptions', () => {
         expect(getAvailableModels('codex', metadata, translate)).toEqual(getCodexModelModes());
         expect(getAvailablePermissionModes('codex', metadata, translate).map((mode) => mode.key)).toEqual([
             'default', 'read-only', 'safe-yolo', 'yolo',
+        ]);
+    });
+
+    it('gives the terminal flavor a single inert permission mode', () => {
+        const modes = getHardcodedPermissionModes('terminal', translate);
+        expect(modes).toEqual([
+            { key: 'default', name: 'tr:agentInput.permissionMode.default', description: null },
+        ]);
+    });
+
+    it('gives the terminal flavor a single inert model mode', () => {
+        const modes = getHardcodedModelModes('terminal', translate);
+        expect(modes).toEqual([
+            { key: 'default', name: 'default', description: null },
+        ]);
+    });
+
+    it('exposes no effort levels for the terminal flavor', () => {
+        expect(getHardcodedEffortLevels('terminal')).toEqual([]);
+        expect(getEffortLevelsForModel('terminal', 'default')).toEqual([]);
+    });
+
+    it('does not support worktrees for the terminal flavor', () => {
+        expect(getSupportsWorktree('terminal')).toBe(false);
+        // sanity: a normal flavor still does
+        expect(getSupportsWorktree('claude')).toBe(true);
+    });
+
+    it('falls back to the hardcoded terminal catalog when there is no metadata', () => {
+        expect(getAvailableModels('terminal', null, translate)).toEqual([
+            { key: 'default', name: 'default', description: null },
         ]);
     });
 });

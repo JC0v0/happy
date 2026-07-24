@@ -140,6 +140,10 @@ export function getAgyPermissionModes(translate: Translate): PermissionMode[] {
 }
 
 export function getHardcodedPermissionModes(flavor: AgentFlavor, translate: Translate): PermissionMode[] {
+    if (flavor === 'terminal') {
+        // Raw pty sessions have no permission concept — single inert option
+        return [{ key: 'default', name: translate('agentInput.permissionMode.default'), description: null }];
+    }
     if (flavor === 'codex') {
         return getCodexPermissionModes(translate);
     }
@@ -176,6 +180,10 @@ export function getAgyModelModes(): ModelMode[] {
 }
 
 export function getHardcodedModelModes(flavor: AgentFlavor, _translate: Translate): ModelMode[] {
+    if (flavor === 'terminal') {
+        // Raw pty sessions have no model concept — single inert option
+        return [{ key: 'default', name: 'default', description: null }];
+    }
     if (flavor === 'codex') {
         return getCodexModelModes();
     }
@@ -392,6 +400,6 @@ export function getDefaultEffortKeyForModel(flavor: AgentFlavor, modelKey: strin
 }
 
 export function getSupportsWorktree(flavor: AgentFlavor): boolean {
-    if (flavor === 'openclaw') return false;
+    if (flavor === 'openclaw' || flavor === 'terminal') return false;
     return true;
 }

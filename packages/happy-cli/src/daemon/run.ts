@@ -422,8 +422,8 @@ export async function startDaemon(): Promise<void> {
 
           // Construct command for the CLI
           const cliPath = join(projectPath(), 'dist', 'index.mjs');
-          // Determine agent command - support claude, codex, gemini, openclaw, and agy
-          const agent = options.agent === 'gemini' ? 'gemini' : (options.agent === 'codex' ? 'codex' : (options.agent === 'openclaw' ? 'openclaw' : (options.agent === 'agy' ? 'agy' : 'claude')));
+          // Determine agent command - support claude, codex, gemini, openclaw, agy, and terminal
+          const agent = options.agent === 'gemini' ? 'gemini' : (options.agent === 'codex' ? 'codex' : (options.agent === 'openclaw' ? 'openclaw' : (options.agent === 'agy' ? 'agy' : (options.agent === 'terminal' ? 'terminal' : 'claude'))));
           const resumeId = agent === 'claude'
             ? options.resumeClaudeSessionId
             : (agent === 'codex' ? options.resumeCodexThreadId : undefined);
@@ -537,6 +537,9 @@ export async function startDaemon(): Promise<void> {
               break;
             case 'agy':
               agentCommand = 'agy';
+              break;
+            case 'terminal':
+              agentCommand = 'terminal';
               break;
             default:
               return {
@@ -796,7 +799,11 @@ export async function startDaemon(): Promise<void> {
     // Handle child process exit — preserve session data for resume
     const onChildExited = (pid: number) => {
       const session = pidToTrackedSession.get(pid);
-      if (session?.happySessionId && session.encryption) {
+      // Terminal sessions relay a raw pty: once the process exits the shell is
+      // dead and there is nothing to resume, so keep them out of the resume
+      // chain (sessionIdToFinishedSession / HAPPY_RECONNECT_*).
+      const isTerminalSession = session?.happySessionMetadataFromLocalWebhook?.flavor === 'terminal';
+      if (session?.happySessionId && session.encryption && !isTerminalSession) {
         sessionIdToFinishedSession.set(session.happySessionId, session);
         logger.debug(`[DAEMON RUN] Process PID ${pid} exited, preserved session ${session.happySessionId} for resume`);
       } else {

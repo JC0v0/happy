@@ -16,6 +16,8 @@ import {
 } from './attachmentDiagnostics';
 import { ApiEphemeralUpdateSchema, ApiMessage, ApiUpdateContainerSchema } from './apiTypes';
 import type { ApiEphemeralActivityUpdate } from './apiTypes';
+import { TerminalOutputSchema } from '@slopus/happy-wire';
+import { emitTerminalOutput } from '@/-session/terminal/terminalOutputBus';
 import { Session, Machine } from './storageTypes';
 import { InvalidateSync } from '@/utils/sync';
 import { ActivityUpdateAccumulator } from './reducer/activityUpdateAccumulator';
@@ -2721,7 +2723,38 @@ class Sync {
             notifyUnreadMessage();
         }
 
+        // Terminal sessions: relayed raw pty output. Decrypt with the session
+        // key and dispatch to any mounted terminal view. Fire-and-forget —
+        // chunk ordering is enforced by the view via `seq`.
+        if (updateData.type === 'terminal-output') {
+            this.handleTerminalOutput(updateData.sessionId, updateData.c);
+        }
+
         // daemon-status ephemeral updates are deprecated, machine status is handled via machine-activity
+    }
+
+    private handleTerminalOutput = async (sessionId: string, encrypted: string) => {
+        try {
+            let encryption = this.encryption.getSessionEncryption(sessionId);
+            if (!encryption) {
+                // Session keys may not be initialized yet (sessions still syncing)
+                await this.sessionsSync.awaitQueue();
+                encryption = this.encryption.getSessionEncryption(sessionId);
+                if (!encryption) {
+                    console.warn(`[terminal] No session encryption for ${sessionId}, dropping output chunk`);
+                    return;
+                }
+            }
+            const decrypted = await encryption.decryptRaw(encrypted);
+            const parsed = TerminalOutputSchema.safeParse(decrypted);
+            if (!parsed.success) {
+                console.warn('[terminal] Failed to decrypt/parse terminal output chunk, dropping');
+                return;
+            }
+            emitTerminalOutput(sessionId, parsed.data);
+        } catch (error) {
+            console.warn('[terminal] Failed to handle terminal output:', error);
+        }
     }
 
     //

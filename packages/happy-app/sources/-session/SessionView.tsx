@@ -38,6 +38,7 @@ import { FileViewPanel } from '@/components/FileViewPanel';
 import { prefetchPierreDiff } from '@/components/diff/PierreDiffView';
 import { GitFileStatus } from '@/sync/gitStatusFiles';
 import { useOverlayNav } from '@/-session/sessionOverlayNav';
+import { SessionTerminalView } from '@/-session/terminal/SessionTerminalView';
 import { formatPathRelativeToHome, getResumeCommandBlock, getSessionAvatarId, getSessionName, useSessionStatus } from '@/utils/sessionUtils';
 import { useSessionQuickActions } from '@/hooks/useSessionQuickActions';
 import { isVersionSupported, MINIMUM_CLI_VERSION } from '@/utils/versionUtils';
@@ -286,6 +287,8 @@ export const SessionView = React.memo((props: { id: string }) => {
                         <Text style={{ color: theme.colors.text, fontSize: 20, marginTop: 16, fontWeight: '600' }}>{t('errors.sessionDeleted')}</Text>
                         <Text style={{ color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>{t('errors.sessionDeletedDescription')}</Text>
                     </View>
+                ) : session.metadata?.flavor === 'terminal' ? (
+                    <SessionTerminalView key={sessionId} session={session} />
                 ) : (
                     <SessionViewLoaded key={sessionId} sessionId={sessionId} session={session} />
                 )}

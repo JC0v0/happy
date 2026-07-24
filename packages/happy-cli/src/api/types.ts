@@ -91,6 +91,7 @@ export interface ClientToServerEvents {
   'ping': (callback: () => void) => void
   'rpc-register': (data: { method: string }) => void
   'rpc-unregister': (data: { method: string }) => void
+  'terminal-output': (data: { sid: string, c: string }) => void
   'rpc-call': (data: { method: string, params: string }, callback: (response: {
     ok: boolean
     result?: string

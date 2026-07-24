@@ -193,6 +193,11 @@ export type EphemeralEvent = {
     title: string;
     body: string;
     timestamp: number;
+} | {
+    type: 'terminal-output';
+    sessionId: string;
+    /** End-to-end encrypted terminal output chunk (opaque to the server). */
+    c: string;
 };
 
 // === EVENT PAYLOAD TYPES ===

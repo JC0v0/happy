@@ -33,7 +33,7 @@ Missing the concept of **workspace** (aka project) that spans multiple machines,
 
 [hard]
 - Attachments in composer / in agent output [hard, encrypted attachments, extra storage - needs design]
-- Terminal embedded in app
+- Terminal embedded in app - **in progress**: E2E-encrypted pty relay across happy-wire / happy-server / happy-cli / happy-app. Web (xterm.js) and native (WebView + offline-bundled xterm) both render; a shared `TerminalOrderer` handles seq dedup / gap resync. 60 tests across wire/server/app. Not yet merged/shipped. Design informed by the [terminal-sync research](competition/superset/terminal-sync.md) (64KB ring buffer, pty lifetime decoupled from UI).
 
 ## Underlying Assistant Upkeep
 
