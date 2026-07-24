@@ -7,7 +7,9 @@ import { apiSocket } from '@/sync/apiSocket';
 import type { Session } from '@/sync/storageTypes';
 import { subscribeTerminalOutput } from './terminalOutputBus';
 import { TerminalOrderer } from './terminalOrdering';
+import { DEFAULT_TERMINAL_ANSI_COLORS } from './terminalTheme';
 import { loadTerminalWebviewAssets, type TerminalWebviewAssets } from './terminalWebviewAsset';
+import type { TerminalAttachResponse } from '@slopus/happy-wire';
 
 /** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
@@ -25,6 +27,7 @@ function buildHtml(assets: TerminalWebviewAssets, colors: { background: string; 
     const bg = JSON.stringify(colors.background);
     const fg = JSON.stringify(colors.foreground);
     const sel = JSON.stringify(colors.selection);
+    const ansi = JSON.stringify(DEFAULT_TERMINAL_ANSI_COLORS);
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -43,15 +46,18 @@ html,body{margin:0;padding:0;height:100%;background:${colors.background};overflo
 <script>
 (function(){
   var post = function(msg){ window.ReactNativeWebView.postMessage(JSON.stringify(msg)); };
+  var ansi = ${ansi};
   var term = new Terminal({
     cursorBlink: true,
     fontSize: 13,
     fontFamily: 'ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Menlo, Monaco, Consolas, monospace',
-    theme: { background: ${bg}, foreground: ${fg}, cursor: ${fg}, cursorAccent: ${bg}, selectionBackground: ${sel} }
+    theme: Object.assign({ background: ${bg}, foreground: ${fg}, cursor: ${fg}, cursorAccent: ${bg}, selectionBackground: ${sel} }, ansi)
   });
   var fit = new FitAddon.FitAddon();
   term.loadAddon(fit);
   term.open(document.getElementById('term-container'));
+  // Called from the app when the host syncs its local terminal color scheme.
+  window.__happyTermSetTheme = function(theme){ term.options.theme = theme; };
 
   function fitAndReport(){
     try { fit.fit(); } catch (e) {}
@@ -142,6 +148,28 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
         };
 
+        // Push the host's synced terminal colors into the WebView's xterm.
+        const applySyncedTheme = (response: TerminalAttachResponse) => {
+            if (disposed || !response.theme) {
+                return;
+            }
+            const synced = response.theme;
+            const themeObj = {
+                background: synced.background ?? theme.colors.surface,
+                foreground: synced.foreground ?? theme.colors.text,
+                cursor: synced.cursor ?? theme.colors.text,
+                cursorAccent: synced.cursorAccent ?? theme.colors.surface,
+                selectionBackground: synced.selectionBackground ?? theme.colors.surfaceSelected,
+                ...DEFAULT_TERMINAL_ANSI_COLORS,
+                ...Object.fromEntries(
+                    Object.entries(synced).filter(([, v]) => v != null),
+                ),
+            };
+            webviewRef.current?.injectJavaScript(
+                `;(function(){ window.__happyTermSetTheme(${JSON.stringify(themeObj)}); })();`,
+            );
+        };
+
         const orderer = new TerminalOrderer((event) => {
             if (disposed) {
                 return;
@@ -153,7 +181,8 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                     scheduleFlush();
                 }
             } else {
-                apiSocket.sessionRPC(sessionId, 'terminal-attach', { t: 'attach' })
+                apiSocket.sessionRPC<TerminalAttachResponse, { t: 'attach' }>(sessionId, 'terminal-attach', { t: 'attach' })
+                    .then(applySyncedTheme)
                     .catch((error) => console.warn('[terminal] Resync attach failed:', error));
             }
         });
@@ -173,7 +202,8 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
             webviewReady = true;
             flush();
-            apiSocket.sessionRPC(sessionId, 'terminal-attach', { t: 'attach' })
+            apiSocket.sessionRPC<TerminalAttachResponse, { t: 'attach' }>(sessionId, 'terminal-attach', { t: 'attach' })
+                .then(applySyncedTheme)
                 .catch((error) => console.warn('[terminal] terminal-attach failed:', error))
                 .finally(() => {
                     if (!disposed) {

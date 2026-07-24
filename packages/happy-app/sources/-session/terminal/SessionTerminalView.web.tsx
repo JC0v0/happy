@@ -9,6 +9,8 @@ import { apiSocket } from '@/sync/apiSocket';
 import type { Session } from '@/sync/storageTypes';
 import { subscribeTerminalOutput } from './terminalOutputBus';
 import { TerminalOrderer } from './terminalOrdering';
+import { DEFAULT_TERMINAL_ANSI_COLORS } from './terminalTheme';
+import type { TerminalAttachResponse } from '@slopus/happy-wire';
 
 /** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
@@ -40,6 +42,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 cursor: theme.colors.text,
                 cursorAccent: theme.colors.surface,
                 selectionBackground: theme.colors.surfaceSelected,
+                ...DEFAULT_TERMINAL_ANSI_COLORS,
             },
         });
         const fitAddon = new FitAddon();
@@ -47,6 +50,12 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         term.open(container);
         fitAddon.fit();
         term.focus();
+
+        if (typeof window !== 'undefined') {
+            (window as any).__happyTerminal = term;
+            (window as any).__happyTerminalSessionId = sessionId;
+            (window as any).__terminalChunkCounts = { live: 0, snapshot: 0, write: 0 };
+        }
 
         let disposed = false;
 
@@ -58,6 +67,9 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
             if (event.type === 'write') {
                 try {
+                    if (typeof window !== 'undefined') {
+                        (window as any).__terminalChunkCounts.write += 1;
+                    }
                     term.write(decodeBase64(event.data, 'base64'));
                 } catch (error) {
                     console.warn('[terminal] Failed to write output chunk:', error);
@@ -70,11 +82,35 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
 
         const unsubscribe = subscribeTerminalOutput(sessionId, (chunk) => {
             if (!disposed) {
+                if (typeof window !== 'undefined') {
+                    (window as any).__terminalChunkCounts.live += 1;
+                    if (chunk.snapshot) {
+                        (window as any).__terminalChunkCounts.snapshot += 1;
+                    }
+                }
                 orderer.push(chunk);
             }
         });
 
-        apiSocket.sessionRPC(sessionId, 'terminal-attach', { t: 'attach' })
+        apiSocket.sessionRPC<TerminalAttachResponse, { t: 'attach' }>(sessionId, 'terminal-attach', { t: 'attach' })
+            .then((response) => {
+                if (disposed || !response?.theme) {
+                    return;
+                }
+                // Sync the host's local terminal colors. Override the ANSI
+                // palette entirely; fill any gaps from the app/default theme.
+                term.options.theme = {
+                    background: response.theme.background ?? theme.colors.surface,
+                    foreground: response.theme.foreground ?? theme.colors.text,
+                    cursor: response.theme.cursor ?? theme.colors.text,
+                    cursorAccent: response.theme.cursorAccent ?? theme.colors.surface,
+                    selectionBackground: response.theme.selectionBackground ?? theme.colors.surfaceSelected,
+                    ...DEFAULT_TERMINAL_ANSI_COLORS,
+                    ...Object.fromEntries(
+                        Object.entries(response.theme).filter(([, v]) => v != null),
+                    ),
+                };
+            })
             .catch((error) => {
                 // Snapshot replay failed - still go live so new output streams in
                 console.warn('[terminal] terminal-attach failed:', error);

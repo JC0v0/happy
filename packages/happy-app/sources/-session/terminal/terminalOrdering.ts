@@ -21,12 +21,18 @@ export interface TerminalOrdererOptions {
 /**
  * Orders terminal output chunks into a coherent stream.
  *
- * The CLI emits chunks with a per-session monotonic `seq`. Live chunks that
- * arrive before the `terminal-attach` RPC settles are buffered; on
- * {@link settle} they flush in seq order. Snapshot chunks (replayed by the
- * CLI on attach) bypass the seq gate so scrollback restores immediately. A
- * gap in the live seq (`seq > lastSeq + 1`) triggers a rate-limited `resync`
- * rather than writing out-of-order data.
+ * The CLI emits chunks with a per-session monotonic `seq`. Two histories must
+ * merge on attach: the bus replay (buffered live chunks) and the CLI's
+ * snapshot replay (its ring, which may have evicted the oldest chunks). Either
+ * may arrive first and they interleave. To render one coherent, correctly
+ * ordered scrollback, NOTHING is written while the attach is in flight:
+ * everything is buffered into `pending`, and {@link settle} (fired when the
+ * `terminal-attach` RPC resolves, i.e. after the CLI has sent its snapshot)
+ * sorts, dedupes by seq, and writes the merged history once, oldest-first.
+ *
+ * After settle, chunks stream live: they are written in seq order, deduped,
+ * and a forward gap (`seq > lastSeq + 1`) triggers a rate-limited `resync`
+ * (the snapshot from that resync arrives post-settle and writes immediately).
  *
  * Extracted from the terminal views so both the web (xterm.js) and native
  * (WebView) renderers share one ordering implementation.
@@ -49,6 +55,14 @@ export class TerminalOrderer {
 
     /** Feed a decrypted chunk from the output bus. */
     push(chunk: TerminalOutput): void {
+        // Until the attach settles, buffer BOTH snapshot and live chunks so the
+        // two histories can be merged and written in order by settle().
+        if (!this.attachSettled) {
+            this.pending.push(chunk);
+            return;
+        }
+        // Post-settle snapshot (from a gap-triggered resync): bypass the seq
+        // gate so scrollback restores immediately, dedupe by seq.
         if (chunk.snapshot) {
             if (chunk.seq > this.lastSeq) {
                 this.lastSeq = chunk.seq;
@@ -56,21 +70,27 @@ export class TerminalOrderer {
             }
             return;
         }
-        if (!this.attachSettled) {
-            this.pending.push(chunk);
-            return;
-        }
         this.applyLive(chunk);
     }
 
-    /** Mark the `terminal-attach` RPC as settled and flush buffered live chunks. */
+    /**
+     * Mark the `terminal-attach` RPC as settled and write the merged history.
+     * Snapshot chunks (the CLI ring's tail) and buffered live chunks (the bus
+     * replay, which may carry earlier history the ring evicted) are sorted by
+     * seq and deduped, then written oldest-first so xterm renders one ordered
+     * scrollback instead of tail-then-head.
+     */
     settle(): void {
         this.attachSettled = true;
         const buffered = this.pending;
         this.pending = [];
         buffered.sort((a, b) => a.seq - b.seq);
         for (const chunk of buffered) {
-            this.applyLive(chunk);
+            if (chunk.seq <= this.lastSeq) {
+                continue; // duplicate: the same seq arrived via both histories
+            }
+            this.lastSeq = chunk.seq;
+            this.emit({ type: 'write', seq: chunk.seq, data: chunk.data });
         }
     }
 
@@ -87,9 +107,14 @@ export class TerminalOrderer {
             return;
         }
         if (this.lastSeq >= 0 && chunk.seq > this.lastSeq + 1) {
-            // Gap - drop the out-of-order chunk and request a snapshot replay.
+            // Gap - either a dropped packet or the CLI's ring buffer overflowed
+            // and can no longer cover the missing range. Request a snapshot
+            // replay (rate-limited) in case the ring still has some of the
+            // missing data, but write this chunk and advance lastSeq regardless.
+            // Dropping it would pin the orderer in an endless resync loop where
+            // every live chunk is discarded - leaving the terminal frozen - when
+            // the ring can't fill the gap.
             this.requestResync();
-            return;
         }
         this.lastSeq = chunk.seq;
         this.emit({ type: 'write', seq: chunk.seq, data: chunk.data });

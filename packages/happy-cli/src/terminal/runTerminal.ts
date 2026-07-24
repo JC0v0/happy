@@ -18,6 +18,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import * as path from 'node:path';
 import * as pty from 'node-pty';
 
 import { ApiClient } from '@/api/api';
@@ -34,6 +36,7 @@ import {
   TerminalInputSchema,
   TerminalResizeSchema,
   type TerminalOutput,
+  type TerminalTheme,
 } from '@slopus/happy-wire';
 
 /** How long the relay socket may stay down before the session self-destructs. */
@@ -44,7 +47,7 @@ const DISCONNECT_GRACE_MS = 5_000;
  */
 const OUTPUT_BATCH_MS = 16;
 /** Size of the in-memory replay buffer used to answer terminal-attach. */
-const RING_BUFFER_BYTES = 64 * 1024;
+const RING_BUFFER_BYTES = 1024 * 1024;
 
 type BufferedChunk = {
   seq: number;
@@ -53,9 +56,138 @@ type BufferedChunk = {
 
 function resolveShell(): string {
   if (process.platform === 'win32') {
-    return process.env.COMSPEC || 'powershell.exe';
+    // Prefer PowerShell for richer color output (matches Windows Terminal's
+    // default profile). COMSPEC (cmd.exe) emits almost no ANSI color codes.
+    return 'powershell.exe';
   }
   return process.env.SHELL || '/bin/bash';
+}
+
+/**
+ * Remove line (slash-slash) and block (slash-star) comments from a
+ * JSON-with-comments string without touching comment-like sequences inside
+ * string literals (e.g. "https://...").
+ */
+function stripJsonComments(text: string): string {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) {
+      result += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      result += ch;
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      result += ch;
+      continue;
+    }
+    if (!inString && ch === '/' && text[i + 1] === '/') {
+      while (i < text.length && text[i] !== '\n') {
+        i++;
+      }
+      continue;
+    }
+    if (!inString && ch === '/' && text[i + 1] === '*') {
+      i += 2;
+      while (i < text.length - 1 && !(text[i] === '*' && text[i + 1] === '/')) {
+        i++;
+      }
+      i++;
+      continue;
+    }
+    result += ch;
+  }
+  return result;
+}
+
+/**
+ * Read the local terminal's color scheme from Windows Terminal settings so the
+ * app can render the same palette the user sees locally. Returns undefined on
+ * non-Windows hosts or when WT settings can't be found/parsed.
+ */
+function readLocalTerminalTheme(): TerminalTheme | undefined {
+  if (process.platform !== 'win32') {
+    return undefined;
+  }
+  try {
+    const localAppData = process.env.LOCALAPPDATA;
+    if (!localAppData) {
+      return undefined;
+    }
+    const settingsPath = path.join(
+      localAppData,
+      'Packages',
+      'Microsoft.WindowsTerminal_8wekyb3d8bbwe',
+      'LocalState',
+      'settings.json',
+    );
+    let raw: string;
+    try {
+      raw = readFileSync(settingsPath, 'utf8');
+    } catch {
+      return undefined;
+    }
+    // WT settings.json allows // and /* */ comments. Strip them while
+    // respecting string literals so URLs inside strings (e.g. "https://...")
+    // are not mistaken for line comments.
+    const cleaned = stripJsonComments(raw);
+    const settings = JSON.parse(cleaned) as {
+      defaultProfile?: string;
+      profiles?: {
+        defaults?: { colorScheme?: string };
+        list?: Array<{ guid?: string; colorScheme?: string }>;
+      };
+      schemes?: Array<Record<string, string>>;
+    };
+
+    const defaultGuid = settings.defaultProfile;
+    const profiles = settings.profiles?.list ?? [];
+    const defaultProfile = profiles.find((p) => p.guid === defaultGuid) ?? {};
+    const schemeName =
+      defaultProfile.colorScheme ??
+      settings.profiles?.defaults?.colorScheme ??
+      'Campbell';
+    const scheme = (settings.schemes ?? []).find((s) => s.name === schemeName);
+    if (!scheme) {
+      return undefined;
+    }
+
+    // Windows Terminal uses "purple"/"brightPurple"; xterm uses
+    // "magenta"/"brightMagenta". Map the keys accordingly.
+    return {
+      background: scheme.background,
+      foreground: scheme.foreground,
+      cursor: scheme.cursorColor,
+      selectionBackground: scheme.selectionBackground,
+      black: scheme.black,
+      red: scheme.red,
+      green: scheme.green,
+      yellow: scheme.yellow,
+      blue: scheme.blue,
+      magenta: scheme.purple,
+      cyan: scheme.cyan,
+      white: scheme.white,
+      brightBlack: scheme.brightBlack,
+      brightRed: scheme.brightRed,
+      brightGreen: scheme.brightGreen,
+      brightYellow: scheme.brightYellow,
+      brightBlue: scheme.brightBlue,
+      brightMagenta: scheme.brightPurple,
+      brightCyan: scheme.brightCyan,
+      brightWhite: scheme.brightWhite,
+    };
+  } catch (error) {
+    logger.debug('[terminal] Failed to read Windows Terminal theme:', error);
+    return undefined;
+  }
 }
 
 export async function runTerminal(opts: {
@@ -107,12 +239,13 @@ export async function runTerminal(opts: {
   //
 
   const localTty = opts.startedBy !== 'daemon' && process.stdout.isTTY === true;
+  const localTheme = readLocalTerminalTheme();
   const term = pty.spawn(resolveShell(), [], {
     name: 'xterm-256color',
     cols: localTty ? (process.stdout.columns || 80) : 80,
     rows: localTty ? (process.stdout.rows || 24) : 24,
     cwd: process.cwd(),
-    env: process.env,
+    env: { ...process.env, COLORTERM: 'truecolor' },
   });
 
   //
@@ -203,7 +336,7 @@ export async function runTerminal(opts: {
         snapshot: true,
       });
     }
-    return {};
+    return localTheme ? { theme: localTheme } : {};
   });
 
   //

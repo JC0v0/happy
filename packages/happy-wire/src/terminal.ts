@@ -32,6 +32,43 @@ export const TerminalAttachSchema = z.object({
 });
 export type TerminalAttach = z.infer<typeof TerminalAttachSchema>;
 
+/**
+ * Terminal color theme synced from the CLI host's local terminal
+ * configuration (e.g. Windows Terminal settings). All values are CSS hex
+ * strings like `#1e1e2e`. When absent the app falls back to its built-in
+ * palette.
+ */
+export const TerminalThemeSchema = z.object({
+    background: z.string().optional(),
+    foreground: z.string().optional(),
+    cursor: z.string().optional(),
+    cursorAccent: z.string().optional(),
+    selectionBackground: z.string().optional(),
+    black: z.string().optional(),
+    red: z.string().optional(),
+    green: z.string().optional(),
+    yellow: z.string().optional(),
+    blue: z.string().optional(),
+    magenta: z.string().optional(),
+    cyan: z.string().optional(),
+    white: z.string().optional(),
+    brightBlack: z.string().optional(),
+    brightRed: z.string().optional(),
+    brightGreen: z.string().optional(),
+    brightYellow: z.string().optional(),
+    brightBlue: z.string().optional(),
+    brightMagenta: z.string().optional(),
+    brightCyan: z.string().optional(),
+    brightWhite: z.string().optional(),
+});
+export type TerminalTheme = z.infer<typeof TerminalThemeSchema>;
+
+/** Response to `terminal-attach`: the host's terminal theme for color syncing. */
+export const TerminalAttachResponseSchema = z.object({
+    theme: TerminalThemeSchema.optional(),
+});
+export type TerminalAttachResponse = z.infer<typeof TerminalAttachResponseSchema>;
+
 export const TerminalRpcParamsSchema = z.discriminatedUnion('t', [
     TerminalInputSchema,
     TerminalResizeSchema,

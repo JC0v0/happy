@@ -27,8 +27,21 @@ function makeOrderer(now: () => number = () => BASE_TIME) {
 }
 
 describe('TerminalOrderer', () => {
-    it('writes snapshot chunks immediately, bypassing the seq gate', () => {
+    it('buffers snapshot chunks before settle, writes them in order on settle', () => {
         const h = makeOrderer();
+        h.orderer.push(snap(5));
+
+        // Pre-settle the snapshot is buffered, not written, so it can be merged
+        // and ordered with the live/bus history.
+        expect(h.writes()).toEqual([]);
+
+        h.orderer.settle();
+        expect(h.writes()).toEqual([5]);
+    });
+
+    it('writes a post-settle snapshot immediately, bypassing the seq gate', () => {
+        const h = makeOrderer();
+        h.orderer.settle();
         h.orderer.push(snap(5));
 
         expect(h.writes()).toEqual([5]);
@@ -67,14 +80,30 @@ describe('TerminalOrderer', () => {
         expect(h.writes()).toEqual([0, 1]);
     });
 
-    it('emits resync (not a write) on a seq gap', () => {
+    it('writes a live chunk past a seq gap and requests resync', () => {
         const h = makeOrderer();
         h.orderer.settle();
         h.orderer.push(live(0));
         h.orderer.push(live(5)); // gap
 
-        expect(h.writes()).toEqual([0]);
+        expect(h.writes()).toEqual([0, 5]);
         expect(h.resyncs()).toBe(1);
+    });
+
+    it('does not stall when the ring buffer cannot fill a gap', () => {
+        // Reproduces the ring-overflow freeze: the initial attach snapshot
+        // only covers seq 0, but the live stream has advanced to 130 because
+        // the CLI's 64 KB ring dropped the intermediate chunks. Every live
+        // chunk must be written (not dropped) so the terminal stays live.
+        const h = makeOrderer();
+        h.orderer.push(snap(0)); // banner
+        h.orderer.settle();
+        h.orderer.push(live(130)); // gap - ring can't cover it
+        h.orderer.push(live(131));
+        h.orderer.push(live(132));
+
+        expect(h.writes()).toEqual([0, 130, 131, 132]);
+        expect(h.resyncs()).toBe(1); // rate-limited to one resync attempt
     });
 
     it('rate-limits resync emissions with a cooldown', () => {
@@ -104,8 +133,9 @@ describe('TerminalOrderer', () => {
         expect(h.writes()).toEqual([10, 11]);
     });
 
-    it('drops snapshots with seq <= lastSeq', () => {
+    it('drops post-settle snapshots with seq <= lastSeq', () => {
         const h = makeOrderer();
+        h.orderer.settle();
         h.orderer.push(snap(5)); // written
         h.orderer.push(snap(3)); // older -> dropped
         h.orderer.push(snap(5)); // equal -> dropped

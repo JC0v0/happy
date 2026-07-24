@@ -8,6 +8,7 @@ import { sync } from './sync';
 import { storage } from './storage';
 import type { MachineMetadata, SessionAgentModesPatch } from './storageTypes';
 import { markAgentModePushPending, clearAgentModePushPending, type AgentModeField } from './agentModesPending';
+import { clearTerminalOutputBuffer } from '@/-session/terminal/terminalOutputBus';
 import {
     isRigMetadata,
     rigCanAbort,
@@ -952,9 +953,10 @@ export async function sessionDelete(sessionId: string): Promise<{ success: boole
         const response = await apiSocket.request(`/v1/sessions/${sessionId}`, {
             method: 'DELETE'
         });
-        
+
         if (response.ok) {
             const result = await response.json();
+            clearTerminalOutputBuffer(sessionId);
             return { success: true };
         } else {
             const error = await response.text();
