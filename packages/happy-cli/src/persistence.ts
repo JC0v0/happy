@@ -41,8 +41,6 @@ interface Settings {
   machineId?: string
   machineIdConfirmedByServer?: boolean
   daemonAutoStartWhenRunningHappy?: boolean
-  chromeMode?: boolean
-  sandboxConfig?: SandboxConfig
   serverUrl?: string
   webappUrl?: string
 }
@@ -50,7 +48,6 @@ interface Settings {
 const defaultSettings: Settings = {
   schemaVersion: SUPPORTED_SCHEMA_VERSION,
   onboardingCompleted: false,
-  sandboxConfig: undefined,
 }
 
 /**
@@ -102,15 +99,6 @@ export async function readSettings(): Promise<Settings> {
 
     // Migrate if needed
     const migrated = migrateSettings(raw, schemaVersion);
-
-    if (migrated.sandboxConfig !== undefined) {
-      try {
-        migrated.sandboxConfig = SandboxConfigSchema.parse(migrated.sandboxConfig);
-      } catch (error: any) {
-        logger.warn(`⚠️ Invalid sandbox config - skipping. Error: ${error.message}`);
-        migrated.sandboxConfig = undefined;
-      }
-    }
 
     // Merge with defaults to ensure all required fields exist
     return { ...defaultSettings, ...migrated };

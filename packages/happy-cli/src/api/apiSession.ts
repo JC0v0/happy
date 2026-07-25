@@ -1,53 +1,17 @@
 import { logger } from '@/ui/logger'
 import { EventEmitter } from 'node:events'
 import { io, Socket } from 'socket.io-client'
-import { AgentState, ClientToServerEvents, FileEventMessage, FileEventMessageSchema, Metadata, ServerToClientEvents, Session, Update, UserMessage, UserMessageSchema, Usage } from './types'
-import { decodeBase64, decryptBlob, decrypt, encodeBase64, encrypt, encryptBlob } from './encryption';
+import { AgentState, ClientToServerEvents, FileEventMessage, FileEventMessageSchema, Metadata, ServerToClientEvents, Session, Update, UserMessage, UserMessageSchema } from './types'
+import { decodeBase64, decrypt, encodeBase64, encrypt } from './encryption';
 import { backoff, delay } from '@/utils/time';
 import { configuration } from '@/configuration';
-import { RawJSONLines } from '@/claude/types';
 import { randomUUID } from 'node:crypto';
 import { AsyncLock } from '@/utils/lock';
-import { deriveKey } from '@/utils/deriveKey';
 import { RpcHandlerManager } from './rpc/RpcHandlerManager';
 import { registerCommonHandlers } from '../modules/common/registerCommonHandlers';
-import { calculateCost } from '@/utils/pricing';
 import { shouldReconnect } from '@/utils/lidState';
-import { createEnvelope, type CreateEnvelopeOptions, type SessionEnvelope, type SessionTurnEndStatus } from '@slopus/happy-wire';
-import {
-    closeClaudeTurnWithStatus,
-    mapClaudeLogMessageToSessionEnvelopes,
-    type ClaudeSessionProtocolState,
-} from '@/claude/utils/sessionProtocolMapper';
 import { InvalidateSync } from '@/utils/sync';
 import axios from 'axios';
-
-/**
- * ACP (Agent Communication Protocol) message data types.
- * This is the unified format for all agent messages - CLI adapts each provider's format to ACP.
- */
-export type ACPMessageData =
-    // Core message types
-    | { type: 'message'; message: string }
-    | { type: 'reasoning'; message: string }
-    | { type: 'thinking'; text: string }
-    // Tool interactions
-    | { type: 'tool-call'; callId: string; name: string; input: unknown; id: string }
-    | { type: 'tool-result'; callId: string; output: unknown; id: string; isError?: boolean }
-    // File operations
-    | { type: 'file-edit'; description: string; filePath: string; diff?: string; oldContent?: string; newContent?: string; id: string }
-    // Terminal/command output
-    | { type: 'terminal-output'; data: string; callId: string }
-    // Task lifecycle events
-    | { type: 'task_started'; id: string }
-    | { type: 'task_complete'; id: string }
-    | { type: 'turn_aborted'; id: string }
-    // Permissions
-    | { type: 'permission-request'; permissionId: string; toolName: string; description: string; options?: unknown }
-    // Usage/metrics
-    | { type: 'token_count';[key: string]: unknown };
-
-export type ACPProvider = 'gemini' | 'codex' | 'claude' | 'opencode';
 
 type V3SessionMessage = {
     id: string;
@@ -73,118 +37,6 @@ type V3PostSessionMessagesResponse = {
     }>;
 };
 
-type AttachmentUploadResult = {
-    ref: string;
-    uploadUrl: string;
-    method?: 'PUT' | 'POST';
-    formFields?: Record<string, string>;
-};
-
-export type LocalImageAttachment = {
-    data: Uint8Array;
-    mimeType: string;
-    name: string;
-};
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null;
-}
-
-function extensionForImageMime(mimeType: string): string {
-    switch (mimeType.toLowerCase()) {
-        case 'image/jpeg':
-        case 'image/jpg':
-            return 'jpg';
-        case 'image/gif':
-            return 'gif';
-        case 'image/webp':
-            return 'webp';
-        case 'image/png':
-        default:
-            return 'png';
-    }
-}
-
-function extractLocalTranscriptImageAttachments(body: RawJSONLines): LocalImageAttachment[] {
-    if (body.type !== 'user' || body.isMeta || body.isSidechain) {
-        return [];
-    }
-
-    const content = (body as { message?: { content?: unknown } }).message?.content;
-    if (!Array.isArray(content)) {
-        return [];
-    }
-
-    // Tool results are user-role messages from Claude's protocol, but they
-    // represent agent tool lifecycle, not human multimodal input.
-    if (content.some((block) => isRecord(block) && block.type === 'tool_result')) {
-        return [];
-    }
-
-    const attachments: LocalImageAttachment[] = [];
-    for (const block of content) {
-        if (!isRecord(block) || block.type !== 'image') {
-            continue;
-        }
-        const source = block.source;
-        if (!isRecord(source) || source.type !== 'base64' || typeof source.data !== 'string') {
-            continue;
-        }
-
-        const data = decodeBase64(source.data);
-        if (data.length === 0) {
-            continue;
-        }
-
-        const mimeType = typeof source.media_type === 'string' && source.media_type.startsWith('image/')
-            ? source.media_type
-            : 'image/png';
-        const index = attachments.length + 1;
-        attachments.push({
-            data,
-            mimeType,
-            name: `claude-image-${index}.${extensionForImageMime(mimeType)}`,
-        });
-    }
-
-    return attachments;
-}
-
-function escapeMultipartValue(value: string): string {
-    return value.replaceAll('\r', '').replaceAll('\n', '').replaceAll('"', '%22');
-}
-
-function buildMultipartUploadBody(
-    fields: Record<string, string> | undefined,
-    data: Uint8Array,
-): { body: Buffer; boundary: string } {
-    const boundary = `----happy-cli-${randomUUID()}`;
-    const chunks: Buffer[] = [];
-
-    for (const [key, value] of Object.entries(fields ?? {})) {
-        chunks.push(Buffer.from(
-            `--${boundary}\r\n`
-            + `Content-Disposition: form-data; name="${escapeMultipartValue(key)}"\r\n\r\n`
-            + `${value}\r\n`,
-            'utf8',
-        ));
-    }
-
-    chunks.push(Buffer.from(
-        `--${boundary}\r\n`
-        + 'Content-Disposition: form-data; name="file"; filename="blob"\r\n'
-        + 'Content-Type: application/octet-stream\r\n\r\n',
-        'utf8',
-    ));
-    chunks.push(Buffer.from(data));
-    chunks.push(Buffer.from(`\r\n--${boundary}--\r\n`, 'utf8'));
-
-    return {
-        body: Buffer.concat(chunks),
-        boundary,
-    };
-}
-
 export class ApiSessionClient extends EventEmitter {
     private readonly token: string;
     readonly sessionId: string;
@@ -197,14 +49,6 @@ export class ApiSessionClient extends EventEmitter {
     private pendingMessageCallback: ((message: UserMessage) => void) | null = null;
     private pendingFileEvents: FileEventMessage[] = [];
     private pendingFileEventCallback: ((data: FileEventMessage) => void) | null = null;
-    private blobKey: Uint8Array | null = null;
-    /**
-     * In-flight attachment download promises that belong to the *current*
-     * (not-yet-drained) batch. Each promise resolves to the decoded blob (or
-     * null on failure), so per-message ownership is intrinsic — there is no
-     * shared push-array between batches that a late download could leak into.
-     */
-    private pendingDownloads: Promise<{ data: Uint8Array; mimeType: string; name: string } | null>[] = [];
     readonly rpcHandlerManager: RpcHandlerManager;
     private agentStateLock = new AsyncLock();
     private metadataLock = new AsyncLock();
@@ -213,17 +57,6 @@ export class ApiSessionClient extends EventEmitter {
     private reconnectInterval: NodeJS.Timeout | null = null;
     private ignoreArchiveSignal = false;
     private skipInitialMessages = false;
-    private claudeSessionProtocolState: ClaudeSessionProtocolState = {
-        currentTurnId: null,
-        uuidToProviderSubagent: new Map<string, string>(),
-        taskPromptToSubagents: new Map<string, string[]>(),
-        providerSubagentToSessionSubagent: new Map<string, string>(),
-        subagentTitles: new Map<string, string>(),
-        bufferedSubagentMessages: new Map<string, RawJSONLines[]>(),
-        hiddenParentToolCalls: new Set<string>(),
-        startedSubagents: new Set<string>(),
-        activeSubagents: new Set<string>(),
-    };
     private lastSeq = 0;
     private pendingOutbox: Array<{ content: string; localId: string }> = [];
     private readonly sendSync: InvalidateSync;
@@ -387,161 +220,6 @@ export class ApiSessionClient extends EventEmitter {
         }
     }
 
-    /**
-     * Derive (and cache) the blob decryption key for this session.
-     * Legacy sessions use deriveKey(masterSecret, 'Happy Blobs', ['master']).
-     * DataKey sessions use deriveKey(dataKey, 'Happy Blobs', ['session']).
-     */
-    async getBlobKey(): Promise<Uint8Array> {
-        if (!this.blobKey) {
-            const path = this.encryptionVariant === 'dataKey' ? ['session'] : ['master'];
-            this.blobKey = await deriveKey(this.encryptionKey, 'Happy Blobs', path);
-        }
-        return this.blobKey;
-    }
-
-    private async requestAttachmentUpload(filename: string, size: number): Promise<AttachmentUploadResult> {
-        const response = await axios.post<AttachmentUploadResult>(
-            `${configuration.serverUrl}/v1/sessions/${encodeURIComponent(this.sessionId)}/attachments/request-upload`,
-            { filename, size },
-            {
-                headers: this.authHeaders(),
-                timeout: 30000,
-            },
-        );
-
-        const upload = response.data;
-        if (
-            !upload
-            || typeof upload.ref !== 'string'
-            || typeof upload.uploadUrl !== 'string'
-            || (upload.method !== undefined && upload.method !== 'PUT' && upload.method !== 'POST')
-        ) {
-            throw new Error('request-upload returned an invalid response');
-        }
-
-        return {
-            ...upload,
-            method: upload.method ?? 'PUT',
-        };
-    }
-
-    private async uploadEncryptedAttachmentBlob(upload: AttachmentUploadResult, encrypted: Uint8Array): Promise<void> {
-        if (upload.method === 'POST') {
-            const { body, boundary } = buildMultipartUploadBody(upload.formFields, encrypted);
-            await axios.post(upload.uploadUrl, body, {
-                headers: {
-                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
-                },
-                timeout: 60000,
-                maxBodyLength: 10 * 1024 * 1024,
-            });
-            return;
-        }
-
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/octet-stream',
-        };
-        if (upload.uploadUrl.startsWith(configuration.serverUrl)) {
-            headers.Authorization = `Bearer ${this.token}`;
-        }
-
-        await axios.put(upload.uploadUrl, Buffer.from(encrypted), {
-            headers,
-            timeout: 60000,
-            maxBodyLength: 10 * 1024 * 1024,
-        });
-    }
-
-    async uploadLocalImageAttachmentEnvelope(
-        attachment: LocalImageAttachment,
-        opts: Pick<CreateEnvelopeOptions, 'id' | 'time' | 'claudeUuid' | 'codexItemId'> = {},
-    ): Promise<SessionEnvelope> {
-        const blobKey = await this.getBlobKey();
-        const encrypted = encryptBlob(attachment.data, blobKey);
-        const upload = await this.requestAttachmentUpload(attachment.name, encrypted.length);
-        await this.uploadEncryptedAttachmentBlob(upload, encrypted);
-
-        return createEnvelope('user', {
-            t: 'file',
-            ref: upload.ref,
-            name: attachment.name,
-            size: attachment.data.length,
-            mimeType: attachment.mimeType,
-        }, opts);
-    }
-
-    /**
-     * Download an encrypted attachment blob via the request-download flow:
-     * POST /request-download → { downloadUrl } → GET downloadUrl. Local mode
-     * downloadUrl points back at our server (Bearer required); S3 mode is a
-     * presigned URL that does not accept extra headers.
-     */
-    async downloadAttachment(ref: string): Promise<Uint8Array> {
-        const requestUrl = `${configuration.serverUrl}/v1/sessions/${this.sessionId}/attachments/request-download`;
-        const requestRes = await axios.post(
-            requestUrl,
-            { ref },
-            {
-                headers: { 'Authorization': `Bearer ${this.token}`, 'Content-Type': 'application/json' },
-                timeout: 30000,
-            },
-        );
-        const downloadUrl = requestRes.data?.downloadUrl;
-        if (typeof downloadUrl !== 'string') {
-            throw new Error('request-download returned no downloadUrl');
-        }
-
-        const isServerUrl = downloadUrl.startsWith(configuration.serverUrl);
-        const headers: Record<string, string> = {};
-        if (isServerUrl) {
-            headers['Authorization'] = `Bearer ${this.token}`;
-        }
-        const response = await axios.get(downloadUrl, {
-            headers,
-            responseType: 'arraybuffer',
-            timeout: 60000,
-            maxRedirects: 5,
-            maxContentLength: 10 * 1024 * 1024,
-        });
-        return new Uint8Array(response.data);
-    }
-
-    /**
-     * Download and decrypt an attachment blob.
-     * Returns the decrypted binary data or null if decryption fails.
-     */
-    async downloadAndDecryptAttachment(ref: string): Promise<Uint8Array | null> {
-        const encrypted = await this.downloadAttachment(ref);
-        const key = await this.getBlobKey();
-        const decrypted = decryptBlob(encrypted, key);
-        return decrypted;
-    }
-
-    /**
-     * Track an attachment download whose promise resolves to the decoded blob
-     * (or null on failure). The download stays in the current batch until the
-     * next drainAttachmentsForUserMessage call swaps the bucket out — file
-     * events that arrive after the swap go into a fresh bucket bound to the
-     * next user-text message.
-     */
-    trackAttachmentDownload(promise: Promise<{ data: Uint8Array; mimeType: string; name: string } | null>): void {
-        this.pendingDownloads.push(promise);
-    }
-
-    /**
-     * Atomically claim every download started before this call, wait for them
-     * to resolve, and return the successful ones. The swap-then-await order
-     * guarantees that a late-arriving file event cannot leak into this batch.
-     */
-    async drainAttachmentsForUserMessage(): Promise<Array<{ data: Uint8Array; mimeType: string; name: string }>> {
-        const downloads = this.pendingDownloads;
-        this.pendingDownloads = [];
-        if (downloads.length === 0) return [];
-        const results = await Promise.all(downloads);
-        return results.filter((x): x is { data: Uint8Array; mimeType: string; name: string } => x !== null);
-    }
-
     private authHeaders() {
         return {
             'Authorization': `Bearer ${this.token}`,
@@ -674,183 +352,6 @@ export class ApiSessionClient extends EventEmitter {
         }
     }
 
-    private enqueueMessage(content: unknown, invalidate: boolean = true) {
-        const encrypted = encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, content));
-        this.pendingOutbox.push({
-            content: encrypted,
-            localId: randomUUID()
-        });
-        if (invalidate) {
-            this.sendSync.invalidate();
-        }
-    }
-
-    private enqueueSessionProtocolEnvelopes(envelopes: SessionEnvelope[], invalidate: boolean = true) {
-        for (let i = 0; i < envelopes.length; i += 1) {
-            this.enqueueSessionProtocolEnvelope(envelopes[i], invalidate && i === envelopes.length - 1);
-        }
-    }
-
-    private applyClaudeSessionMessageSideEffects(body: RawJSONLines) {
-        // Track usage from assistant messages
-        if (body.type === 'assistant' && body.message?.usage) {
-            try {
-                this.sendUsageData(body.message.usage, body.message.model);
-            } catch (error) {
-                logger.debug('[SOCKET] Failed to send usage data:', error);
-            }
-        }
-
-        // Update metadata with summary if this is a summary message
-        if (body.type === 'summary' && 'summary' in body && 'leafUuid' in body) {
-            this.updateMetadata((metadata) => ({
-                ...metadata,
-                summary: {
-                    text: body.summary,
-                    updatedAt: Date.now()
-                }
-            }));
-        }
-    }
-
-    /**
-     * Send message to session
-     * @param body - Message body (can be MessageContent or raw content for agent messages)
-     */
-    sendClaudeSessionMessage(body: RawJSONLines) {
-        const mapped = mapClaudeLogMessageToSessionEnvelopes(body, this.claudeSessionProtocolState);
-        this.claudeSessionProtocolState.currentTurnId = mapped.currentTurnId;
-        this.enqueueSessionProtocolEnvelopes(mapped.envelopes);
-        this.applyClaudeSessionMessageSideEffects(body);
-    }
-
-    async sendClaudeSessionMessageFromLocalTranscript(body: RawJSONLines): Promise<void> {
-        const attachments = extractLocalTranscriptImageAttachments(body);
-        if (attachments.length === 0) {
-            this.sendClaudeSessionMessage(body);
-            return;
-        }
-
-        const closeMapped = closeClaudeTurnWithStatus(this.claudeSessionProtocolState, 'completed');
-        this.claudeSessionProtocolState.currentTurnId = closeMapped.currentTurnId;
-        this.enqueueSessionProtocolEnvelopes(closeMapped.envelopes, false);
-
-        const claudeUuid = typeof (body as { uuid?: unknown }).uuid === 'string'
-            ? (body as { uuid: string }).uuid
-            : undefined;
-        for (const attachment of attachments) {
-            try {
-                const envelope = await this.uploadLocalImageAttachmentEnvelope(attachment, { claudeUuid });
-                this.enqueueSessionProtocolEnvelope(envelope, false);
-            } catch (error) {
-                logger.debug('[API] Failed to upload local Claude transcript image attachment', {
-                    sessionId: this.sessionId,
-                    name: attachment.name,
-                    error,
-                });
-            }
-        }
-
-        const mapped = mapClaudeLogMessageToSessionEnvelopes(body, this.claudeSessionProtocolState);
-        this.claudeSessionProtocolState.currentTurnId = mapped.currentTurnId;
-        this.enqueueSessionProtocolEnvelopes(mapped.envelopes, mapped.envelopes.length > 0);
-        if (mapped.envelopes.length === 0) {
-            this.sendSync.invalidate();
-        }
-        this.applyClaudeSessionMessageSideEffects(body);
-    }
-
-    closeClaudeSessionTurn(status: SessionTurnEndStatus = 'completed') {
-        const mapped = closeClaudeTurnWithStatus(this.claudeSessionProtocolState, status);
-        this.claudeSessionProtocolState.currentTurnId = mapped.currentTurnId;
-        this.enqueueSessionProtocolEnvelopes(mapped.envelopes);
-    }
-
-    sendCodexMessage(body: any) {
-        let content = {
-            role: 'agent',
-            content: {
-                type: 'codex',
-                data: body  // This wraps the entire Claude message
-            },
-            meta: {
-                sentFrom: 'cli'
-            }
-        };
-        this.enqueueMessage(content);
-    }
-
-    private enqueueSessionProtocolEnvelope(envelope: SessionEnvelope, invalidate: boolean = true) {
-        const content = {
-            role: 'session',
-            content: envelope,
-            meta: {
-                sentFrom: 'cli'
-            }
-        };
-
-        this.enqueueMessage(content, invalidate);
-    }
-
-    sendSessionProtocolMessage(envelope: SessionEnvelope) {
-        if (envelope.role !== 'user') {
-            this.enqueueSessionProtocolEnvelope(envelope);
-            return;
-        }
-
-        if (envelope.ev.t !== 'text') {
-            this.enqueueSessionProtocolEnvelope(envelope);
-            return;
-        }
-
-        this.enqueueSessionProtocolEnvelope(envelope);
-    }
-
-    /**
-     * Send a generic agent message to the session using ACP (Agent Communication Protocol) format.
-     * Works for any agent type (Gemini, Codex, Claude, etc.) - CLI normalizes to unified ACP format.
-     * 
-     * @param provider - The agent provider sending the message (e.g., 'gemini', 'codex', 'claude')
-     * @param body - The message payload (type: 'message' | 'reasoning' | 'tool-call' | 'tool-result')
-     */
-    sendAgentMessage(provider: 'gemini' | 'codex' | 'claude' | 'opencode' | 'openclaw', body: ACPMessageData) {
-        let content = {
-            role: 'agent',
-            content: {
-                type: 'acp',
-                provider,
-                data: body
-            },
-            meta: {
-                sentFrom: 'cli'
-            }
-        };
-
-        logger.debug(`[SOCKET] Sending ACP message from ${provider}:`, { type: body.type, hasMessage: 'message' in body });
-
-        this.enqueueMessage(content);
-    }
-
-    sendSessionEvent(event: {
-        type: 'switch', mode: 'local' | 'remote'
-    } | {
-        type: 'message', message: string
-    } | {
-        type: 'permission-mode-changed', mode: 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan'
-    } | {
-        type: 'ready'
-    }, id?: string) {
-        let content = {
-            role: 'agent',
-            content: {
-                id: id ?? randomUUID(),
-                type: 'event',
-                data: event
-            }
-        };
-        this.enqueueMessage(content);
-    }
-
     /**
      * Send a ping message to keep the connection alive
      */
@@ -878,44 +379,23 @@ export class ApiSessionClient extends EventEmitter {
      *
      * `payload` is a plaintext TerminalOutput object (see happy-wire
      * terminal.ts); it is encrypted here with the session key/variant so the
-     * server only ever sees ciphertext. Emitted volatile (fire-and-forget,
-     * dropped while the socket is down) because terminal chunks are
-     * high-frequency and terminal sessions destroy themselves after a short
-     * disconnect grace period anyway.
+     * server only ever sees ciphertext. Live chunks are emitted volatile
+     * (fire-and-forget, dropped while the socket is down) because terminal
+     * chunks are high-frequency and terminal sessions destroy themselves
+     * after a short disconnect grace period anyway; snapshot replays pass
+     * `reliable: true` so they are never dropped mid-burst.
      */
-    sendTerminalOutput(payload: unknown) {
+    sendTerminalOutput(payload: unknown, opts?: { reliable?: boolean }) {
         const c = encodeBase64(encrypt(this.encryptionKey, this.encryptionVariant, payload));
-        this.socket.volatile.emit('terminal-output', { sid: this.sessionId, c });
-    }
-
-    /**
-     * Send usage data to the server
-     */
-    sendUsageData(usage: Usage, model?: string) {
-        // Calculate total tokens
-        const totalTokens = usage.input_tokens + usage.output_tokens + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
-
-        const costs = calculateCost(usage, model);
-
-        // Transform Claude usage format to backend expected format
-        const usageReport = {
-            key: 'claude-session',
-            sessionId: this.sessionId,
-            tokens: {
-                total: totalTokens,
-                input: usage.input_tokens,
-                output: usage.output_tokens,
-                cache_creation: usage.cache_creation_input_tokens || 0,
-                cache_read: usage.cache_read_input_tokens || 0
-            },
-            cost: {
-                total: costs.total,
-                input: costs.input,
-                output: costs.output
-            }
+        // Snapshot replays (terminal-attach) must be lossless — a volatile
+        // burst can drop the tail when the engine.io transport is momentarily
+        // not writable, silently truncating the restored scrollback. Live
+        // stream stays volatile (fire-and-forget) as before.
+        if (opts?.reliable) {
+            this.socket.emit('terminal-output', { sid: this.sessionId, c });
+        } else {
+            this.socket.volatile.emit('terminal-output', { sid: this.sessionId, c });
         }
-        logger.debugLargeJson('[SOCKET] Sending usage data:', usageReport)
-        this.socket.emit('usage-report', usageReport);
     }
 
     /**

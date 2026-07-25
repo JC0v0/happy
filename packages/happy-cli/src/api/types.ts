@@ -1,6 +1,5 @@
 import { z } from 'zod'
 import type { Update, UpdateMachineBody } from '@slopus/happy-wire';
-import { UsageSchema } from '@/claude/types'
 import type { SandboxConfig } from '@/persistence'
 
 export {
@@ -33,11 +32,6 @@ export type {
  * - read-only → default
  */
 export type PermissionMode = 'default' | 'acceptEdits' | 'bypassPermissions' | 'plan' | 'read-only' | 'safe-yolo' | 'yolo'
-
-/**
- * Usage data type from Claude
- */
-export type Usage = z.infer<typeof UsageSchema>
 
 /**
  * Socket events from server to client

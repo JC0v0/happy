@@ -55,7 +55,12 @@ import { join } from 'node:path';
 import { projectPath } from '@/projectPath';
 import { logger } from '@/ui/logger';
 import { existsSync } from 'node:fs';
-import { isBun } from './runtime';
+
+// Inlined from the removed utils/runtime.ts: detect the Bun runtime so the
+// CLI is re-spawned with the same runtime it is currently executing under.
+function isBun(): boolean {
+  return typeof (globalThis as any).Bun !== 'undefined' || !!process?.versions?.bun;
+}
 
 /**
  * Spawn the Happy CLI with the given arguments in a cross-platform way.
