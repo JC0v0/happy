@@ -792,6 +792,7 @@ export const pl: TranslationStructure = {
         title: 'Mobilny klient Codex i Claude Code',
         subtitle: 'Szyfrowanie end-to-end, a Twoje konto jest przechowywane tylko na Twoim urządzeniu.',
         createAccount: 'Utwórz konto',
+        continueWithGithub: 'Kontynuuj z GitHub',
         linkOrRestoreAccount: 'Połącz lub przywróć konto',
         loginWithMobileApp: 'Zaloguj się przez aplikację mobilną',
     },

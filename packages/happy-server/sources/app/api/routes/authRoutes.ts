@@ -3,6 +3,7 @@ import { type Fastify } from "../types";
 import * as privacyKit from "privacy-kit";
 import { db } from "@/storage/db";
 import { auth } from "@/app/auth/auth";
+import { githubLogin } from "@/app/auth/githubLogin";
 import { log } from "@/utils/log";
 
 export function authRoutes(app: Fastify) {
@@ -239,6 +240,49 @@ export function authRoutes(app: Fastify) {
             });
         }
         return reply.send({ success: true });
+    });
+
+    // GitHub OAuth login. The client sends a GitHub OAuth code plus its
+    // Ed25519 publicKey. The server exchanges the code for a GitHub profile
+    // (GitHub validates identity), upserts the Account bound to that GitHub
+    // user id, and returns a token. This is an *entry* auth path - unlike
+    // /v1/connect/github it does not require an existing session; the
+    // publicKey travels with the code and the Account is keyed by githubUserId.
+    app.post('/v1/auth/github', {
+        schema: {
+            body: z.object({
+                code: z.string(),
+                publicKey: z.string(),
+            }),
+            response: {
+                200: z.object({
+                    success: z.literal(true),
+                    token: z.string(),
+                }),
+                400: z.object({ error: z.string() }),
+                401: z.object({ error: z.string() }),
+            },
+        },
+    }, async (request, reply) => {
+        const tweetnacl = (await import("tweetnacl")).default;
+        const publicKey = privacyKit.decodeBase64(request.body.publicKey);
+        if (tweetnacl.sign.publicKeyLength !== publicKey.length) {
+            return reply.code(401).send({ error: 'Invalid public key' });
+        }
+        const publicKeyHex = privacyKit.encodeHex(publicKey);
+
+        try {
+            const { userId } = await githubLogin(publicKeyHex, request.body.code);
+            return reply.send({
+                success: true,
+                token: await auth.createToken(userId),
+            });
+        } catch (error: any) {
+            const message = error?.message ?? "GitHub login failed";
+            log({ module: "github-auth", level: "error" }, `GitHub login route failed: ${message}\n${error?.stack ?? ""}`);
+            const isConfigError = message.includes("not configured");
+            return reply.code(isConfigError ? 400 : 401).send({ error: message });
+        }
     });
 
 }

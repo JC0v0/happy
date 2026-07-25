@@ -777,6 +777,7 @@ export const zhHans: TranslationStructure = {
         title: 'Codex 和 Claude Code 移动客户端',
         subtitle: '端到端加密，您的账户仅存储在您的设备上。',
         createAccount: '创建账户',
+        continueWithGithub: '使用 GitHub 继续',
         linkOrRestoreAccount: '链接或恢复账户',
         loginWithMobileApp: '使用移动应用登录',
     },

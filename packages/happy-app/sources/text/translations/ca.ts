@@ -776,6 +776,7 @@ export const ca: TranslationStructure = {
         title: 'Client mòbil de Codex i Claude Code',
         subtitle: 'Xifrat punt a punt i el teu compte s\'emmagatzema només al teu dispositiu.',
         createAccount: 'Crea un compte',
+        continueWithGithub: 'Continua amb GitHub',
         linkOrRestoreAccount: 'Enllaça o restaura un compte',
         loginWithMobileApp: 'Inicia sessió amb l\'aplicació mòbil',
     },

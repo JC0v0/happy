@@ -780,6 +780,7 @@ export const ru: TranslationStructure = {
         title: 'Мобильный клиент Codex и Claude Code',
         subtitle: 'Сквозное шифрование, аккаунт хранится только на вашем устройстве.',
         createAccount: 'Создать аккаунт',
+        continueWithGithub: 'Продолжить с GitHub',
         linkOrRestoreAccount: 'Связать или восстановить аккаунт',
         loginWithMobileApp: 'Войти через мобильное приложение',
     },

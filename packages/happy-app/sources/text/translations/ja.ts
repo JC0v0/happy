@@ -777,6 +777,7 @@ export const ja: TranslationStructure = {
         title: 'CodexとClaude Codeのモバイルクライアント',
         subtitle: 'エンドツーエンド暗号化され、アカウントはデバイスにのみ保存されます。',
         createAccount: 'アカウントを作成',
+        continueWithGithub: 'GitHub で続行',
         linkOrRestoreAccount: 'アカウントをリンクまたは復元',
         loginWithMobileApp: 'モバイルアプリでログイン',
     },

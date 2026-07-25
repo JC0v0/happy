@@ -4,7 +4,7 @@ import { Text, View, Image, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as React from 'react';
 import { encodeBase64 } from "@/encryption/base64";
-import { authGetToken } from "@/auth/authGetToken";
+import { githubAuthRequest, githubGetToken, derivePublicKey } from "@/auth/githubAuth";
 import { router, useRouter } from "expo-router";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { getRandomBytesAsync } from "expo-crypto";
@@ -36,16 +36,18 @@ function NotAuthenticated() {
     const isLandscape = useIsLandscape();
     const insets = useSafeAreaInsets();
 
-    const createAccount = async () => {
+    const loginWithGithub = async () => {
         try {
             const secret = await getRandomBytesAsync(32);
-            const token = await authGetToken(secret);
+            const publicKey = derivePublicKey(secret);
+            const code = await githubAuthRequest();
+            const token = await githubGetToken(publicKey, code);
             if (token && secret) {
                 await auth.login(token, encodeBase64(secret, 'base64url'));
                 trackAccountCreated();
             }
         } catch (error) {
-            console.error('Error creating account', error);
+            console.error('Error GitHub login', error);
         }
     }
 
@@ -73,21 +75,13 @@ function NotAuthenticated() {
                             }}
                         />
                     </View>
-                    <View style={styles.buttonContainerSecondary}>
-                        <RoundButton
-                            size="normal"
-                            title={t('welcome.createAccount')}
-                            action={createAccount}
-                            display="inverted"
-                        />
-                    </View>
                 </>
             ) : (
                 <>
                     <View style={styles.buttonContainer}>
                         <RoundButton
-                            title={t('welcome.createAccount')}
-                            action={createAccount}
+                            title={t('welcome.continueWithGithub')}
+                            action={loginWithGithub}
                         />
                     </View>
                     <View style={styles.buttonContainerSecondary}>
@@ -134,20 +128,12 @@ function NotAuthenticated() {
                                     }}
                                 />
                             </View>
-                            <View style={styles.landscapeButtonContainerSecondary}>
-                                <RoundButton
-                                    size="normal"
-                                    title={t('welcome.createAccount')}
-                                    action={createAccount}
-                                    display="inverted"
-                                />
-                            </View>
                         </>)
                         : (<>
                             <View style={styles.landscapeButtonContainer}>
                                 <RoundButton
-                                    title={t('welcome.createAccount')}
-                                    action={createAccount}
+                                    title={t('welcome.continueWithGithub')}
+                                    action={loginWithGithub}
                                 />
                             </View>
                             <View style={styles.landscapeButtonContainerSecondary}>

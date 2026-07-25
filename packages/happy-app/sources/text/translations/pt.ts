@@ -775,6 +775,7 @@ export const pt: TranslationStructure = {
         title: 'Cliente móvel Codex e Claude Code',
         subtitle: 'Criptografado ponta a ponta e sua conta é armazenada apenas no seu dispositivo.',
         createAccount: 'Criar conta',
+        continueWithGithub: 'Continuar com GitHub',
         linkOrRestoreAccount: 'Vincular ou restaurar conta',
         loginWithMobileApp: 'Fazer login com aplicativo móvel',
     },
