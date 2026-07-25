@@ -46,14 +46,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="inbox/index"
-                options={{
-                    headerShown: false,
-                    headerTitle: t('tabs.inbox'),
-                    headerBackTitle: t('common.home')
-                }}
-            />
-            <Stack.Screen
                 name="settings/index"
                 options={{
                     headerShown: true,
@@ -65,38 +57,6 @@ export default function RootLayout() {
                 name="session/[id]"
                 options={{
                     headerShown: false
-                }}
-            />
-            <Stack.Screen
-                name="session/[id]/message/[messageId]"
-                options={{
-                    headerShown: true,
-                    headerBackTitle: t('common.back'),
-                    headerTitle: t('common.message')
-                }}
-            />
-            <Stack.Screen
-                name="session/[id]/info"
-                options={{
-                    headerShown: true,
-                    headerTitle: '',
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="session/[id]/files"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('common.files'),
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="session/[id]/file"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('common.fileViewer'),
-                    headerBackTitle: t('common.files'),
                 }}
             />
             <Stack.Screen
@@ -112,12 +72,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="settings/agents"
-                options={{
-                    headerTitle: localizedText('Agent Defaults', '智能体默认设置', '智慧體預設設定'),
-                }}
-            />
-            <Stack.Screen
                 name="settings/features"
                 options={{
                     headerTitle: t('settings.features'),
@@ -127,12 +81,6 @@ export default function RootLayout() {
                 name="settings/language"
                 options={{
                     headerTitle: t('settingsLanguage.title'),
-                }}
-            />
-            <Stack.Screen
-                name="settings/usage"
-                options={{
-                    headerTitle: t('settings.usage'),
                 }}
             />
             <Stack.Screen
@@ -169,36 +117,6 @@ export default function RootLayout() {
                     headerShown: true,
                     headerTitle: t('navigation.whatsNew'),
                     headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/index"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.title'),
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/[id]"
-                options={{
-                    headerShown: false, // We'll set header dynamically
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/new"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.new'),
-                    headerBackTitle: t('common.cancel'),
-                }}
-            />
-            <Stack.Screen
-                name="artifacts/edit/[id]"
-                options={{
-                    headerShown: true,
-                    headerTitle: t('artifacts.edit'),
-                    headerBackTitle: t('common.cancel'),
                 }}
             />
             <Stack.Screen
@@ -269,12 +187,6 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="dev/tools2"
-                options={{
-                    headerTitle: localizedText('Tool Views Demo', '工具视图演示', '工具檢視示範'),
-                }}
-            />
-            <Stack.Screen
                 name="dev/shimmer-demo"
                 options={{
                     headerTitle: localizedText('Shimmer View Demo', '微光加载演示', '微光載入示範'),
@@ -287,28 +199,12 @@ export default function RootLayout() {
                 }}
             />
             <Stack.Screen
-                name="dev/session-composer"
-                options={{
-                    headerTitle: localizedText('Session Composer', '会话编辑器', '工作階段編輯器'),
-                }}
-            />
-            <Stack.Screen
-                name="dev/rig-preview"
-                options={{
-                    headerTitle: localizedText('Rig Preview', 'Rig 预览', 'Rig 預覽'),
-                }}
-            />
-            <Stack.Screen
                 name="dev/logs"
                 options={{ headerTitle: localizedText('Logs', '日志', '日誌') }}
             />
             <Stack.Screen
                 name="dev/device-info"
                 options={{ headerTitle: localizedText('Device Info', '设备信息', '裝置資訊') }}
-            />
-            <Stack.Screen
-                name="dev/messages-demo"
-                options={{ headerTitle: localizedText('Messages Demo', '消息列表演示', '訊息清單示範') }}
             />
             <Stack.Screen
                 name="dev/inverted-list"
@@ -347,28 +243,6 @@ export default function RootLayout() {
                 options={{
                     headerShown: true,
                     headerTitle: t('sessionHistory.title'),
-                    headerBackTitle: t('common.back'),
-                }}
-            />
-            <Stack.Screen
-                name="settings/connect/claude"
-                options={{
-                    headerShown: true,
-                    headerTitle: localizedText('Connect to Claude', '连接 Claude', '連接 Claude'),
-                    headerBackTitle: t('common.back'),
-                    // headerStyle: {
-                    //     backgroundColor: Platform.OS === 'web' ? theme.colors.header.background : '#1F1E1C',
-                    // },
-                    // headerTintColor: Platform.OS === 'web' ? theme.colors.header.tint : '#FFFFFF',
-                    // headerTitleStyle: {
-                    //     color: Platform.OS === 'web' ? theme.colors.header.tint : '#FFFFFF',
-                    // },
-                }}
-            />
-            <Stack.Screen
-                name="new/index"
-                options={{
-                    headerTitle: t('newSession.title'),
                     headerBackTitle: t('common.back'),
                 }}
             />

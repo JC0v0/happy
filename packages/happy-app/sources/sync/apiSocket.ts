@@ -63,6 +63,13 @@ class ApiSocket {
     private reconnectedListeners: Set<() => void> = new Set();
     private statusListeners: Set<(status: 'disconnected' | 'connecting' | 'connected' | 'error') => void> = new Set();
     private currentStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+    // Bounded manual retry for connect_error: socket.io only auto-reconnects
+    // after a connection was once established, so a failed first handshake
+    // would otherwise leave the app stuck on "error" until restart.
+    private errorRetryCount = 0;
+    private errorRetryTimer: ReturnType<typeof setTimeout> | null = null;
+    private static readonly ERROR_RETRY_MAX = 20;
+    private static readonly ERROR_RETRY_DELAY_MS = 3000;
 
     //
     // Initialization
@@ -93,7 +100,9 @@ class ApiSocket {
                 happyClient: getHappyClientId(),
                 appState: getCurrentAppState(),
             },
-            transports: ['websocket'],
+            // Polling first, upgrade to websocket when possible. Forcing
+            // websocket-only hangs silently in some RN/cleartext dev setups.
+            transports: ['polling', 'websocket'],
             reconnection: true,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
@@ -104,11 +113,34 @@ class ApiSocket {
     }
 
     disconnect() {
+        this.clearErrorRetry();
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
         }
         this.updateStatus('disconnected');
+    }
+
+    private scheduleErrorRetry() {
+        if (this.errorRetryTimer !== null || this.errorRetryCount >= ApiSocket.ERROR_RETRY_MAX) {
+            return;
+        }
+        this.errorRetryCount += 1;
+        this.errorRetryTimer = setTimeout(() => {
+            this.errorRetryTimer = null;
+            if (this.socket && this.currentStatus === 'error') {
+                this.updateStatus('connecting');
+                this.socket.connect();
+            }
+        }, ApiSocket.ERROR_RETRY_DELAY_MS);
+    }
+
+    private clearErrorRetry() {
+        this.errorRetryCount = 0;
+        if (this.errorRetryTimer !== null) {
+            clearTimeout(this.errorRetryTimer);
+            this.errorRetryTimer = null;
+        }
     }
 
     //
@@ -279,6 +311,7 @@ class ApiSocket {
                 console.log('🔌 SyncSocket: Connected, recovered: ' + this.socket?.recovered);
                 console.log('🔌 SyncSocket: Socket ID:', this.socket?.id);
             }
+            this.clearErrorRetry();
             this.updateStatus('connected');
             if (!this.socket?.recovered) {
                 this.reconnectedListeners.forEach(listener => listener());
@@ -298,6 +331,7 @@ class ApiSocket {
                 console.error('🔌 SyncSocket: Connection error', error);
             }
             this.updateStatus('error');
+            this.scheduleErrorRetry();
         });
 
         this.socket.on('error', (error) => {

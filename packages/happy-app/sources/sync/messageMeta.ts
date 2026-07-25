@@ -1,7 +1,6 @@
 import type { Session } from './storageTypes';
 import type { Settings } from './settings';
 import { getAgentDefaultOverride } from './agentDefaults';
-import type { PermissionModeKey } from '@/components/PermissionModeSelector';
 import {
     getRigCurrentModel,
     getRigModels,
@@ -10,6 +9,8 @@ import {
     getRigSelectedModelKey,
     isRigMetadataV1,
 } from './rig';
+
+type PermissionModeKey = string;
 
 export type MessageModeMeta = {
     permissionMode?: PermissionModeKey;

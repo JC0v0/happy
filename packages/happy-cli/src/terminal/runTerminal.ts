@@ -30,7 +30,7 @@ import { initialMachineMetadata } from '@/daemon/run';
 import { createSessionMetadata } from '@/utils/createSessionMetadata';
 import { notifyDaemonSessionStarted } from '@/daemon/controlClient';
 import { encodeBase64 } from '@/api/encryption';
-import { registerKillSessionHandler } from '@/claude/registerKillSessionHandler';
+import { registerKillSessionHandler } from '@/terminal/registerKillSessionHandler';
 import {
   TerminalAttachSchema,
   TerminalInputSchema,
@@ -260,8 +260,8 @@ export async function runTerminal(opts: {
   let pendingData = '';
   let flushTimer: NodeJS.Timeout | null = null;
 
-  const sendChunk = (chunk: TerminalOutput) => {
-    session.sendTerminalOutput(chunk);
+  const sendChunk = (chunk: TerminalOutput, reliable = false) => {
+    session.sendTerminalOutput(chunk, { reliable });
   };
 
   const flushPending = () => {
@@ -327,6 +327,8 @@ export async function runTerminal(opts: {
     }
     // Flush first so every replayed seq is strictly below any future live
     // chunk; the app dedupes snapshot chunks against the live stream by seq.
+    // The replay goes out reliably (not volatile) — it is a bounded burst
+    // that must arrive whole, or the restored scrollback loses its tail.
     flushPending();
     for (const chunk of ring) {
       sendChunk({
@@ -334,7 +336,7 @@ export async function runTerminal(opts: {
         seq: chunk.seq,
         data: Buffer.from(chunk.data, 'utf8').toString('base64'),
         snapshot: true,
-      });
+      }, true);
     }
     return localTheme ? { theme: localTheme } : {};
   });

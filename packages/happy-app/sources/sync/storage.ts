@@ -27,7 +27,7 @@ import { isAgentModePushPending } from "./agentModesPending";
 import type { CustomerInfo } from './revenueCat/types';
 import React from "react";
 import { sync } from "./sync";
-import { isMutableTool } from "@/components/tools/knownTools";
+import { isMutableTool } from "./knownTools";
 import { DecryptedArtifact } from "./artifactTypes";
 import { FeedItem } from "./feedTypes";
 import { getRigActivityIndicators, getRigIdentity } from './rig';

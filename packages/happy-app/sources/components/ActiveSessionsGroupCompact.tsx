@@ -4,7 +4,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import { Text } from '@/components/StyledText';
 import { Machine } from '@/sync/storageTypes';
 import { SessionRowData } from '@/sync/storage';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { type SessionState, formatPathRelativeToHome, vibingMessages, formatLastSeen } from '@/utils/sessionUtils';
 import { Avatar } from './Avatar';
 import { Typography } from '@/constants/Typography';
@@ -17,9 +17,9 @@ import { useHappyAction } from '@/hooks/useHappyAction';
 import { HappyError } from '@/utils/errors';
 import { SessionActionsAnchor, SessionActionsPopover } from './SessionActionsPopover';
 import { useSessionActionAlert } from '@/hooks/useSessionQuickActions';
-import { sessionKill } from '@/sync/ops';
-import { isWorktreePath, getRepoPath, getWorktreeName } from '@/utils/worktree';
-import { useNewSessionDraft } from '@/hooks/useNewSessionDraft';
+import { sessionKill, machineSpawnNewSession } from '@/sync/ops';
+import { sync } from '@/sync/sync';
+import { Modal } from '@/modal';
 import { useRouter } from 'expo-router';
 import { ProviderIcon } from './ProviderIcon';
 
@@ -37,7 +37,7 @@ interface ActiveSessionsGroupProps {
 
 /**
  * Hook to get git display info for a section header:
- * branch name, line changes, and worktree status.
+ * branch name and line changes.
  */
 function useSectionGitInfo(sessionId: string) {
     const gitStatus = useSessionGitStatus(sessionId);
@@ -60,32 +60,40 @@ const SectionHeader = React.memo(({ session, displayPath }: { session: SessionRo
     const styles = stylesheet;
     const { theme } = useUnistyles();
     const router = useRouter();
-    const draft = useNewSessionDraft();
+    const navigateToSession = useNavigateToSession();
 
     const sessionPath = session.path || '';
-    const isWorktree = isWorktreePath(sessionPath);
-    const repoPath = isWorktree ? getRepoPath(sessionPath) : sessionPath;
-    const repoDisplayPath = isWorktree
-        ? formatPathRelativeToHome(repoPath, session.homeDir ?? undefined)
-        : displayPath;
-    const repoFolderName = repoPath.split(/[/\\]/).filter(Boolean).pop() || repoDisplayPath;
-    const worktreeName = isWorktree ? getWorktreeName(sessionPath) : null;
+    const repoFolderName = sessionPath.split(/[/\\]/).filter(Boolean).pop() || displayPath;
 
     const gitInfo = useSectionGitInfo(session.id);
-    const branchName = worktreeName || gitInfo.branch;
+    const branchName = gitInfo.branch;
     const hasBranch = !!branchName;
 
-    const handleAdd = React.useCallback(() => {
-        const machineId = session.machineId;
-        if (machineId) {
-            draft.setMachineId(machineId);
+    // Spawn a fresh terminal on the same machine, in the same directory.
+    const [isSpawning, setIsSpawning] = React.useState(false);
+    const handleAdd = React.useCallback(async () => {
+        if (!session.machineId || isSpawning) {
+            return;
         }
-        const pathToSet = formatPathRelativeToHome(repoPath, session.homeDir ?? undefined);
-        draft.setPath(pathToSet);
-        draft.setSessionType(isWorktree ? 'worktree' : 'simple');
-        draft.setWorktreeKey(isWorktree ? sessionPath : null);
-        router.navigate('/new');
-    }, [session.machineId, session.homeDir, repoPath, isWorktree, sessionPath, draft, router]);
+        setIsSpawning(true);
+        try {
+            const result = await machineSpawnNewSession({
+                machineId: session.machineId,
+                directory: sessionPath || '/',
+                agent: 'terminal',
+            });
+            if (result.type === 'success') {
+                await sync.refreshSessions();
+                navigateToSession(result.sessionId);
+            } else if (result.type === 'error') {
+                Modal.alert(t('terminals.spawnFailed'), result.errorMessage);
+            }
+        } catch (error) {
+            Modal.alert(t('terminals.spawnFailed'), error instanceof Error ? error.message : t('common.error'));
+        } finally {
+            setIsSpawning(false);
+        }
+    }, [session.machineId, sessionPath, isSpawning, navigateToSession]);
 
     const [isHovered, setIsHovered] = React.useState(false);
 
@@ -112,14 +120,6 @@ const SectionHeader = React.memo(({ session, displayPath }: { session: SessionRo
                         <Text style={styles.branchText} numberOfLines={1}>
                             {branchName}
                         </Text>
-                        {isWorktree && (
-                            <MaterialCommunityIcons
-                                name="tree"
-                                size={11}
-                                color={theme.colors.textSecondary}
-                                style={styles.worktreeIcon}
-                            />
-                        )}
                         {gitInfo.linesAdded > 0 && (
                             <Text style={styles.addedText}>+{gitInfo.linesAdded}</Text>
                         )}
@@ -466,9 +466,6 @@ const stylesheet = StyleSheet.create((theme) => ({
         color: theme.colors.textSecondary,
         ...Typography.default('regular'),
         flexShrink: 1,
-    },
-    worktreeIcon: {
-        marginLeft: 4,
     },
     addedText: {
         fontSize: 11,

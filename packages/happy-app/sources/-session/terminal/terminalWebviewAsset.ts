@@ -1,9 +1,10 @@
 import { Asset } from 'expo-asset';
-import * as FileSystem from 'expo-file-system';
+import { readAsStringAsync } from 'expo-file-system/legacy';
 
 import xtermModule from '../../../assets/terminal/xterm.txt';
 import fitModule from '../../../assets/terminal/xterm-fit.txt';
 import cssModule from '../../../assets/terminal/xterm-css.txt';
+import fontModule from '../../../assets/terminal/sarasa-term-sc-woff2.txt';
 
 export interface TerminalWebviewAssets {
     /** @xterm/xterm UMD build - defines `Terminal` on the window. */
@@ -12,6 +13,8 @@ export interface TerminalWebviewAssets {
     fitJs: string;
     /** xterm.css stylesheet text. */
     css: string;
+    /** Sarasa Term SC subset (base64 woff2) - mono font with full CJK coverage. */
+    fontBase64: string;
 }
 
 // Loaded once and cached for the app lifetime - the xterm bundle is ~500KB and
@@ -24,7 +27,7 @@ async function readAsset(moduleId: number): Promise<string> {
     if (!asset.localUri) {
         throw new Error('Terminal webview asset has no localUri');
     }
-    return FileSystem.readAsStringAsync(asset.localUri);
+    return readAsStringAsync(asset.localUri);
 }
 
 /**
@@ -36,11 +39,12 @@ export async function loadTerminalWebviewAssets(): Promise<TerminalWebviewAssets
     if (cache) {
         return cache;
     }
-    const [xtermJs, fitJs, css] = await Promise.all([
+    const [xtermJs, fitJs, css, fontBase64] = await Promise.all([
         readAsset(xtermModule),
         readAsset(fitModule),
         readAsset(cssModule),
+        readAsset(fontModule),
     ]);
-    cache = { xtermJs, fitJs, css };
+    cache = { xtermJs, fitJs, css, fontBase64 };
     return cache;
 }

@@ -8,7 +8,7 @@ import { type SessionState, formatLastSeen, vibingMessages } from '@/utils/sessi
 import { Avatar } from './Avatar';
 import { ActiveSessionsGroupCompact } from './ActiveSessionsGroupCompact';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useVisibleSessionListViewData } from '@/hooks/useVisibleSessionListViewData';
+import { useVisibleSessionListViewData, filterTerminalListViewData } from '@/hooks/useVisibleSessionListViewData';
 import { Typography } from '@/constants/Typography';
 import { StatusDot } from './StatusDot';
 import { StyleSheet } from 'react-native-unistyles';
@@ -197,10 +197,14 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
 }));
 
-export function SessionsList() {
+export function SessionsList(props: { terminalOnly?: boolean; listHeader?: React.ReactNode }) {
     const styles = stylesheet;
     const safeArea = useSafeAreaInsets();
-    const data = useVisibleSessionListViewData();
+    const fullData = useVisibleSessionListViewData();
+    const data = React.useMemo(
+        () => (props.terminalOnly ? filterTerminalListViewData(fullData) : fullData),
+        [fullData, props.terminalOnly],
+    );
     const pathname = usePathname();
     const isTablet = useIsTablet();
     const [hideInactiveSessions, setHideInactiveSessions] = useSettingMutable('hideInactiveSessions');
@@ -311,9 +315,12 @@ export function SessionsList() {
 
     const HeaderComponent = React.useCallback(() => {
         return (
-            <UpdateBanner />
+            <>
+                {props.listHeader}
+                <UpdateBanner />
+            </>
         );
-    }, []);
+    }, [props.listHeader]);
 
     // Footer removed - all sessions now shown inline
 
