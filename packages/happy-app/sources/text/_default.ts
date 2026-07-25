@@ -731,6 +731,16 @@ export const en = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'Terminal',
+        connected: 'Connected',
+        disconnected: 'Session disconnected',
+        reconnect: 'Reconnect',
+        copyAll: 'Copy all',
+        copied: 'Copied',
+        clear: 'Clear screen',
+        fontSizeIncrease: 'Increase font size',
+        fontSizeDecrease: 'Decrease font size',
         webBrowserRequired: 'Web Browser Required',
         webBrowserRequiredDescription: 'Terminal connection links can only be opened in a web browser for security reasons. Please use the QR code scanner or open this link on a computer.',
         processingConnection: 'Processing connection...',
@@ -751,6 +761,15 @@ export const en = {
         clientSideProcessing: 'Client-Side Processing',
         linkProcessedLocally: 'Link processed locally in browser',
         linkProcessedOnDevice: 'Link processed locally on device',
+    },
+
+    terminals: {
+        machines: 'Machines',
+        noMachines: 'No machines found. Run `happy` on a computer to connect it.',
+        emptyHint: 'Tap a machine above to open a new terminal',
+        spawning: 'Starting…',
+        spawnFailed: 'Failed to start terminal',
+        unsupportedFlavor: 'This build only supports terminal sessions.',
     },
 
     modals: {

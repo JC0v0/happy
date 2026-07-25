@@ -716,6 +716,16 @@ export const pt: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'Terminal',
+        connected: 'Conectado',
+        disconnected: 'Sessão desconectada',
+        reconnect: 'Reconectar',
+        copyAll: 'Copiar tudo',
+        copied: 'Copiado',
+        clear: 'Limpar tela',
+        fontSizeIncrease: 'Aumentar fonte',
+        fontSizeDecrease: 'Diminuir fonte',
         webBrowserRequired: 'Navegador web necessário',
         webBrowserRequiredDescription: 'Links de conexão de terminal só podem ser abertos em um navegador web por questões de segurança. Use o leitor de código QR ou abra este link num computador.',
         processingConnection: 'Processando conexão...',
@@ -736,6 +746,15 @@ export const pt: TranslationStructure = {
         clientSideProcessing: 'Processamento do lado cliente',
         linkProcessedLocally: 'Link processado localmente no navegador',
         linkProcessedOnDevice: 'Link processado localmente no dispositivo',
+    },
+
+    terminals: {
+        machines: 'Máquinas',
+        noMachines: 'Nenhuma máquina encontrada. Execute `happy` em um computador para conectá-la.',
+        emptyHint: 'Toque em uma máquina acima para abrir um novo terminal',
+        spawning: 'Iniciando…',
+        spawnFailed: 'Falha ao iniciar o terminal',
+        unsupportedFlavor: 'Esta versão suporta apenas sessões de terminal.',
     },
 
     modals: {

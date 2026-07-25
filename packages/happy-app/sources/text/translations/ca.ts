@@ -717,6 +717,16 @@ export const ca: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'Terminal',
+        connected: 'Connectat',
+        disconnected: 'Sessió desconnectada',
+        reconnect: 'Torna a connectar',
+        copyAll: 'Copia-ho tot',
+        copied: 'Copiat',
+        clear: 'Neteja la pantalla',
+        fontSizeIncrease: 'Augmenta la mida de la lletra',
+        fontSizeDecrease: 'Redueix la mida de la lletra',
         webBrowserRequired: 'Es requereix un navegador web',
         webBrowserRequiredDescription: 'Els enllaços de connexió de terminal només es poden obrir en un navegador web per raons de seguretat. Utilitza l\'escàner de codi QR o obre aquest enllaç en un ordinador.',
         processingConnection: 'Processant la connexió...',
@@ -737,6 +747,15 @@ export const ca: TranslationStructure = {
         clientSideProcessing: 'Processament del costat del client',
         linkProcessedLocally: 'Enllaç processat localment al navegador',
         linkProcessedOnDevice: 'Enllaç processat localment al dispositiu',
+    },
+
+    terminals: {
+        machines: 'Màquines',
+        noMachines: 'No s\'han trobat màquines. Executa `happy` en un ordinador per connectar-la.',
+        emptyHint: 'Toca una màquina a dalt per obrir un nou terminal',
+        spawning: 'S\'està iniciant…',
+        spawnFailed: 'No s\'ha pogut iniciar el terminal',
+        unsupportedFlavor: 'Aquesta versió només admet sessions de terminal.',
     },
 
     modals: {

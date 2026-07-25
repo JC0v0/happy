@@ -721,6 +721,16 @@ export const ru: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'Терминал',
+        connected: 'Подключено',
+        disconnected: 'Сеанс отключён',
+        reconnect: 'Переподключиться',
+        copyAll: 'Копировать всё',
+        copied: 'Скопировано',
+        clear: 'Очистить экран',
+        fontSizeIncrease: 'Увеличить шрифт',
+        fontSizeDecrease: 'Уменьшить шрифт',
         webBrowserRequired: 'Требуется веб-браузер',
         webBrowserRequiredDescription: 'Ссылки подключения терминала можно открывать только в веб-браузере по соображениям безопасности. Используйте сканер QR-кодов или откройте эту ссылку на компьютере.',
         processingConnection: 'Обработка подключения...',
@@ -741,6 +751,15 @@ export const ru: TranslationStructure = {
         clientSideProcessing: 'Обработка на стороне клиента',
         linkProcessedLocally: 'Ссылка обработана локально в браузере',
         linkProcessedOnDevice: 'Ссылка обработана локально на устройстве',
+    },
+
+    terminals: {
+        machines: 'Машины',
+        noMachines: 'Машины не найдены. Запустите `happy` на компьютере, чтобы подключить его.',
+        emptyHint: 'Нажмите на машину выше, чтобы открыть новый терминал',
+        spawning: 'Запуск…',
+        spawnFailed: 'Не удалось запустить терминал',
+        unsupportedFlavor: 'Эта сборка поддерживает только терминальные сеансы.',
     },
 
     modals: {

@@ -715,6 +715,16 @@ export const it: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'Terminale',
+        connected: 'Connesso',
+        disconnected: 'Sessione disconnessa',
+        reconnect: 'Riconnetti',
+        copyAll: 'Copia tutto',
+        copied: 'Copiato',
+        clear: 'Pulisci schermo',
+        fontSizeIncrease: 'Aumenta dimensione font',
+        fontSizeDecrease: 'Riduci dimensione font',
         webBrowserRequired: 'Browser web richiesto',
         webBrowserRequiredDescription: 'I link di connessione del terminale possono essere aperti solo in un browser web per motivi di sicurezza. Usa lo scanner QR o apri questo link su un computer.',
         processingConnection: 'Elaborazione connessione...',
@@ -735,6 +745,15 @@ export const it: TranslationStructure = {
         clientSideProcessing: 'Elaborazione lato client',
         linkProcessedLocally: 'Link elaborato localmente nel browser',
         linkProcessedOnDevice: 'Link elaborato localmente sul dispositivo',
+    },
+
+    terminals: {
+        machines: 'Macchine',
+        noMachines: 'Nessuna macchina trovata. Esegui `happy` su un computer per connetterla.',
+        emptyHint: 'Tocca una macchina sopra per aprire un nuovo terminale',
+        spawning: 'Avvio…',
+        spawnFailed: 'Impossibile avviare il terminale',
+        unsupportedFlavor: 'Questa build supporta solo sessioni di terminale.',
     },
 
     modals: {

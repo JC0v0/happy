@@ -718,6 +718,16 @@ export const ja: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: 'ターミナル',
+        connected: '接続中',
+        disconnected: 'セッションが切断されました',
+        reconnect: '再接続',
+        copyAll: 'すべてコピー',
+        copied: 'コピーしました',
+        clear: '画面をクリア',
+        fontSizeIncrease: 'フォントサイズを大きく',
+        fontSizeDecrease: 'フォントサイズを小さく',
         webBrowserRequired: 'Webブラウザが必要です',
         webBrowserRequiredDescription: 'ターミナル接続リンクはセキュリティ上の理由からWebブラウザでのみ開くことができます。QRコードスキャナーを使用するか、コンピューターでこのリンクを開いてください。',
         processingConnection: '接続を処理中...',
@@ -738,6 +748,15 @@ export const ja: TranslationStructure = {
         clientSideProcessing: 'クライアントサイド処理',
         linkProcessedLocally: 'リンクはブラウザ内でローカルに処理されました',
         linkProcessedOnDevice: 'リンクはデバイス上でローカルに処理されました',
+    },
+
+    terminals: {
+        machines: 'マシン',
+        noMachines: 'マシンが見つかりません。コンピュータで `happy` を実行して接続してください。',
+        emptyHint: '上のマシンをタップして新しいターミナルを開く',
+        spawning: '起動中…',
+        spawnFailed: 'ターミナルの起動に失敗しました',
+        unsupportedFlavor: 'このビルドはターミナルセッションのみサポートしています。',
     },
 
     modals: {

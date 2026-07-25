@@ -717,6 +717,16 @@ export const zhHant: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: '終端',
+        connected: '已連線',
+        disconnected: '工作階段已斷線',
+        reconnect: '重新連線',
+        copyAll: '複製全部',
+        copied: '已複製',
+        clear: '清除畫面',
+        fontSizeIncrease: '放大字體',
+        fontSizeDecrease: '縮小字體',
         webBrowserRequired: '需要 Web 瀏覽器',
         webBrowserRequiredDescription: '出於安全原因，終端連線連結只能在 Web 瀏覽器中開啟。請使用 QR Code 掃描器或在電腦上開啟此連結。',
         processingConnection: '正在處理連線...',
@@ -737,6 +747,15 @@ export const zhHant: TranslationStructure = {
         clientSideProcessing: '用戶端處理',
         linkProcessedLocally: '連結在瀏覽器中本機處理',
         linkProcessedOnDevice: '連結在裝置上本機處理',
+    },
+
+    terminals: {
+        machines: '選擇機器',
+        noMachines: '找不到機器。在電腦上執行 `happy` 即可連線。',
+        emptyHint: '點按上方機器開啟新終端',
+        spawning: '啟動中…',
+        spawnFailed: '終端啟動失敗',
+        unsupportedFlavor: '此版本僅支援終端工作階段。',
     },
 
     modals: {

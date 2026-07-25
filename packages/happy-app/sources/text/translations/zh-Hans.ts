@@ -718,6 +718,16 @@ export const zhHans: TranslationStructure = {
 
     terminal: {
         // Used by terminal connection screens
+        // Session terminal view (toolbar, disconnect overlay)
+        title: '终端',
+        connected: '已连接',
+        disconnected: '会话已断开',
+        reconnect: '重新连接',
+        copyAll: '复制全部',
+        copied: '已复制',
+        clear: '清屏',
+        fontSizeIncrease: '增大字号',
+        fontSizeDecrease: '减小字号',
         webBrowserRequired: '需要 Web 浏览器',
         webBrowserRequiredDescription: '出于安全原因，终端连接链接只能在 Web 浏览器中打开。请使用二维码扫描器或在计算机上打开此链接。',
         processingConnection: '正在处理连接...',
@@ -738,6 +748,15 @@ export const zhHans: TranslationStructure = {
         clientSideProcessing: '客户端处理',
         linkProcessedLocally: '链接在浏览器中本地处理',
         linkProcessedOnDevice: '链接在设备上本地处理',
+    },
+
+    terminals: {
+        machines: '选择机器',
+        noMachines: '未发现机器。在电脑上运行 `happy` 即可连接。',
+        emptyHint: '点击上方机器打开新终端',
+        spawning: '启动中…',
+        spawnFailed: '终端启动失败',
+        unsupportedFlavor: '此版本仅支持终端会话。',
     },
 
     modals: {
