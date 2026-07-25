@@ -83,22 +83,6 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
 }));
 
 
-export const HomeHeader = React.memo(() => {
-    const { theme } = useUnistyles();
-
-    return (
-        <View style={{ backgroundColor: theme.colors.groupped.background }}>
-            <Header
-                title={<HeaderTitleWithSubtitle />}
-                headerRight={() => <HeaderRight />}
-                headerLeft={() => <HeaderLeft />}
-                headerShadowVisible={false}
-                headerTransparent={true}
-            />
-        </View>
-    )
-})
-
 export const HomeHeaderNotAuth = React.memo(() => {
     useSegments(); // Re-rendered automatically when screen navigates back
     const serverInfo = getServerInfo();
@@ -113,22 +97,6 @@ export const HomeHeaderNotAuth = React.memo(() => {
         />
     )
 });
-
-function HeaderRight() {
-    const router = useRouter();
-    const styles = stylesheet;
-    const { theme } = useUnistyles();
-
-    return (
-        <Pressable
-            onPress={() => router.navigate('/new')}
-            hitSlop={15}
-            style={styles.headerButton}
-        >
-            <Ionicons name="add-outline" size={28} color={theme.colors.header.tint} />
-        </Pressable>
-    );
-}
 
 function HeaderRightNotAuth() {
     const router = useRouter();

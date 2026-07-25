@@ -10,14 +10,8 @@ import { localizedText, t } from '@/text';
 export default function FeaturesSettingsScreen() {
     const [experiments, setExperiments] = useSettingMutable('experiments');
     const [analyticsOptOut, setAnalyticsOptOut] = useSettingMutable('analyticsOptOut');
-    const [agentInputEnterToSend, setAgentInputEnterToSend] = useSettingMutable('agentInputEnterToSend');
     const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
-    const [markdownCopyV2, setMarkdownCopyV2] = useLocalSettingMutable('markdownCopyV2');
     const [hideInactiveSessions, setHideInactiveSessions] = useSettingMutable('hideInactiveSessions');
-    const [expResumeSession, setExpResumeSession] = useSettingMutable('expResumeSession');
-    const [fileDiffsSidebar, setFileDiffsSidebar] = useSettingMutable('fileDiffsSidebar');
-    const [groupToolCalls, setGroupToolCalls] = useSettingMutable('groupToolCalls');
-    const [expImageUpload, setExpImageUpload] = useSettingMutable('expImageUpload');
     const [sortSessionsByActivity, setSortSessionsByActivity] = useSettingMutable('sortSessionsByActivity');
 
     return (
@@ -27,34 +21,6 @@ export default function FeaturesSettingsScreen() {
                 title={localizedText('Interface', '界面', '介面')}
                 footer={localizedText('Optional panels and layout elements.', '控制可选面板和界面布局。', '控制可選面板和介面配置。')}
             >
-                <Item
-                    title={localizedText('File Diffs Sidebar', '文件差异侧边栏', '檔案差異側邊欄')}
-                    subtitle={localizedText(
-                        'Show git changes next to the chat on desktop',
-                        '在桌面端聊天旁显示 Git 文件改动',
-                        '在桌面端聊天旁顯示 Git 檔案變更',
-                    )}
-                    icon={<Ionicons name="git-branch-outline" size={29} color="#5AC8FA" />}
-                    rightElement={
-                        <Switch
-                            value={fileDiffsSidebar}
-                            onValueChange={setFileDiffsSidebar}
-                        />
-                    }
-                    showChevron={false}
-                />
-                <Item
-                    title={t('settingsFeatures.groupToolCalls')}
-                    subtitle={t('settingsFeatures.groupToolCallsSubtitle')}
-                    icon={<Ionicons name="layers-outline" size={29} color="#AF52DE" />}
-                    rightElement={
-                        <Switch
-                            value={groupToolCalls}
-                            onValueChange={setGroupToolCalls}
-                        />
-                    }
-                    showChevron={false}
-                />
                 <Item
                     title={localizedText('Sort by Recent Activity', '按最近活动排序', '依最近活動排序')}
                     subtitle={localizedText(
@@ -91,18 +57,6 @@ export default function FeaturesSettingsScreen() {
                     showChevron={false}
                 />
                 <Item
-                    title={t('settingsFeatures.markdownCopyV2')}
-                    subtitle={t('settingsFeatures.markdownCopyV2Subtitle')}
-                    icon={<Ionicons name="text-outline" size={29} color="#34C759" />}
-                    rightElement={
-                        <Switch
-                            value={markdownCopyV2}
-                            onValueChange={setMarkdownCopyV2}
-                        />
-                    }
-                    showChevron={false}
-                />
-                <Item
                     title={t('settingsFeatures.hideInactiveSessions')}
                     subtitle={t('settingsFeatures.hideInactiveSessionsSubtitle')}
                     icon={<Ionicons name="eye-off-outline" size={29} color="#FF9500" />}
@@ -110,34 +64,6 @@ export default function FeaturesSettingsScreen() {
                         <Switch
                             value={hideInactiveSessions}
                             onValueChange={setHideInactiveSessions}
-                        />
-                    }
-                    showChevron={false}
-                />
-                <Item
-                    title={localizedText('Resume Session', '恢复会话', '恢復工作階段')}
-                    subtitle={localizedText(
-                        'Resume disconnected Claude Code and Codex sessions via the machine daemon',
-                        '通过设备后台服务恢复已断开的 Claude Code 和 Codex 会话',
-                        '透過裝置背景服務恢復已中斷的 Claude Code 和 Codex 工作階段',
-                    )}
-                    icon={<Ionicons name="play-circle-outline" size={29} color="#30D158" />}
-                    rightElement={
-                        <Switch
-                            value={expResumeSession}
-                            onValueChange={setExpResumeSession}
-                        />
-                    }
-                    showChevron={false}
-                />
-                <Item
-                    title={t('settingsFeatures.imageUpload')}
-                    subtitle={t('settingsFeatures.imageUploadSubtitle')}
-                    icon={<Ionicons name="image-outline" size={29} color="#FF2D55" />}
-                    rightElement={
-                        <Switch
-                            value={expImageUpload}
-                            onValueChange={setExpImageUpload}
                         />
                     }
                     showChevron={false}
@@ -165,22 +91,10 @@ export default function FeaturesSettingsScreen() {
 
             {/* Web-only Features */}
             {Platform.OS === 'web' && (
-                <ItemGroup 
+                <ItemGroup
                     title={t('settingsFeatures.webFeatures')}
                     footer={t('settingsFeatures.webFeaturesDescription')}
                 >
-                    <Item
-                        title={t('settingsFeatures.enterToSend')}
-                        subtitle={agentInputEnterToSend ? t('settingsFeatures.enterToSendEnabled') : t('settingsFeatures.enterToSendDisabled')}
-                        icon={<Ionicons name="return-down-forward-outline" size={29} color="#007AFF" />}
-                        rightElement={
-                            <Switch
-                                value={agentInputEnterToSend}
-                                onValueChange={setAgentInputEnterToSend}
-                            />
-                        }
-                        showChevron={false}
-                    />
                     <Item
                         title={t('settingsFeatures.commandPalette')}
                         subtitle={commandPaletteEnabled ? t('settingsFeatures.commandPaletteEnabled') : t('settingsFeatures.commandPaletteDisabled')}

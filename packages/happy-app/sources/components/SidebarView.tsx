@@ -17,29 +17,6 @@ const stylesheet = StyleSheet.create((theme) => ({
         borderWidth: StyleSheet.hairlineWidth,
         borderColor: theme.colors.divider,
     },
-    newSessionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginHorizontal: 16,
-        marginTop: 8,
-        marginBottom: 4,
-        paddingVertical: 10,
-        paddingHorizontal: 14,
-        borderRadius: 10,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.divider,
-        backgroundColor: theme.colors.surface,
-        gap: 8,
-    },
-    newSessionButtonPressed: {
-        backgroundColor: theme.colors.surfacePressed,
-    },
-    newSessionText: {
-        fontSize: 14,
-        fontWeight: '500',
-        color: theme.colors.text,
-        ...Typography.default('semiBold'),
-    },
     settingsRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -63,24 +40,8 @@ export const SidebarView = React.memo(() => {
     const router = useRouter();
     const headerHeight = useHeaderHeight();
 
-    const handleNewSession = React.useCallback(() => {
-        router.navigate('/new');
-    }, [router]);
-
     return (
         <View style={[styles.container, { paddingTop: safeArea.top + headerHeight }]}>
-            {/* New Session button */}
-            <Pressable
-                onPress={handleNewSession}
-                style={({ pressed }) => [
-                    styles.newSessionButton,
-                    pressed && styles.newSessionButtonPressed,
-                ]}
-            >
-                <Ionicons name="create-outline" size={16} color={stylesheet.newSessionText.color} />
-                <Text style={styles.newSessionText}>{t('sidebar.newSession')}</Text>
-            </Pressable>
-
             {/* Sessions list */}
             <MainView variant="sidebar" />
 

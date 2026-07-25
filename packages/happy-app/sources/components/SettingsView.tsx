@@ -24,7 +24,6 @@ import { useUnistyles } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { getGitHubOAuthParams, disconnectGitHub } from '@/sync/apiGithub';
-import { disconnectService } from '@/sync/apiServices';
 import { useProfile } from '@/sync/storage';
 import { getDisplayName, getAvatarUrl, getBio } from '@/sync/profile';
 import { Avatar } from '@/components/Avatar';
@@ -88,7 +87,6 @@ export const SettingsView = React.memo(function SettingsView() {
     const auth = useAuth();
     const [devModeEnabled, setDevModeEnabled] = useLocalSettingMutable('devModeEnabled');
     const isPro = __DEV__ || useEntitlement('pro');
-    const experiments = useSetting('experiments');
     const isCustomServer = isUsingCustomServer();
     const [showOfflineMachines, setShowOfflineMachines] = React.useState(false);
     const allMachinesWithOffline = useAllMachines({ includeOffline: true });
@@ -143,7 +141,6 @@ export const SettingsView = React.memo(function SettingsView() {
 
     // Connection status
     const isGitHubConnected = !!profile.github;
-    const isAnthropicConnected = profile.connectedServices?.includes('anthropic') || false;
 
     // GitHub connection
     const [connectingGitHub, connectGitHub] = useHappyAction(async () => {
@@ -162,25 +159,6 @@ export const SettingsView = React.memo(function SettingsView() {
             await disconnectGitHub(auth.credentials!);
         }
     });
-
-    // Anthropic connection
-    const [connectingAnthropic, connectAnthropic] = useHappyAction(async () => {
-        router.push('/settings/connect/claude');
-    });
-
-    // Anthropic disconnection
-    const [disconnectingAnthropic, handleDisconnectAnthropic] = useHappyAction(async () => {
-        const confirmed = await Modal.confirm(
-            t('modals.disconnectService', { service: 'Claude' }),
-            t('modals.disconnectServiceConfirm', { service: 'Claude' }),
-            { confirmText: t('modals.disconnect'), destructive: true }
-        );
-        if (confirmed) {
-            await disconnectService(auth.credentials!, 'anthropic');
-            await sync.refreshProfile();
-        }
-    });
-
 
     return (
 
@@ -265,23 +243,6 @@ export const SettingsView = React.memo(function SettingsView() {
 
             <ItemGroup title={t('settings.connectedAccounts')}>
                 <Item
-                    title="Claude Code"
-                    subtitle={isAnthropicConnected
-                        ? t('settingsAccount.statusActive')
-                        : t('settings.connectAccount')
-                    }
-                    icon={
-                        <Image
-                            source={require('@/assets/images/icon-claude.png')}
-                            style={{ width: 29, height: 29 }}
-                            contentFit="contain"
-                        />
-                    }
-                    onPress={isAnthropicConnected ? handleDisconnectAnthropic : connectAnthropic}
-                    loading={connectingAnthropic || disconnectingAnthropic}
-                    showChevron={false}
-                />
-                <Item
                     title={t('settings.github')}
                     subtitle={isGitHubConnected
                         ? t('settings.githubConnected', { login: profile.github?.login! })
@@ -299,16 +260,6 @@ export const SettingsView = React.memo(function SettingsView() {
                     showChevron={false}
                 />
             </ItemGroup>
-
-            {/* Social */}
-            {/* <ItemGroup title={t('settings.social')}>
-                <Item
-                    title={t('navigation.friends')}
-                    subtitle={t('friends.manageFriends')}
-                    icon={<Ionicons name="people-outline" size={29} color="#007AFF" />}
-                    onPress={() => router.push('/friends')}
-                />
-            </ItemGroup> */}
 
             {/* Machines (sorted: online first, then last seen desc) */}
             {allMachinesWithOffline.length > 0 && (
@@ -379,29 +330,11 @@ export const SettingsView = React.memo(function SettingsView() {
                     onPress={() => router.push('/settings/appearance')}
                 />
                 <Item
-                    title={localizedText('Agent Defaults', '智能体默认设置', '智慧體預設設定')}
-                    subtitle={localizedText(
-                        'Default model, effort, and permissions',
-                        '设置默认模型、思考强度和权限',
-                        '設定預設模型、思考強度和權限',
-                    )}
-                    icon={<Ionicons name="options-outline" size={29} color="#5AC8FA" />}
-                    onPress={() => router.push('/settings/agents' as any)}
-                />
-                <Item
                     title={t('settings.featuresTitle')}
                     subtitle={t('settings.featuresSubtitle')}
                     icon={<Ionicons name="flask-outline" size={29} color="#FF9500" />}
                     onPress={() => router.push('/settings/features')}
                 />
-                {experiments && (
-                    <Item
-                        title={t('settings.usage')}
-                        subtitle={t('settings.usageSubtitle')}
-                        icon={<Ionicons name="analytics-outline" size={29} color="#007AFF" />}
-                        onPress={() => router.push('/settings/usage')}
-                    />
-                )}
             </ItemGroup>
 
             {/* Developer */}

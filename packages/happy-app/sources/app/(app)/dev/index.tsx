@@ -269,22 +269,10 @@ export default function DevScreen() {
                     onPress={() => router.push('/dev/colors')}
                 />
                 <Item
-                    title={devText('Message Demos', '消息演示', '訊息示範')}
-                    subtitle={devText('Various message types and components', '查看各种消息类型和组件', '查看各種訊息類型和元件')}
-                    icon={<Ionicons name="chatbubbles-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/dev/messages-demo')}
-                />
-                <Item
                     title={devText('Inverted List Test', '倒序列表测试', '倒序清單測試')}
                     subtitle={devText('Test inverted FlatList with keyboard', '测试带键盘的倒序 FlatList', '測試搭配鍵盤的倒序 FlatList')}
                     icon={<Ionicons name="swap-vertical-outline" size={28} color="#007AFF" />}
                     onPress={() => router.push('/dev/inverted-list')}
-                />
-                <Item
-                    title={devText('Tool Views', '工具视图', '工具檢視')}
-                    subtitle={devText('Tool call visualization components', '工具调用的可视化组件', '工具呼叫的視覺化元件')}
-                    icon={<Ionicons name="construct-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/dev/tools2')}
                 />
                 <Item
                     title={devText('Shimmer View', '微光加载视图', '微光載入檢視')}
@@ -328,18 +316,6 @@ export default function DevScreen() {
                     icon={<Ionicons name="qr-code-outline" size={28} color="#007AFF" />}
                     onPress={() => router.push('/dev/qr-test')}
                 />
-                <Item
-                    title={devText('Session Composer', '会话编辑器', '工作階段編輯器')}
-                    subtitle={devText('New session creation screen layout', '新建会话页面布局', '新建工作階段頁面配置')}
-                    icon={<Ionicons name="add-circle-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/dev/session-composer' as any)}
-                />
-                <Item
-                    title={devText('Rig Preview', 'Rig 预览', 'Rig 預覽')}
-                    subtitle={devText('Rig identity, selectors, and activity metadata', '查看 Rig 身份、选择器和活动信息', '查看 Rig 身分、選擇器和活動資訊')}
-                    icon={<Ionicons name="terminal-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/dev/rig-preview' as any)}
-                />
             </ItemGroup>
 
             {/* Test Features */}
@@ -347,12 +323,6 @@ export default function DevScreen() {
                 title={devText('Test Features', '测试功能', '測試功能')}
                 footer={devText('These actions may affect app stability', '这些操作可能影响 App 稳定性', '這些操作可能影響 App 穩定性')}
             >
-                <Item
-                    title={devText('Claude OAuth Test', 'Claude OAuth 测试', 'Claude OAuth 測試')}
-                    subtitle={devText('Test Claude authentication flow', '测试 Claude 身份验证流程', '測試 Claude 驗證流程')}
-                    icon={<Ionicons name="key-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/settings/connect/claude')}
-                />
                 <Item
                     title={devText('Test Crash', '崩溃测试', '當機測試')}
                     subtitle={devText('Trigger a test crash', '主动触发一次测试崩溃', '主動觸發一次測試當機')}

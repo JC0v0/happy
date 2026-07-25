@@ -1,6 +1,7 @@
 import * as React from "react";
 import { View } from "react-native";
 import { Image } from "expo-image";
+import { Ionicons } from "@expo/vector-icons";
 import { AvatarSkia } from "./AvatarSkia";
 import { AvatarGradient } from "./AvatarGradient";
 import { AvatarBrutalist } from "./AvatarBrutalist";
@@ -94,12 +95,16 @@ export const Avatar = React.memo((props: AvatarProps) => {
                         alignItems: 'center',
                         justifyContent: 'center'
                     }]}>
-                        <Image
-                            source={flavorIcon}
-                            style={{ width: iconSize, height: iconSize }}
-                            contentFit="contain"
-                            tintColor={effectiveFlavor === 'codex' ? theme.colors.text : undefined}
-                        />
+                        {effectiveFlavor === 'terminal' ? (
+                            <Ionicons name="terminal" size={iconSize} color={theme.colors.text} />
+                        ) : (
+                            <Image
+                                source={flavorIcon}
+                                style={{ width: iconSize, height: iconSize }}
+                                contentFit="contain"
+                                tintColor={effectiveFlavor === 'codex' ? theme.colors.text : undefined}
+                            />
+                        )}
                     </View>
                 </View>
             );
@@ -142,12 +147,16 @@ export const Avatar = React.memo((props: AvatarProps) => {
                     alignItems: 'center',
                     justifyContent: 'center'
                 }]}>
-                    <Image
-                        source={flavorIcon}
-                        style={{ width: iconSize, height: iconSize }}
-                        contentFit="contain"
-                        tintColor={effectiveFlavor === 'codex' ? theme.colors.text : undefined}
-                    />
+                    {effectiveFlavor === 'terminal' ? (
+                        <Ionicons name="terminal" size={iconSize} color={theme.colors.text} />
+                    ) : (
+                        <Image
+                            source={flavorIcon}
+                            style={{ width: iconSize, height: iconSize }}
+                            contentFit="contain"
+                            tintColor={effectiveFlavor === 'codex' ? theme.colors.text : undefined}
+                        />
+                    )}
                 </View>
             </View>
         );

@@ -22,17 +22,6 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
         const cmds: Command[] = [
             // Navigation commands
             {
-                id: 'new-session',
-                title: 'New Session',
-                subtitle: 'Start a new chat session',
-                icon: 'add-circle-outline',
-                category: 'Sessions',
-                shortcut: '⌘N',
-                action: () => {
-                    router.navigate('/new');
-                }
-            },
-            {
                 id: 'sessions',
                 title: 'View All Sessions',
                 subtitle: 'Browse your chat history',
