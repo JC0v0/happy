@@ -251,6 +251,27 @@ class EventRouter {
         // Socket.IO automatically removes sockets from all rooms on disconnect
     }
 
+    // === ONLINE PRESENCE (admin console) ===
+    // Snapshot of currently connected sockets, grouped by userId. Only reflects
+    // connections to THIS server instance; in a multi-replica (Redis adapter)
+    // deployment it will not include peers on other instances.
+    getOnlineUsers(): { userId: string; connections: { clientType: string; sessionId?: string; machineId?: string }[] }[] {
+        if (!this.io) return [];
+        const byUser = new Map<string, { clientType: string; sessionId?: string; machineId?: string }[]>();
+        for (const socket of this.io.sockets.sockets.values()) {
+            const uid = (socket.data as any)?.userId;
+            if (typeof uid !== "string" || uid.length === 0) continue;
+            let list = byUser.get(uid);
+            if (!list) { list = []; byUser.set(uid, list); }
+            list.push({
+                clientType: (socket.data as any)?.clientType ?? "unknown",
+                sessionId: (socket.data as any)?.sessionId,
+                machineId: (socket.data as any)?.machineId,
+            });
+        }
+        return [...byUser.entries()].map(([userId, connections]) => ({ userId, connections }));
+    }
+
     // === EVENT EMISSION METHODS ===
 
     emitUpdate(params: {
