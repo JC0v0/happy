@@ -39,6 +39,9 @@ yarn-error.*
 .env
 .env.production
 
+# local auth overrides (dev-only, never commit)
+.auth-local.*
+
 # typescript
 *.tsbuildinfo
 
