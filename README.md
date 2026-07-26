@@ -7,80 +7,67 @@
 </div>
 
 <h1 align="center">
-  Mobile and Web Client for Claude Code & Codex
+  Terminal-first fork of slopus/happy
 </h1>
 
 <h4 align="center">
-Use Claude Code or Codex from anywhere with end-to-end encryption.
+A mobile and web client for your terminal, end-to-end encrypted.
 </h4>
 
+> **Fork notice.** This is a secondary-development fork of [`slopus/happy`](https://github.com/slopus/happy). The upstream project is a mobile/web client for AI coding agents (Claude Code, Codex, …). **This fork removes the agent layer and repurposes the app as a pure terminal client**: you attach to a remote shell from your phone or browser, over the same E2E-encrypted relay the upstream uses for sessions. App Store / Google Play / Discord / demo links below belong to the upstream project, not this fork.
+
 <div align="center">
-  
-[📱 **iOS App**](https://apps.apple.com/us/app/happy-claude-code-client/id6748571505) • [🤖 **Android App**](https://play.google.com/store/apps/details?id=com.ex3ndr.happy) • [🌐 **Web App**](https://app.happy.engineering) • [🎥 **See a Demo**](https://youtu.be/GCS0OG9QMSE) • [📚 **Documentation**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD)
+
+[📱 **iOS App**](https://apps.apple.com/us/app/happy-claude-code-client/id6748571505) • [🤖 **Android App**](https://play.google.com/store/apps/details?id=com.ex3ndr.happy) • [🌐 **Web App**](https://app.happy.engineering) • [🎥 **See a Demo**](https://youtu.be/GCS0OG9QMSE) • [📚 **Upstream Docs**](https://happy.engineering/docs/) • [💬 **Discord**](https://discord.gg/fX9WBAhyfD) <sub>(upstream)</sub>
 
 </div>
 
-<img width="5178" height="2364" alt="github" src="/.github/header.png" />
+## What changed vs upstream
 
+- **Removed**: coding-agent backends in the CLI (Claude Code / Codex / Gemini / ACP / agy / openclaw), the agent UI components and pages, and the mobile voice assistant.
+- **Added**: E2E-encrypted terminal sessions — a pty relay across `happy-wire` / `happy-server` / `happy-cli` / `happy-app`. Web renders with xterm.js, native renders with a WebView + offline-bundled xterm, and a shared `TerminalOrderer` handles sequence dedup and gap resync. Host color scheme is synced to the client, and scrollback survives reattach.
+- **Kept**: the encrypted sync engine, server, wire protocol, and GitHub login.
 
-<h3 align="center">
-Step 1: Download App
-</h3>
-
-<div align="center">
-<a href="https://apps.apple.com/us/app/happy-claude-code-client/id6748571505"><img width="135" height="39" alt="appstore" src="https://github.com/user-attachments/assets/45e31a11-cf6b-40a2-a083-6dc8d1f01291" /></a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a href="https://play.google.com/store/apps/details?id=com.ex3ndr.happy"><img width="135" height="39" alt="googleplay" src="https://github.com/user-attachments/assets/acbba639-858f-4c74-85c7-92a4096efbf5" /></a>
-</div>
-
-<h3 align="center">
-Step 2: Install CLI on your computer
-</h3>
-
-```bash
-npm install -g happy
-```
-
-> Migrated from the `happy-coder` package. Thanks to [@franciscop](https://github.com/franciscop) for donating the `happy` package name!
-
-<h3 align="center">
-Step 3: Start using `happy` instead of `claude` or `codex`
-</h3>
-
-```bash
-# Instead of claude, use:
-happy claude
-# or
-happy codex
-```
+See [`docs/roadmap.md`](docs/roadmap.md) for status.
 
 ## How does it work?
 
-On your computer, run `happy` instead of `claude` or `happy codex` instead of `codex` to start your AI through our wrapper. When you want to control your coding agent from your phone, it restarts the session in remote mode. To switch back to your computer, just press any key on your keyboard.
+The CLI hosts an E2E-encrypted pty session on your computer; the app (web or native) attaches to it through `happy-server`. The server only relays ciphertext — your terminal output never leaves your devices unencrypted.
 
-## 🔥 Why Happy Coder?
+Because this is a fork, install from source (the `happy` package name on npm belongs to upstream):
 
-- 📱 **Mobile access to Claude Code and Codex** - Check what your AI is building while away from your desk
-- 🔔 **Push notifications** - Get alerted when Claude Code and Codex needs permission or encounters errors  
-- ⚡ **Switch devices instantly** - Take control from phone or desktop with one keypress
-- 🔐 **End-to-end encrypted** - Your code never leaves your devices unencrypted
-- 🛠️ **Open source** - Audit the code yourself. No telemetry, no tracking
+```bash
+pnpm install
+pnpm --filter happy cli
+```
+
+## 🔥 Why this fork?
+
+- 📱 **Terminal access from anywhere** — drive a remote shell from your phone or browser
+- 🔐 **End-to-end encrypted** — output is encrypted in transit; the server only relays
+- 🖥️ **Persistent sessions** — reattach to a running terminal without losing scrollback
+- 🧩 **Built on a proven base** — inherits upstream's sync engine, wire protocol, and server
 
 ## 📦 Project Components
 
-- **[Happy App](https://github.com/slopus/happy/tree/main/packages/happy-app)** - Web UI + mobile client (Expo)
-- **[Happy CLI](https://github.com/slopus/happy/tree/main/packages/happy-cli)** - Command-line interface for Claude Code and Codex
-- **[Happy Agent](https://github.com/slopus/happy/tree/main/packages/happy-agent)** - Remote agent control CLI (create, send, monitor sessions)
-- **[Happy Server](https://github.com/slopus/happy/tree/main/packages/happy-server)** - Backend server for encrypted sync
+- **[Happy App](packages/happy-app)** — Web UI + mobile client (Expo)
+- **[Happy CLI](packages/happy-cli)** — Command-line interface that hosts terminal sessions
+- **[Happy Server](packages/happy-server)** — Backend for encrypted relay
+- **[Happy Wire](packages/happy-wire)** — Shared wire schemas/types
+- **[Happy Agent](packages/happy-agent)** — Upstream remote-agent-control package; kept, but **not wired into the terminal flow** of this fork
+- **[Happy App Logs](packages/happy-app-logs)** — Logging helper
+- **[Codium](packages/codium)** — Bundled editor
 
-## 🏠 Who We Are
+## Tracking upstream
 
-We're engineers scattered across Bay Area coffee shops and hacker houses, constantly checking how our AI coding agents are progressing on our pet projects during lunch breaks. Happy Coder was born from the frustration of not being able to peek at our AI coding tools building our side hustles while we're away from our keyboards. We believe the best tools come from scratching your own itch and sharing with the community.
+This fork tracks `slopus/happy` **selectively** — bug fixes, protocol/wire upgrades, dependency bumps — rather than wholesale, because upstream continues toward the agent direction this fork moves away from. Rebasing the whole branch onto `origin/main` tends to reintroduce removed agent code, so upstream changes are cherry-picked.
 
 ## 📚 Documentation & Contributing
 
-- **[Documentation Website](https://happy.engineering/docs/)** - Learn how to use Happy Coder effectively
-- **[Contributing Guide](docs/CONTRIBUTING.md)** - How to contribute, PR guidelines, and development setup
-- **[Edit docs at github.com/slopus/slopus.github.io](https://github.com/slopus/slopus.github.io)** - Help improve our documentation and guides
+- **[Internal docs](docs/README.md)** — Protocol, backend, CLI architecture, deployment
+- **[Contributing guide](docs/CONTRIBUTING.md)**
+- Upstream docs site: <https://happy.engineering/docs/>
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License — see [LICENSE](LICENSE). This fork inherits the upstream license and attribution.

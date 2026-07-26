@@ -1,5 +1,7 @@
 # Happy Roadmap
 
+> **Fork notice.** This is `jc0v0/happy`, a secondary-development fork of [`slopus/happy`](https://github.com/slopus/happy). The upstream is a mobile/web client for AI coding agents (Claude Code, Codex, …); **this fork removes the agent layer and makes the app terminal-first** - an E2E-encrypted terminal session is the core feature. Agent-oriented items below (assistant upkeep, multi-agent dispatch, software factories) are deferred unless explicitly revisited.
+
 ## Next Up
 
 - Start using as the daily development driver
@@ -33,7 +35,7 @@ Missing the concept of **workspace** (aka project) that spans multiple machines,
 
 [hard]
 - Attachments in composer / in agent output [hard, encrypted attachments, extra storage - needs design]
-- Terminal embedded in app - **in progress**: E2E-encrypted pty relay across happy-wire / happy-server / happy-cli / happy-app. Web (xterm.js) and native (WebView + offline-bundled xterm) both render; a shared `TerminalOrderer` handles seq dedup / gap resync. 60 tests across wire/server/app. Not yet merged/shipped. Design informed by the [terminal-sync research](competition/superset/terminal-sync.md) (64KB ring buffer, pty lifetime decoupled from UI).
+- Terminal embedded in app - **done (on `feat/terminal-history-colors`)**: E2E-encrypted pty relay across happy-wire / happy-server / happy-cli / happy-app. Web (xterm.js) and native (WebView + offline-bundled xterm) both render; a shared `TerminalOrderer` handles seq dedup / gap resync. Tests across wire/server/app. Implemented on the fork branch; not yet merged to `main`. Design informed by the [terminal-sync research](competition/superset/terminal-sync.md) (64KB ring buffer, pty lifetime decoupled from UI).
 
 ## Underlying Assistant Upkeep
 
