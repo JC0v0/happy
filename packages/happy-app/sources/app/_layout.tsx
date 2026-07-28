@@ -19,6 +19,7 @@ import { ModalProvider } from '@/modal';
 import { PostHogProvider } from 'posthog-react-native';
 import { tracking } from '@/track/tracking';
 import { syncRestore } from '@/sync/sync';
+import { clearPersistence } from '@/sync/persistence';
 import { useTrackScreens } from '@/track/useTrackScreens';
 import { FaviconPermissionIndicator } from '@/components/web/FaviconPermissionIndicator';
 import { CommandPaletteProvider } from '@/components/CommandPalette/CommandPaletteProvider';
@@ -236,6 +237,18 @@ export default function RootLayout() {
                 await sodium.ready;
 
                 let credentials = await TokenStorage.getCredentials();
+
+                // When EXPO_PUBLIC_HAPPY_SERVER_URL is explicitly set (dev / local
+                // server), any stored credentials were almost certainly issued by a
+                // different server and will produce 401 loops. Wipe them so the app
+                // starts in a clean, usable state.
+                if (process.env.EXPO_PUBLIC_HAPPY_SERVER_URL && credentials) {
+                    console.warn('[Init] EXPO_PUBLIC_HAPPY_SERVER_URL is set — clearing stale credentials from previous server');
+                    await TokenStorage.removeCredentials();
+                    clearPersistence();
+                    credentials = null;
+                }
+
                 const devCredentials = getDevWebQueryCredentials() ?? getDevEnvironmentCredentials();
 
                 if (devCredentials) {

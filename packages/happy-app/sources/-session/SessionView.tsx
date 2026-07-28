@@ -4,6 +4,7 @@ import { useIsDataReady, useSession } from '@/sync/storage';
 import { t } from '@/text';
 import { useDeviceType, useHeaderHeight, useIsLandscape } from '@/utils/responsive';
 import { SessionTerminalView } from '@/-session/terminal/SessionTerminalView';
+import { TERMINAL_VISUAL_THEME } from '@/-session/terminal/terminalVisualTheme';
 import { getSessionAvatarId, getSessionName } from '@/utils/sessionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -58,7 +59,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                     left: 0,
                     right: 0,
                     height: safeArea.top,
-                    backgroundColor: theme.colors.surface,
+                    backgroundColor: isTerminal ? TERMINAL_VISUAL_THEME.chrome : theme.colors.surface,
                     zIndex: 1000,
                     shadowColor: theme.colors.shadow.color,
                     shadowOffset: {
@@ -94,12 +95,18 @@ export const SessionView = React.memo((props: { id: string }) => {
                             />
                         ) : undefined}
                         onBackPress={() => router.back()}
+                        backgroundColor={isTerminal ? TERMINAL_VISUAL_THEME.chrome : undefined}
+                        tintColor={isTerminal ? TERMINAL_VISUAL_THEME.text : undefined}
                     />
                 </View>
             )}
 
             {/* Content based on state */}
-            <View style={{ flex: 1, paddingTop: !hideHeader ? safeArea.top + headerHeight : 0 }}>
+            <View style={{
+                flex: 1,
+                paddingTop: !hideHeader ? safeArea.top + headerHeight : 0,
+                backgroundColor: isTerminal ? TERMINAL_VISUAL_THEME.canvas : theme.colors.surface,
+            }}>
                 {!isDataReady ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={theme.colors.textSecondary} />

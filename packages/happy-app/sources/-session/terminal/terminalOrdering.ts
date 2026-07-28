@@ -1,4 +1,6 @@
-import type { TerminalOutput } from '@slopus/happy-wire';
+import type { TerminalStreamEvent } from '@slopus/happy-wire';
+
+export type TerminalMetadataEvent = Exclude<TerminalStreamEvent, { t: 'output' }>;
 
 /**
  * Events emitted by {@link TerminalOrderer} as it reconciles chunks.
@@ -9,6 +11,7 @@ import type { TerminalOutput } from '@slopus/happy-wire';
  */
 export type TerminalOrdererEvent =
     | { type: 'write'; seq: number; data: string }
+    | { type: 'metadata'; event: TerminalMetadataEvent }
     | { type: 'resync' };
 
 export interface TerminalOrdererOptions {
@@ -40,7 +43,7 @@ export interface TerminalOrdererOptions {
 export class TerminalOrderer {
     private lastSeq = -1;
     private attachSettled = false;
-    private pending: TerminalOutput[] = [];
+    private pending: TerminalStreamEvent[] = [];
     private lastResyncAt = 0;
     private readonly resyncCooldownMs: number;
     private readonly now: () => number;
@@ -54,7 +57,7 @@ export class TerminalOrderer {
     }
 
     /** Feed a decrypted chunk from the output bus. */
-    push(chunk: TerminalOutput): void {
+    push(chunk: TerminalStreamEvent): void {
         // Until the attach settles, buffer BOTH snapshot and live chunks so the
         // two histories can be merged and written in order by settle().
         if (!this.attachSettled) {
@@ -66,7 +69,7 @@ export class TerminalOrderer {
         if (chunk.snapshot) {
             if (chunk.seq > this.lastSeq) {
                 this.lastSeq = chunk.seq;
-                this.emit({ type: 'write', seq: chunk.seq, data: chunk.data });
+                this.emitStreamEvent(chunk);
             }
             return;
         }
@@ -90,7 +93,7 @@ export class TerminalOrderer {
                 continue; // duplicate: the same seq arrived via both histories
             }
             this.lastSeq = chunk.seq;
-            this.emit({ type: 'write', seq: chunk.seq, data: chunk.data });
+            this.emitStreamEvent(chunk);
         }
     }
 
@@ -102,7 +105,7 @@ export class TerminalOrderer {
         this.lastResyncAt = 0;
     }
 
-    private applyLive(chunk: TerminalOutput): void {
+    private applyLive(chunk: TerminalStreamEvent): void {
         if (chunk.seq <= this.lastSeq) {
             return;
         }
@@ -117,7 +120,15 @@ export class TerminalOrderer {
             this.requestResync();
         }
         this.lastSeq = chunk.seq;
-        this.emit({ type: 'write', seq: chunk.seq, data: chunk.data });
+        this.emitStreamEvent(chunk);
+    }
+
+    private emitStreamEvent(event: TerminalStreamEvent): void {
+        if (event.t === 'output') {
+            this.emit({ type: 'write', seq: event.seq, data: event.data });
+        } else {
+            this.emit({ type: 'metadata', event });
+        }
     }
 
     private requestResync(): void {

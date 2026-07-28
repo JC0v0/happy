@@ -8,9 +8,12 @@ const LOG_SERVER_KEY = 'log-server-url';
 const DEFAULT_SERVER_URL = 'https://121.40.138.143:443';
 
 export function getServerUrl(): string {
+    // Explicit env var or runtime config overrides any stored value,
+    // so local dev servers (--host 0.0.0.0) always take effect.
+    const override = (globalThis as any).__HAPPY_CONFIG__?.serverUrl ||
+                     process.env.EXPO_PUBLIC_HAPPY_SERVER_URL;
+    if (override) return override;
     return serverConfigStorage.getString(SERVER_KEY) ||
-           (globalThis as any).__HAPPY_CONFIG__?.serverUrl ||
-           process.env.EXPO_PUBLIC_HAPPY_SERVER_URL ||
            DEFAULT_SERVER_URL;
 }
 

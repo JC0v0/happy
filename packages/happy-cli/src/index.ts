@@ -24,6 +24,7 @@ import { handleAuthCommand } from './commands/auth'
 import { handleServerCommand } from './commands/server'
 import { spawnHappyCLI } from './utils/spawnHappyCLI'
 import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
+import { configuration } from './configuration'
 
 
 (async () => {
@@ -37,7 +38,10 @@ import { ensureDaemonRunning } from './daemon/ensureDaemonRunning'
   // Check if first argument is a subcommand
   const subcommand = args[0]
 
-  if (subcommand === 'doctor') {
+  if (subcommand === '--version' || subcommand === '-v') {
+    console.log(configuration.currentCliVersion)
+    return
+  } else if (subcommand === 'doctor') {
     // Check for clean subcommand
     if (args[1] === 'clean') {
       if (args.slice(2).some(a => a === '--help' || a === '-h')) {

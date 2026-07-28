@@ -6,8 +6,8 @@
 import { apiSocket } from './apiSocket';
 import { sync } from './sync';
 import { storage } from './storage';
-import type { MachineMetadata, SessionAgentModesPatch } from './storageTypes';
-import { markAgentModePushPending, clearAgentModePushPending, type AgentModeField } from './agentModesPending';
+import type { MachineMetadata, SessionModesPatch } from './storageTypes';
+import { markSessionModePushPending, clearSessionModePushPending, type SessionModeField } from './sessionModePending';
 import { clearTerminalOutputBuffer } from '@/-session/terminal/terminalOutputBus';
 import {
     isRigMetadata,
@@ -19,7 +19,7 @@ import {
     rigHasRpcMethod,
 } from './rig';
 
-export type { SessionAgentModesPatch };
+export type { SessionModesPatch };
 
 // Strict type definitions for all operations
 
@@ -579,9 +579,9 @@ export async function machineUpdateMetadata(
  * taken from the server via the schema-free raw decrypt, so fields this app
  * version doesn't know about survive the read-modify-write.
  */
-async function sessionUpdateAgentModesMetadata(
+async function sessionUpdateModesMetadata(
     sessionId: string,
-    patch: SessionAgentModesPatch,
+    patch: SessionModesPatch,
     maxRetries: number = 3
 ): Promise<void> {
     const encryption = sync.encryption.getSessionEncryption(sessionId);
@@ -591,7 +591,7 @@ async function sessionUpdateAgentModesMetadata(
     }
 
     // Defensive copy: retries drop fields from the patch (see below)
-    let pendingPatch: SessionAgentModesPatch = { ...patch };
+    let pendingPatch: SessionModesPatch = { ...patch };
     let currentVersion = session.metadataVersion;
     let currentMetadata: Record<string, unknown> = { ...session.metadata, ...pendingPatch };
 
@@ -621,7 +621,7 @@ async function sessionUpdateAgentModesMetadata(
             // owns the field now, and blindly replaying the original patch
             // would resurrect a pick the user already cleared.
             const liveSession = storage.getState().sessions[sessionId];
-            for (const field of Object.keys(pendingPatch) as (keyof SessionAgentModesPatch)[]) {
+            for (const field of Object.keys(pendingPatch) as (keyof SessionModesPatch)[]) {
                 if ((liveSession?.[field] ?? null) !== (pendingPatch[field] ?? null)) {
                     delete pendingPatch[field];
                 }
@@ -645,7 +645,7 @@ async function sessionUpdateAgentModesMetadata(
  * failed push leaves the optimistic local value, and the next inbound
  * metadata update reconciles the UI.
  */
-export function sessionSetAgentModes(sessionId: string, patch: SessionAgentModesPatch): void {
+export function sessionSetModes(sessionId: string, patch: SessionModesPatch): void {
     const state = storage.getState();
     const session = state.sessions[sessionId];
 
@@ -655,13 +655,13 @@ export function sessionSetAgentModes(sessionId: string, patch: SessionAgentModes
     // synced metadata: a local-only value (e.g. the EnterPlanMode auto-switch
     // writes the mirror without metadata) must still be pushed when the user
     // picks it explicitly, or other devices never see it.
-    const isChanged = (value: string | null, field: keyof SessionAgentModesPatch): boolean => {
+    const isChanged = (value: string | null, field: keyof SessionModesPatch): boolean => {
         const mirror = session?.[field] ?? null;
         const metaRaw = session?.metadata?.[field];
         const meta = metaRaw === undefined ? null : (metaRaw ?? null);
         return value !== mirror || value !== meta;
     };
-    const changed: SessionAgentModesPatch = {};
+    const changed: SessionModesPatch = {};
     if (patch.permissionMode !== undefined && isChanged(patch.permissionMode, 'permissionMode')) {
         changed.permissionMode = patch.permissionMode;
     }
@@ -675,19 +675,19 @@ export function sessionSetAgentModes(sessionId: string, patch: SessionAgentModes
         return;
     }
 
-    state.updateSessionAgentModes(sessionId, changed);
+    state.updateSessionModes(sessionId, changed);
 
     // While the push is in flight, inbound updates still carry the OLD
     // metadata; mark the fields pending so applySessions keeps the fresher
     // local mirror instead of bouncing the pick back.
-    const changedFields = Object.keys(changed) as AgentModeField[];
-    markAgentModePushPending(sessionId, changedFields);
-    sessionUpdateAgentModesMetadata(sessionId, changed)
+    const changedFields = Object.keys(changed) as SessionModeField[];
+    markSessionModePushPending(sessionId, changedFields);
+    sessionUpdateModesMetadata(sessionId, changed)
         .catch((error) => {
             console.error(`Failed to sync agent modes for session ${sessionId}`, error);
         })
         .finally(() => {
-            clearAgentModePushPending(sessionId, changedFields);
+            clearSessionModePushPending(sessionId, changedFields);
         });
 }
 

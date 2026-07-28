@@ -11,24 +11,54 @@ import * as z from 'zod';
 //   plaintext and never persists it.
 //
 
-/** Keystroke bytes (base64) from a client, to be written to the pty. */
+export const TerminalIdSchema = z.string().min(1).max(128);
+
+const TerminalScopeSchema = {
+    /** Stable per-device PTY identity. Absent means the legacy shared PTY. */
+    terminalId: TerminalIdSchema.optional(),
+};
+
+/** Keystroke bytes (base64) from a client, to be written to its device PTY. */
 export const TerminalInputSchema = z.object({
     t: z.literal('input'),
     data: z.string(),
+    ...TerminalScopeSchema,
 });
 export type TerminalInput = z.infer<typeof TerminalInputSchema>;
+
+/**
+ * A complete command submitted from Happy's command dock. Unlike raw
+ * `terminal-input`, this gives the CLI an explicit command boundary so it can
+ * attach lifecycle metadata without attempting to reconstruct editable shell
+ * input from a byte stream. Older CLIs simply do not register this RPC and
+ * clients fall back to `terminal-input`.
+ */
+export const TerminalExecuteSchema = z.object({
+    t: z.literal('execute'),
+    command: z.string().min(1).max(32 * 1024),
+    ...TerminalScopeSchema,
+});
+export type TerminalExecute = z.infer<typeof TerminalExecuteSchema>;
+
+export const TerminalExecuteResponseSchema = z.object({
+    commandId: z.string().optional(),
+    tracked: z.boolean(),
+});
+export type TerminalExecuteResponse = z.infer<typeof TerminalExecuteResponseSchema>;
 
 /** Terminal dimensions from a client, to be applied via pty.resize(). */
 export const TerminalResizeSchema = z.object({
     t: z.literal('resize'),
     cols: z.number().int().min(1).max(1000),
     rows: z.number().int().min(1).max(1000),
+    ...TerminalScopeSchema,
 });
 export type TerminalResize = z.infer<typeof TerminalResizeSchema>;
 
 /** Request from a newly attached client for a replay of the recent output buffer. */
 export const TerminalAttachSchema = z.object({
     t: z.literal('attach'),
+    ...TerminalScopeSchema,
 });
 export type TerminalAttach = z.infer<typeof TerminalAttachSchema>;
 
@@ -64,21 +94,49 @@ export const TerminalThemeSchema = z.object({
 export type TerminalTheme = z.infer<typeof TerminalThemeSchema>;
 
 /** Response to `terminal-attach`: the host's terminal theme for color syncing. */
+export const TerminalCapabilitiesSchema = z.object({
+    protocolVersion: z.number().int().min(1),
+    structuredCommands: z.boolean(),
+    shell: z.string(),
+    perDevicePty: z.boolean().optional(),
+    /** The shared PTY grid follows the device that most recently sent input. */
+    adaptiveGrid: z.boolean().optional(),
+    /** Native host runtime selected for this terminal session. */
+    ptyBackend: z.enum(['node-pty', 'rust-host-agent']).optional(),
+});
+export type TerminalCapabilities = z.infer<typeof TerminalCapabilitiesSchema>;
+
+export const TerminalSessionStateSchema = z.object({
+    status: z.enum(['idle', 'running', 'needs-input']),
+    cwd: z.string().optional(),
+    activeCommand: z.object({
+        commandId: z.string(),
+        command: z.string(),
+        startedAt: z.number().int().nonnegative(),
+        cwd: z.string().optional(),
+    }).optional(),
+});
+export type TerminalSessionState = z.infer<typeof TerminalSessionStateSchema>;
+
 export const TerminalAttachResponseSchema = z.object({
     theme: TerminalThemeSchema.optional(),
+    capabilities: TerminalCapabilitiesSchema.optional(),
+    state: TerminalSessionStateSchema.optional(),
 });
 export type TerminalAttachResponse = z.infer<typeof TerminalAttachResponseSchema>;
 
 export const TerminalRpcParamsSchema = z.discriminatedUnion('t', [
     TerminalInputSchema,
+    TerminalExecuteSchema,
     TerminalResizeSchema,
     TerminalAttachSchema,
 ]);
 export type TerminalRpcParams = z.infer<typeof TerminalRpcParamsSchema>;
 
 /**
- * A chunk of pty output (base64). `seq` is a per-session monotonically
- * increasing counter; `snapshot: true` marks chunks replayed from the CLI's
+ * A chunk of pty output (base64). `seq` is monotonically increasing within
+ * one `terminalId`; legacy events without an id use the shared sequence.
+ * `snapshot: true` marks chunks replayed from the CLI's
  * in-memory buffer in response to `terminal-attach`, so clients can dedupe
  * against the live stream.
  */
@@ -87,8 +145,79 @@ export const TerminalOutputSchema = z.object({
     seq: z.number().int().min(0),
     data: z.string(),
     snapshot: z.boolean().optional(),
+    ...TerminalScopeSchema,
 });
 export type TerminalOutput = z.infer<typeof TerminalOutputSchema>;
+
+const TerminalSequencedEventSchema = z.object({
+    seq: z.number().int().min(0),
+    snapshot: z.boolean().optional(),
+    ...TerminalScopeSchema,
+});
+
+/** A command accepted by the shell-facing terminal command dock. */
+export const TerminalCommandStartSchema = TerminalSequencedEventSchema.extend({
+    t: z.literal('command-start'),
+    commandId: z.string().min(1),
+    command: z.string(),
+    startedAt: z.number().int().nonnegative(),
+    cwd: z.string().optional(),
+});
+export type TerminalCommandStart = z.infer<typeof TerminalCommandStartSchema>;
+
+/** Completion metadata emitted when shell integration reaches the next prompt. */
+export const TerminalCommandEndSchema = TerminalSequencedEventSchema.extend({
+    t: z.literal('command-end'),
+    commandId: z.string().min(1),
+    endedAt: z.number().int().nonnegative(),
+    durationMs: z.number().int().nonnegative(),
+    exitCode: z.number().int(),
+    cwd: z.string().optional(),
+});
+export type TerminalCommandEnd = z.infer<typeof TerminalCommandEndSchema>;
+
+/** Current working directory reported by shell integration. */
+export const TerminalCwdSchema = TerminalSequencedEventSchema.extend({
+    t: z.literal('cwd'),
+    path: z.string(),
+});
+export type TerminalCwd = z.infer<typeof TerminalCwdSchema>;
+
+/** Coarse terminal state used by mobile UI and attention notifications. */
+export const TerminalStateSchema = TerminalSequencedEventSchema.extend({
+    t: z.literal('state'),
+    state: z.enum(['idle', 'running', 'needs-input']),
+    commandId: z.string().optional(),
+});
+export type TerminalState = z.infer<typeof TerminalStateSchema>;
+
+/**
+ * Shared PTY dimensions selected by the active controller. Every client uses
+ * this logical grid while fitting it independently into its physical viewport.
+ */
+export const TerminalGridSchema = TerminalSequencedEventSchema.extend({
+    t: z.literal('grid'),
+    cols: z.number().int().min(1).max(1000),
+    rows: z.number().int().min(1).max(1000),
+    controllerTerminalId: TerminalIdSchema.optional(),
+});
+export type TerminalGrid = z.infer<typeof TerminalGridSchema>;
+
+/**
+ * Ordered plaintext event stream carried inside the existing encrypted
+ * terminal-output relay. Keeping one `seq` domain per device PTY for bytes
+ * and metadata makes snapshot/live reconciliation deterministic and leaves
+ * the server blind to commands, paths and output.
+ */
+export const TerminalStreamEventSchema = z.discriminatedUnion('t', [
+    TerminalOutputSchema,
+    TerminalCommandStartSchema,
+    TerminalCommandEndSchema,
+    TerminalCwdSchema,
+    TerminalStateSchema,
+    TerminalGridSchema,
+]);
+export type TerminalStreamEvent = z.infer<typeof TerminalStreamEventSchema>;
 
 /**
  * Unencrypted relay envelope emitted by the CLI on the `terminal-output`

@@ -1,5 +1,4 @@
 import * as z from 'zod';
-import { AgentDefaultOverridesSchema } from './agentDefaults';
 import { DEFAULT_USER_MESSAGE_BUBBLE_COLOR } from '../utils/userMessageBubbleColor';
 
 //
@@ -48,24 +47,18 @@ export const SettingsSchema = z.object({
         machineId: z.string(),
         path: z.string()
     })).describe('Last 10 machine-path combinations, ordered by most recent first'),
-    lastUsedAgent: z.string().nullable().describe('Last selected agent type for new sessions'),
+    lastUsedAgent: z.string().nullable().describe('Last selected agent type (inert — no agent backends remain)'),
     lastUsedPermissionMode: z.string().nullable().describe('Last selected permission mode for new sessions'),
     lastUsedModelMode: z.string().nullable().describe('Last selected model mode for new sessions'),
-    agentDefaultOverrides: AgentDefaultOverridesSchema.describe('User-selected agent defaults. Missing values use code defaults and are not sent as agent metadata.'),
-    // Dismissed CLI warning banners (supports both per-machine and global dismissal)
+    // Agent overrides are inert — all agent backends have been removed, but the
+    // field still exists in synced settings so older clients don't lose data.
+    agentDefaultOverrides: z.record(z.string(), z.unknown()).default({}).describe('User-selected agent defaults (inert — no agent backends remain).'),
+    // Dismissed CLI warning banners. Kept as a generic record for backward
+    // compatibility — per-agent keys (claude/codex/gemini/openclaw) are inert
+    // since all agent backends were removed.
     dismissedCLIWarnings: z.object({
-        perMachine: z.record(z.string(), z.object({
-            claude: z.boolean().optional(),
-            codex: z.boolean().optional(),
-            gemini: z.boolean().optional(),
-            openclaw: z.boolean().optional(),
-        })).default({}),
-        global: z.object({
-            claude: z.boolean().optional(),
-            codex: z.boolean().optional(),
-            gemini: z.boolean().optional(),
-            openclaw: z.boolean().optional(),
-        }).default({}),
+        perMachine: z.record(z.string(), z.record(z.string(), z.boolean()).default({})).default({}),
+        global: z.record(z.string(), z.boolean()).default({}),
     }).default({ perMachine: {}, global: {} }).describe('Tracks which CLI installation warnings user has dismissed (per-machine or globally)'),
 });
 
@@ -196,15 +189,19 @@ export function applySettings(settings: Settings, delta: Partial<Settings>): Set
 export function settingsToSyncPayload(settings: Settings): Partial<Settings> {
     const result: Partial<Settings> = { ...settings };
     removeLegacyVoiceSettings(result as Record<string, unknown>);
-    const compactAgentOverrides = Object.fromEntries(
-        Object.entries(settings.agentDefaultOverrides ?? {}).filter(([, value]) => (
-            value && typeof value === 'object' && Object.keys(value).length > 0
+    // Strip empty agent default overrides to keep the payload small.
+    // The field is inert (no agent backends remain) but preserved for
+    // backward compatibility with older clients.
+    const overrides = settings.agentDefaultOverrides ?? {};
+    const compacted = Object.fromEntries(
+        Object.entries(overrides).filter(([, value]) => (
+            value && typeof value === 'object' && Object.keys(value as object).length > 0
         )),
-    ) as Settings['agentDefaultOverrides'];
-    if (Object.keys(compactAgentOverrides).length === 0) {
+    );
+    if (Object.keys(compacted).length === 0) {
         delete result.agentDefaultOverrides;
     } else {
-        result.agentDefaultOverrides = compactAgentOverrides;
+        result.agentDefaultOverrides = compacted;
     }
     return result;
 }

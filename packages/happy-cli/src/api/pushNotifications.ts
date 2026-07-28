@@ -11,7 +11,13 @@ export interface PushToken {
     updatedAt: number
 }
 
-export type SessionNotificationKind = 'done' | 'permission' | 'question'
+export type SessionNotificationKind =
+    | 'done'
+    | 'permission'
+    | 'question'
+    | 'terminal-done'
+    | 'terminal-failed'
+    | 'terminal-needs-input'
 
 function getSessionTitle(metadata: Metadata | null | undefined): string {
     const summaryText = metadata?.summary?.text?.trim()
@@ -52,6 +58,12 @@ export function getSessionNotificationTitle(
             return 'Permission request'
         case 'question':
             return 'Clarification needed'
+        case 'terminal-done':
+            return 'Command finished'
+        case 'terminal-failed':
+            return 'Command failed'
+        case 'terminal-needs-input':
+            return 'Terminal needs input'
     }
 }
 
@@ -255,8 +267,12 @@ export class PushNotificationClient {
         kind: SessionNotificationKind
         metadata: Metadata | null | undefined
         data?: Record<string, any>
+        title?: string
+        body?: string
     }): void {
-        const { title, body } = getSessionNotificationCopy(params.kind, params.metadata)
+        const defaults = getSessionNotificationCopy(params.kind, params.metadata)
+        const title = params.title ?? defaults.title
+        const body = params.body ?? defaults.body
         const sessionTitle = getSessionNotificationBody(params.metadata)
         const url = getSessionNotificationUrl(params.data)
         const payloadData = {
@@ -294,7 +310,13 @@ export class PushNotificationClient {
                 )
                 logger.debug(`[PUSH] sendSessionNotification dispatched via server (kind=${params.kind})`)
             } catch (error) {
-                logger.debug('[PUSH] sendSessionNotification failed:', error)
+                if (axios.isAxiosError(error)) {
+                    logger.debug(
+                        `[PUSH] sendSessionNotification failed: status=${error.response?.status ?? 'network'} message=${error.message}`
+                    )
+                } else {
+                    logger.debug(`[PUSH] sendSessionNotification failed: ${error instanceof Error ? error.message : 'unknown error'}`)
+                }
             }
         })()
     }

@@ -4,7 +4,8 @@
 # Stage 1: install dependencies
 FROM node:20 AS deps
 
-RUN apt-get update && apt-get install -y python3 make g++ build-essential && rm -rf /var/lib/apt/lists/*
+RUN sed -i "s@deb.debian.org@mirrors.aliyun.com@g" /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
+    apt-get update && apt-get install -y python3 make g++ gcc build-essential && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@10.11.0 --activate
 
 WORKDIR /repo
@@ -13,12 +14,11 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY scripts ./scripts
 COPY patches ./patches
 
-RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-agent packages/happy-wire
+RUN mkdir -p packages/happy-app packages/happy-server packages/happy-cli packages/happy-wire
 
 COPY packages/happy-app/package.json packages/happy-app/
 COPY packages/happy-server/package.json packages/happy-server/
 COPY packages/happy-cli/package.json packages/happy-cli/
-COPY packages/happy-agent/package.json packages/happy-agent/
 COPY packages/happy-wire/package.json packages/happy-wire/
 
 # Workspace postinstall requirements
@@ -34,16 +34,21 @@ FROM deps AS builder
 
 COPY packages/happy-wire ./packages/happy-wire
 COPY packages/happy-server ./packages/happy-server
+COPY packages/happy-app/sources/sync/apiTypes.ts ./packages/happy-app/sources/sync/apiTypes.ts
+COPY packages/happy-app/sources/sync/feedTypes.ts ./packages/happy-app/sources/sync/feedTypes.ts
+COPY packages/happy-app/sources/sync/friendTypes.ts ./packages/happy-app/sources/sync/friendTypes.ts
+COPY packages/happy-app/sources/sync/profile.ts ./packages/happy-app/sources/sync/profile.ts
 
 RUN pnpm --filter @slopus/happy-wire build
-RUN pnpm --filter happy-server build
+RUN pnpm --filter happy-server-self-host typecheck
 
 # Stage 3: runtime
 FROM node:20-slim AS runner
 
 WORKDIR /repo
 
-RUN apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/lists/*
+RUN sed -i "s@deb.debian.org@mirrors.aliyun.com@g" /etc/apt/sources.list.d/debian.sources 2>/dev/null; \
+    apt-get update && apt-get install -y ffmpeg curl && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV DATA_DIR=/data

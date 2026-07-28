@@ -1,4 +1,5 @@
 import { MMKV } from 'react-native-mmkv';
+import { randomUUID } from 'expo-crypto';
 import { Settings, settingsDefaults, settingsParse, settingsToSyncPayload, SettingsSchema } from './settings';
 import { LocalSettings, localSettingsDefaults, localSettingsParse } from './localSettings';
 import { Purchases, purchasesDefaults, purchasesParse } from './purchases';
@@ -9,6 +10,44 @@ type PermissionModeKey = string;
 const mmkv = new MMKV();
 const NEW_SESSION_DRAFT_KEY = 'new-session-draft-v1';
 const REGISTERED_PUSH_TOKEN_KEY = 'registered-push-token-v1';
+const TERMINAL_HISTORY_KEY = 'terminal-command-history-v1';
+const TERMINAL_HISTORY_ENABLED_KEY = 'terminal-command-history-enabled-v1';
+const TERMINAL_DRAFT_PREFIX = 'terminal-command-draft-v1:';
+const TERMINAL_LAST_BLOCK_PREFIX = 'terminal-last-block-v1:';
+const TERMINAL_FONT_SIZE_KEY = 'terminal-font-size-v1';
+const TERMINAL_VIEW_MODE_KEY = 'terminal-view-mode-v1';
+const TERMINAL_DEVICE_ID_KEY = 'terminal-device-id-v1';
+const MAX_TERMINAL_HISTORY_ENTRIES = 500;
+
+export interface PersistedTerminalHistoryEntry {
+    id: string;
+    sessionId: string;
+    machineId?: string;
+    host?: string;
+    command: string;
+    cwd?: string;
+    startedAt: number;
+    endedAt: number;
+    durationMs: number;
+    exitCode: number;
+    favorite: boolean;
+}
+
+export type TerminalViewMode = 'blocks' | 'raw';
+
+/**
+ * Stable identity for this app/browser installation. Terminal sessions use it
+ * to select a private PTY while still receiving every device's block records.
+ */
+export function loadOrCreateTerminalDeviceId(): string {
+    const existing = mmkv.getString(TERMINAL_DEVICE_ID_KEY);
+    if (existing) {
+        return existing;
+    }
+    const created = `device-${randomUUID()}`;
+    mmkv.set(TERMINAL_DEVICE_ID_KEY, created);
+    return created;
+}
 
 export type NewSessionAgentType = 'claude' | 'codex' | 'gemini' | 'openclaw' | 'agy' | 'terminal';
 export type NewSessionSessionType = 'simple' | 'worktree';
@@ -192,6 +231,127 @@ export function saveRegisteredPushToken(token: string) {
 
 export function clearRegisteredPushToken() {
     mmkv.delete(REGISTERED_PUSH_TOKEN_KEY);
+}
+
+function parseTerminalHistoryEntry(value: unknown): PersistedTerminalHistoryEntry | null {
+    if (!value || typeof value !== 'object') {
+        return null;
+    }
+    const entry = value as Record<string, unknown>;
+    if (
+        typeof entry.id !== 'string' ||
+        typeof entry.sessionId !== 'string' ||
+        typeof entry.command !== 'string' ||
+        typeof entry.startedAt !== 'number' ||
+        typeof entry.endedAt !== 'number' ||
+        typeof entry.durationMs !== 'number' ||
+        typeof entry.exitCode !== 'number'
+    ) {
+        return null;
+    }
+    return {
+        id: entry.id,
+        sessionId: entry.sessionId,
+        ...(typeof entry.machineId === 'string' ? { machineId: entry.machineId } : {}),
+        ...(typeof entry.host === 'string' ? { host: entry.host } : {}),
+        command: entry.command,
+        ...(typeof entry.cwd === 'string' ? { cwd: entry.cwd } : {}),
+        startedAt: entry.startedAt,
+        endedAt: entry.endedAt,
+        durationMs: entry.durationMs,
+        exitCode: entry.exitCode,
+        favorite: entry.favorite === true,
+    };
+}
+
+export function loadTerminalHistory(): PersistedTerminalHistoryEntry[] {
+    const raw = mmkv.getString(TERMINAL_HISTORY_KEY);
+    if (!raw) {
+        return [];
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed)
+            ? parsed.map(parseTerminalHistoryEntry).filter((entry): entry is PersistedTerminalHistoryEntry => entry !== null)
+            : [];
+    } catch (e) {
+        console.error('Failed to parse terminal command history', e);
+        return [];
+    }
+}
+
+function saveTerminalHistory(entries: PersistedTerminalHistoryEntry[]): void {
+    mmkv.set(TERMINAL_HISTORY_KEY, JSON.stringify(entries));
+}
+
+export function upsertTerminalHistoryEntry(entry: Omit<PersistedTerminalHistoryEntry, 'favorite'>): void {
+    if (!isTerminalHistoryEnabled()) {
+        return;
+    }
+    const entries = loadTerminalHistory();
+    const existing = entries.find((item) => item.id === entry.id);
+    const next = [
+        { ...entry, favorite: existing?.favorite ?? false },
+        ...entries.filter((item) => item.id !== entry.id),
+    ].sort((a, b) => b.endedAt - a.endedAt);
+    const favorites = next.filter((item) => item.favorite);
+    const recent = next.filter((item) => !item.favorite)
+        .slice(0, Math.max(0, MAX_TERMINAL_HISTORY_ENTRIES - favorites.length));
+    saveTerminalHistory([...favorites, ...recent].sort((a, b) => b.endedAt - a.endedAt));
+}
+
+export function setTerminalHistoryFavorite(id: string, favorite: boolean): void {
+    saveTerminalHistory(loadTerminalHistory().map((entry) => entry.id === id ? { ...entry, favorite } : entry));
+}
+
+export function clearTerminalHistory(): void {
+    mmkv.delete(TERMINAL_HISTORY_KEY);
+}
+
+export function isTerminalHistoryEnabled(): boolean {
+    return mmkv.getBoolean(TERMINAL_HISTORY_ENABLED_KEY) ?? true;
+}
+
+export function setTerminalHistoryEnabled(enabled: boolean): void {
+    mmkv.set(TERMINAL_HISTORY_ENABLED_KEY, enabled);
+}
+
+export function loadTerminalCommandDraft(sessionId: string): string {
+    return mmkv.getString(`${TERMINAL_DRAFT_PREFIX}${sessionId}`) ?? '';
+}
+
+export function saveTerminalCommandDraft(sessionId: string, draft: string): void {
+    const key = `${TERMINAL_DRAFT_PREFIX}${sessionId}`;
+    if (draft.length === 0) {
+        mmkv.delete(key);
+    } else {
+        mmkv.set(key, draft);
+    }
+}
+
+export function loadTerminalLastBlock(sessionId: string): string | null {
+    return mmkv.getString(`${TERMINAL_LAST_BLOCK_PREFIX}${sessionId}`) ?? null;
+}
+
+export function saveTerminalLastBlock(sessionId: string, commandId: string): void {
+    mmkv.set(`${TERMINAL_LAST_BLOCK_PREFIX}${sessionId}`, commandId);
+}
+
+export function loadTerminalFontSize(fallback: number): number {
+    const value = mmkv.getNumber(TERMINAL_FONT_SIZE_KEY);
+    return typeof value === 'number' && value >= 8 && value <= 24 ? value : fallback;
+}
+
+export function saveTerminalFontSize(value: number): void {
+    mmkv.set(TERMINAL_FONT_SIZE_KEY, value);
+}
+
+export function loadTerminalViewMode(): TerminalViewMode {
+    return mmkv.getString(TERMINAL_VIEW_MODE_KEY) === 'raw' ? 'raw' : 'blocks';
+}
+
+export function saveTerminalViewMode(mode: TerminalViewMode): void {
+    mmkv.set(TERMINAL_VIEW_MODE_KEY, mode);
 }
 
 export function loadProfile(): Profile {

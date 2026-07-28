@@ -92,7 +92,7 @@ export function pushRoutes(app: Fastify) {
                 sessionId: z.string()
             }),
             body: z.object({
-                kind: z.enum(['done', 'permission', 'question']),
+                kind: z.enum(['done', 'permission', 'question', 'terminal-done', 'terminal-failed', 'terminal-needs-input']),
                 title: z.string().min(1).max(200),
                 body: z.string().min(1).max(500),
                 data: z.record(z.string(), z.unknown()).optional()

@@ -32,6 +32,8 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
     rightSlot,
     onTitlePress,
     onBackPress,
+    backgroundColor,
+    tintColor,
     isConnected = true,
 }) => {
     const { theme } = useUnistyles();
@@ -40,9 +42,12 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
     const isTablet = useIsTablet();
     const showBackButton = !isTablet && !!onBackPress;
     const hasExtra = !!extraPathSegment;
+    const resolvedBackground = backgroundColor ?? theme.colors.header.background;
+    const resolvedTint = tintColor ?? theme.colors.header.tint;
+    const resolvedMutedTint = tintColor ? 'rgba(243, 244, 246, 0.58)' : theme.colors.textSecondary;
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top, backgroundColor: theme.colors.header.background }]}>
+        <View style={[styles.container, { paddingTop: insets.top, backgroundColor: resolvedBackground }]}>
             <View style={styles.contentWrapper}>
                 <View style={[styles.content, { height: headerHeight }]}>
                     {showBackButton && (
@@ -50,7 +55,7 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
                             <Ionicons
                                 name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                                 size={24}
-                                color={theme.colors.header.tint}
+                                color={resolvedTint}
                             />
                         </Pressable>
                     )}
@@ -63,20 +68,20 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
                             <View style={styles.titleRow}>
                                 <Text
                                     numberOfLines={1}
-                                    style={[styles.folderName, { color: theme.colors.textSecondary, ...Typography.default() }]}
+                                    style={[styles.folderName, { color: resolvedMutedTint, ...Typography.default() }]}
                                 >
                                     {folderName}
                                 </Text>
                                 {title && title !== folderName && (
                                     <>
-                                        <Text style={[styles.separator, { color: theme.colors.textSecondary, ...Typography.default() }]}>/</Text>
+                                        <Text style={[styles.separator, { color: resolvedMutedTint, ...Typography.default() }]}>/</Text>
                                         <Text
                                             numberOfLines={1}
                                             ellipsizeMode="tail"
                                             style={[
                                                 styles.title,
                                                 hasExtra && styles.titleWithExtra,
-                                                { color: theme.colors.header.tint, ...Typography.default() },
+                                                { color: resolvedTint, ...Typography.default() },
                                             ]}
                                         >
                                             {title}
@@ -85,11 +90,11 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
                                 )}
                                 {hasExtra && (
                                     <>
-                                        <Text style={[styles.separator, { color: theme.colors.textSecondary, ...Typography.default() }]}>/</Text>
+                                        <Text style={[styles.separator, { color: resolvedMutedTint, ...Typography.default() }]}>/</Text>
                                         <Text
                                             numberOfLines={1}
                                             ellipsizeMode="middle"
-                                            style={[styles.extraPath, { color: theme.colors.header.tint, ...Typography.mono() }]}
+                                            style={[styles.extraPath, { color: resolvedTint, ...Typography.mono() }]}
                                         >
                                             {extraPathSegment}
                                         </Text>
@@ -100,7 +105,7 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
                             <Text
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
-                                style={[styles.title, { color: theme.colors.header.tint, ...Typography.default() }]}
+                                style={[styles.title, { color: resolvedTint, ...Typography.default() }]}
                             >
                                 {title}
                             </Text>
@@ -109,7 +114,7 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
                             <Text
                                 numberOfLines={1}
                                 ellipsizeMode="tail"
-                                style={[styles.identityLine, { color: theme.colors.textSecondary, ...Typography.default() }]}
+                                style={[styles.identityLine, { color: resolvedMutedTint, ...Typography.default() }]}
                             >
                                 {identityLine}
                             </Text>

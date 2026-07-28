@@ -1,10 +1,10 @@
 /**
  * Terminal session runner.
  *
- * Spawns a local shell via node-pty and relays its raw I/O, end-to-end
- * encrypted with the session key, through the Happy server to the app:
+ * Creates one session-wide node-pty shell and relays raw I/O, end-to-end
+ * encrypted with the session key, through Happy to every attached app:
  *
- *   pty output -> 16ms micro-batched chunks -> ring buffer (snapshots)
+ *   pty output -> shared ordered chunks -> ring buffer (snapshots)
  *              -> ApiSessionClient.sendTerminalOutput (encrypt + emit
  *                 `terminal-output` { sid, c } on the session socket)
  *   app input  -> session RPC `terminal-input` / `terminal-resize` /
@@ -12,7 +12,7 @@
  *
  * Disconnect = destroy: unlike agent sessions there is nothing worth keeping
  * alive without a relay, so a socket disconnect starts a short grace timer
- * after which the pty is killed and the process exits.
+ * after which the shared PTY is killed and the process exits.
  *
  * @module runTerminal
  */
@@ -20,7 +20,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import * as path from 'node:path';
-import * as pty from 'node-pty';
 
 import { ApiClient } from '@/api/api';
 import type { ApiSessionClient } from '@/api/apiSession';
@@ -33,34 +32,60 @@ import { encodeBase64 } from '@/api/encryption';
 import { registerKillSessionHandler } from '@/terminal/registerKillSessionHandler';
 import {
   TerminalAttachSchema,
+  TerminalExecuteSchema,
   TerminalInputSchema,
   TerminalResizeSchema,
-  type TerminalOutput,
   type TerminalTheme,
 } from '@slopus/happy-wire';
+import {
+  POWERSHELL_SHELL_INTEGRATION_SCRIPT,
+} from '@/terminal/terminalShellIntegration';
+import {
+  TerminalInstance,
+  type TerminalActiveCommand,
+  type TerminalShellLaunch,
+} from '@/terminal/terminalInstance';
+import { TerminalGridController } from '@/terminal/terminalGridController';
+import { selectHostAgentPtyBackend } from '@/terminal/hostAgentPty';
 
 /** How long the relay socket may stay down before the session self-destructs. */
-const DISCONNECT_GRACE_MS = 5_000;
-/**
- * Coalescing window for pty output. Caps the emit rate at ~60 chunks/s, well
- * under the server's 200 msg/s per-socket limit, without visible lag.
- */
-const OUTPUT_BATCH_MS = 16;
-/** Size of the in-memory replay buffer used to answer terminal-attach. */
-const RING_BUFFER_BYTES = 1024 * 1024;
+const DISCONNECT_GRACE_MS = 60_000;
+const COMMAND_DONE_NOTIFICATION_THRESHOLD_MS = 10_000;
+const COMMAND_FAILED_NOTIFICATION_THRESHOLD_MS = 3_000;
+const SHARED_TERMINAL_COLS = 80;
+const SHARED_TERMINAL_ROWS = 24;
+const LEGACY_TERMINAL_ID = 'legacy-shared-client';
+const LOCAL_TERMINAL_ID = 'local-cli';
 
-type BufferedChunk = {
-  seq: number;
-  data: string;
-};
+function formatNotificationDuration(durationMs: number): string {
+  if (durationMs < 60_000) {
+    return `${Math.max(1, Math.round(durationMs / 1000))}s`;
+  }
+  const minutes = Math.floor(durationMs / 60_000);
+  const seconds = Math.floor((durationMs % 60_000) / 1000);
+  return `${minutes}m ${seconds}s`;
+}
 
-function resolveShell(): string {
+function resolveShellLaunch(): TerminalShellLaunch {
   if (process.platform === 'win32') {
     // Prefer PowerShell for richer color output (matches Windows Terminal's
     // default profile). COMSPEC (cmd.exe) emits almost no ANSI color codes.
-    return 'powershell.exe';
+    return {
+      file: 'powershell.exe',
+      args: ['-NoLogo', '-NoExit', '-Command', POWERSHELL_SHELL_INTEGRATION_SCRIPT],
+      shell: 'powershell',
+      structuredCommands: true,
+    };
   }
-  return process.env.SHELL || '/bin/bash';
+  const file = process.env.SHELL || '/bin/bash';
+  return {
+    file,
+    args: [],
+    shell: path.basename(file),
+    // bash/zsh shell-integration shims are intentionally deferred. The raw
+    // terminal remains fully functional and clients see this capability flag.
+    structuredCommands: false,
+  };
 }
 
 /**
@@ -235,69 +260,99 @@ export async function runTerminal(opts: {
   }
 
   //
-  // Spawn the shell
+  // All devices drive one PTY. The last device that sends input owns its
+  // logical grid; every client renders that grid with its own local scale.
   //
-
   const localTty = opts.startedBy !== 'daemon' && process.stdout.isTTY === true;
   const localTheme = readLocalTerminalTheme();
-  const term = pty.spawn(resolveShell(), [], {
-    name: 'xterm-256color',
-    cols: localTty ? (process.stdout.columns || 80) : 80,
-    rows: localTty ? (process.stdout.rows || 24) : 24,
-    cwd: process.cwd(),
-    env: { ...process.env, COLORTERM: 'truecolor' },
-  });
+  const shellLaunch = resolveShellLaunch();
+  const nativePtyBackend = selectHostAgentPtyBackend();
+  const ptyBackend = nativePtyBackend?.kind ?? 'node-pty';
+  logger.debug(`[terminal] PTY backend: ${ptyBackend}`);
+  let sharedTerminal: TerminalInstance | null = null;
 
-  //
-  // Output path (pty -> app)
-  //
-
-  let nextSeq = 0;
-  // The ring stores the exact chunks we emitted (with their live seq
-  // numbers), so terminal-attach can replay segments the app dedupes by seq.
-  const ring: BufferedChunk[] = [];
-  let ringBytes = 0;
-  let pendingData = '';
-  let flushTimer: NodeJS.Timeout | null = null;
-
-  const sendChunk = (chunk: TerminalOutput, reliable = false) => {
-    session.sendTerminalOutput(chunk, { reliable });
+  const notifyNeedsInput = (command: TerminalActiveCommand) => {
+    api.push().sendSessionNotification({
+      kind: 'terminal-needs-input',
+      metadata,
+      title: 'Terminal needs input',
+      body: 'Input is waiting in your terminal.',
+      data: { sessionId: response.id, commandId: command.commandId },
+    });
   };
 
-  const flushPending = () => {
-    if (flushTimer) {
-      clearTimeout(flushTimer);
-      flushTimer = null;
-    }
-    if (!pendingData) {
+  const notifyCommandFinished = (
+    command: TerminalActiveCommand,
+    exitCode: number,
+    durationMs: number,
+  ) => {
+    const failed = exitCode !== 0;
+    const threshold = failed
+      ? COMMAND_FAILED_NOTIFICATION_THRESHOLD_MS
+      : COMMAND_DONE_NOTIFICATION_THRESHOLD_MS;
+    if (durationMs < threshold) {
       return;
     }
-    const data = pendingData;
-    pendingData = '';
-    const seq = nextSeq++;
-    ring.push({ seq, data });
-    ringBytes += data.length;
-    while (ringBytes > RING_BUFFER_BYTES && ring.length > 1) {
-      const dropped = ring.shift()!;
-      ringBytes -= dropped.data.length;
-    }
-    sendChunk({ t: 'output', seq, data: Buffer.from(data, 'utf8').toString('base64') });
+    const duration = formatNotificationDuration(durationMs);
+    api.push().sendSessionNotification({
+      kind: failed ? 'terminal-failed' : 'terminal-done',
+      metadata,
+      title: failed ? 'Command failed' : 'Command finished',
+      body: failed ? `Exited with code ${exitCode} after ${duration}.` : `Completed in ${duration}.`,
+      data: { sessionId: response.id, commandId: command.commandId, exitCode, durationMs },
+    });
   };
 
-  term.onData((data) => {
-    if (localTty) {
-      process.stdout.write(data);
+  const createSharedTerminal = () => {
+    let instance: TerminalInstance;
+    instance = new TerminalInstance({
+      shellLaunch,
+      cwd: process.cwd(),
+      cols: SHARED_TERMINAL_COLS,
+      rows: SHARED_TERMINAL_ROWS,
+      env: process.env,
+      ...(nativePtyBackend ? { spawnPty: nativePtyBackend.spawn } : {}),
+      onEvent: (event, reliable) => session.sendTerminalOutput(event, { reliable }),
+      onNeedsInput: notifyNeedsInput,
+      onCommandFinished: (command, exitCode, durationMs) => {
+        notifyCommandFinished(command, exitCode, durationMs);
+      },
+      ...(localTty ? { onLocalOutput: (data: string) => process.stdout.write(data) } : {}),
+      onExit: (exitCode) => {
+        sharedTerminal = null;
+        logger.debug(`[terminal] Shared PTY exited (code ${exitCode})`);
+        void shutdown(`shared pty exited (code ${exitCode})`);
+      },
+    });
+    sharedTerminal = instance;
+    instance.setGrid(
+      SHARED_TERMINAL_COLS,
+      SHARED_TERMINAL_ROWS,
+      undefined,
+      { force: true },
+    );
+    return instance;
+  };
+
+  const getOrCreateSharedTerminal = () => {
+    if (sharedTerminal) {
+      sharedTerminal.touch();
+      return sharedTerminal;
     }
-    pendingData += data;
-    if (!flushTimer) {
-      flushTimer = setTimeout(flushPending, OUTPUT_BATCH_MS);
-    }
+    return createSharedTerminal();
+  };
+
+  const gridController = new TerminalGridController((viewport, controllerTerminalId) => {
+    getOrCreateSharedTerminal().setGrid(
+      viewport.cols,
+      viewport.rows,
+      controllerTerminalId,
+    );
   });
 
-  //
-  // Input path (app -> pty). RpcHandlerManager decrypts params for us; method
-  // names are registered unprefixed (the manager adds `<sessionId>:`).
-  //
+  const terminalIdOf = (terminalId: string | undefined) => (
+    terminalId ?? LEGACY_TERMINAL_ID
+  );
 
   session.rpcHandlerManager.registerHandler('terminal-input', async (params: unknown) => {
     const parsed = TerminalInputSchema.safeParse(params);
@@ -305,8 +360,20 @@ export async function runTerminal(opts: {
       logger.debug('[terminal] Ignoring invalid terminal-input params');
       return {};
     }
-    term.write(Buffer.from(parsed.data.data, 'base64').toString('utf8'));
+    gridController.activate(terminalIdOf(parsed.data.terminalId));
+    getOrCreateSharedTerminal()
+      .write(Buffer.from(parsed.data.data, 'base64').toString('utf8'));
     return {};
+  });
+
+  session.rpcHandlerManager.registerHandler('terminal-execute', async (params: unknown) => {
+    const parsed = TerminalExecuteSchema.safeParse(params);
+    if (!parsed.success || parsed.data.command.trim().length === 0) {
+      logger.debug('[terminal] Ignoring invalid terminal-execute params');
+      return { tracked: false };
+    }
+    gridController.activate(terminalIdOf(parsed.data.terminalId));
+    return getOrCreateSharedTerminal().execute(parsed.data.command);
   });
 
   session.rpcHandlerManager.registerHandler('terminal-resize', async (params: unknown) => {
@@ -315,7 +382,10 @@ export async function runTerminal(opts: {
       logger.debug('[terminal] Ignoring invalid terminal-resize params');
       return {};
     }
-    term.resize(parsed.data.cols, parsed.data.rows);
+    gridController.reportViewport(
+      terminalIdOf(parsed.data.terminalId),
+      { cols: parsed.data.cols, rows: parsed.data.rows },
+    );
     return {};
   });
 
@@ -325,20 +395,22 @@ export async function runTerminal(opts: {
       logger.debug('[terminal] Ignoring invalid terminal-attach params');
       return {};
     }
-    // Flush first so every replayed seq is strictly below any future live
-    // chunk; the app dedupes snapshot chunks against the live stream by seq.
-    // The replay goes out reliably (not volatile) — it is a bounded burst
-    // that must arrive whole, or the restored scrollback loses its tail.
-    flushPending();
-    for (const chunk of ring) {
-      sendChunk({
-        t: 'output',
-        seq: chunk.seq,
-        data: Buffer.from(chunk.data, 'utf8').toString('base64'),
-        snapshot: true,
-      }, true);
+    const requested = getOrCreateSharedTerminal();
+    for (const event of requested.snapshotEvents()) {
+      session.sendTerminalOutput(event, { reliable: true });
     }
-    return localTheme ? { theme: localTheme } : {};
+    return {
+      ...(localTheme ? { theme: localTheme } : {}),
+      capabilities: {
+        protocolVersion: 4,
+        structuredCommands: requested.structuredCommands,
+        shell: requested.shell,
+        perDevicePty: false,
+        adaptiveGrid: true,
+        ptyBackend,
+      },
+      state: requested.state,
+    };
   });
 
   //
@@ -354,6 +426,16 @@ export async function runTerminal(opts: {
   let disconnectTimer: NodeJS.Timeout | null = null;
   let shuttingDown = false;
 
+  const handleLocalResize = () => {
+    if (!localTty) {
+      return;
+    }
+    gridController.reportViewport(LOCAL_TERMINAL_ID, {
+      cols: Math.max(1, process.stdout.columns ?? SHARED_TERMINAL_COLS),
+      rows: Math.max(1, process.stdout.rows ?? SHARED_TERMINAL_ROWS),
+    });
+  };
+
   const shutdown = async (reason: string) => {
     if (shuttingDown) {
       return;
@@ -362,22 +444,15 @@ export async function runTerminal(opts: {
     logger.debug(`[terminal] Shutting down: ${reason}`);
 
     clearInterval(keepAliveInterval);
-    if (flushTimer) {
-      clearTimeout(flushTimer);
-      flushTimer = null;
-    }
     if (disconnectTimer) {
       clearTimeout(disconnectTimer);
       disconnectTimer = null;
     }
-
-    try {
-      term.kill();
-    } catch {
-      // Already dead
-    }
+    sharedTerminal?.dispose();
+    sharedTerminal = null;
 
     if (localTty) {
+      process.stdout.off('resize', handleLocalResize);
       try {
         process.stdin.setRawMode(false);
       } catch {
@@ -431,10 +506,6 @@ export async function runTerminal(opts: {
 
   registerKillSessionHandler(session.rpcHandlerManager, () => shutdown('killSession'));
 
-  term.onExit(({ exitCode }) => {
-    void shutdown(`pty exited (code ${exitCode})`);
-  });
-
   process.on('SIGINT', () => void shutdown('SIGINT'));
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
@@ -444,13 +515,15 @@ export async function runTerminal(opts: {
   //
 
   if (localTty) {
+    const localTerminal = getOrCreateSharedTerminal();
+    handleLocalResize();
+    gridController.activate(LOCAL_TERMINAL_ID);
+    process.stdout.on('resize', handleLocalResize);
     process.stdin.setRawMode(true);
     process.stdin.resume();
     process.stdin.on('data', (data: Buffer) => {
-      term.write(data.toString('utf8'));
-    });
-    process.stdout.on('resize', () => {
-      term.resize(process.stdout.columns || 80, process.stdout.rows || 24);
+      gridController.activate(LOCAL_TERMINAL_ID);
+      localTerminal.write(data.toString('utf8'));
     });
   }
 

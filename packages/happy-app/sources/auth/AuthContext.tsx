@@ -39,21 +39,24 @@ export function AuthProvider({ children, initialCredentials }: { children: React
 
     const logout = async () => {
         trackLogout();
+
+        // Fire-and-forget: unregister push token in the background so a
+        // stale / unreachable server never blocks local cleanup + reload.
         const registeredPushToken = credentials ? loadRegisteredPushToken() : null;
         if (credentials && registeredPushToken) {
-            try {
-                await unregisterPushToken(credentials, registeredPushToken);
-            } catch (error) {
+            unregisterPushToken(credentials, registeredPushToken).catch((error) => {
                 console.log('Failed to unregister push token during logout:', error);
-            }
+            });
         }
+
+        // Clear local state immediately — no network dependency
         clearPersistence();
         await TokenStorage.removeCredentials();
-        
+
         // Update React state to ensure UI consistency
         setCredentials(null);
         setIsAuthenticated(false);
-        
+
         if (Platform.OS === 'web') {
             window.location.reload();
         } else {

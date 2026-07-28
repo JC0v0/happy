@@ -22,7 +22,8 @@ if (!hasNoWarnings || !hasNoDeprecation) {
       ...process.argv.slice(2)
     ], {
       stdio: 'inherit',
-      env: process.env
+      env: process.env,
+      windowsHide: true
     });
   } catch (error) {
     // execFileSync throws if the process exits with non-zero

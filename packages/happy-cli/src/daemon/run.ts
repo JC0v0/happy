@@ -12,6 +12,7 @@ import { startCaffeinate, stopCaffeinate } from '@/utils/caffeinate';
 import packageJson from '../../package.json';
 import { getEnvironmentInfo } from '@/ui/doctor';
 import { spawnHappyCLI } from '@/utils/spawnHappyCLI';
+import { shouldDetachSessionProcess } from '@/daemon/sessionSpawnOptions';
 import { writeDaemonState, DaemonLocallyPersistedState, readDaemonState, acquireDaemonLock, releaseDaemonLock, readPersistedSessions, persistSession } from '@/persistence';
 import type { PersistedSession } from '@/persistence';
 
@@ -491,7 +492,11 @@ export async function startDaemon(): Promise<void> {
     }): Promise<SpawnSessionResult> => {
       const happyProcess = spawnHappyCLI(args, {
         cwd,
-        detached: true,
+        // `detached` asks Windows for an independent console. With Windows
+        // Terminal as the default host that can surface as a visible popup,
+        // despite spawnHappyCLI setting windowsHide. Windows children survive
+        // parent exit without detaching, so only Unix needs this flag.
+        detached: shouldDetachSessionProcess(),
         stdio: 'ignore',
         env,
       });

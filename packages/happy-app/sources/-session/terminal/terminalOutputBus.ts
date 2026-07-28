@@ -1,4 +1,4 @@
-import type { TerminalOutput } from '@slopus/happy-wire';
+import type { TerminalStreamEvent } from '@slopus/happy-wire';
 
 /**
  * In-memory pub/sub for decrypted terminal output chunks.
@@ -11,30 +11,34 @@ import type { TerminalOutput } from '@slopus/happy-wire';
  * or the CLI process may have exited entirely.
  */
 
-type TerminalOutputCallback = (chunk: TerminalOutput) => void;
+type TerminalOutputCallback = (chunk: TerminalStreamEvent) => void;
 
 /** Max replay buffer per session (~512 KB of base64 data). */
 const MAX_BUFFER_BYTES = 512 * 1024;
 
 interface SessionBuffer {
-    chunks: TerminalOutput[];
+    chunks: TerminalStreamEvent[];
     bytes: number;
 }
 
 const subscribers = new Map<string, Set<TerminalOutputCallback>>();
 const buffers = new Map<string, SessionBuffer>();
 
-function addToBuffer(sessionId: string, chunk: TerminalOutput): void {
+function eventSize(chunk: TerminalStreamEvent): number {
+    return chunk.t === 'output' ? chunk.data.length : JSON.stringify(chunk).length;
+}
+
+function addToBuffer(sessionId: string, chunk: TerminalStreamEvent): void {
     let buf = buffers.get(sessionId);
     if (!buf) {
         buf = { chunks: [], bytes: 0 };
         buffers.set(sessionId, buf);
     }
     buf.chunks.push(chunk);
-    buf.bytes += chunk.data.length;
+    buf.bytes += eventSize(chunk);
     while (buf.bytes > MAX_BUFFER_BYTES && buf.chunks.length > 1) {
         const dropped = buf.chunks.shift()!;
-        buf.bytes -= dropped.data.length;
+        buf.bytes -= eventSize(dropped);
     }
 }
 
@@ -68,7 +72,7 @@ export function subscribeTerminalOutput(sessionId: string, callback: TerminalOut
     };
 }
 
-export function emitTerminalOutput(sessionId: string, chunk: TerminalOutput): void {
+export function emitTerminalOutput(sessionId: string, chunk: TerminalStreamEvent): void {
     // Always buffer so history survives view unmount/remount cycles.
     addToBuffer(sessionId, chunk);
 

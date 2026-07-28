@@ -64,23 +64,25 @@ export async function fetchPushTokens(credentials: AuthCredentials): Promise<Pus
 
 export async function unregisterPushToken(credentials: AuthCredentials, token: string): Promise<void> {
     const API_ENDPOINT = getServerUrl();
-    await backoff(async () => {
+    // Quick-fire: don't retry — if the server is unreachable logout
+    // must not block the user. The token expires server-side eventually.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    try {
         const response = await fetch(`${API_ENDPOINT}/v1/push-tokens/${encodeURIComponent(token)}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${credentials.token}`,
                 'Content-Type': 'application/json',
                 'X-Happy-Client': getHappyClientId(),
-            }
+            },
+            signal: controller.signal,
         });
 
         if (!response.ok) {
             throw new Error(`Failed to unregister push token: ${response.status}`);
         }
-
-        const data = await response.json();
-        if (!data.success) {
-            throw new Error('Failed to unregister push token');
-        }
-    });
+    } finally {
+        clearTimeout(timeout);
+    }
 }

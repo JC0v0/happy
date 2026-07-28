@@ -60,6 +60,27 @@ describe('TerminalOrderer', () => {
         expect(h.writes()).toEqual([0, 1, 2]);
     });
 
+    it('orders structured metadata in the same sequence as output', () => {
+        const h = makeOrderer();
+        h.orderer.push({
+            t: 'command-end', seq: 3, commandId: 'cmd-1', endedAt: 20, durationMs: 10, exitCode: 0,
+        });
+        h.orderer.push(live(2));
+        h.orderer.push({
+            t: 'command-start', seq: 1, commandId: 'cmd-1', command: 'pwd', startedAt: 10,
+        });
+        h.orderer.settle();
+
+        expect(h.events.map((event) => event.type === 'metadata'
+            ? `${event.type}:${event.event.t}:${event.event.seq}`
+            : `${event.type}:${'seq' in event ? event.seq : ''}`,
+        )).toEqual([
+            'metadata:command-start:1',
+            'write:2',
+            'metadata:command-end:3',
+        ]);
+    });
+
     it('writes live chunks in order when they arrive after settle', () => {
         const h = makeOrderer();
         h.orderer.settle();

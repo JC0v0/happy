@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
     TerminalInputSchema,
+    TerminalExecuteSchema,
+    TerminalExecuteResponseSchema,
     TerminalResizeSchema,
     TerminalAttachSchema,
+    TerminalAttachResponseSchema,
     TerminalOutputSchema,
+    TerminalStreamEventSchema,
     TerminalRpcParamsSchema,
     TerminalOutputEventSchema,
 } from './terminal';
@@ -42,9 +46,28 @@ describe('terminal wire schemas', () => {
         });
     });
 
+    describe('TerminalExecuteSchema', () => {
+        it('accepts a bounded complete command and response', () => {
+            expect(TerminalExecuteSchema.safeParse({ t: 'execute', command: 'git status' }).success).toBe(true);
+            expect(TerminalExecuteResponseSchema.safeParse({ tracked: true, commandId: 'cmd-1' }).success).toBe(true);
+            expect(TerminalExecuteResponseSchema.safeParse({ tracked: false }).success).toBe(true);
+        });
+
+        it('rejects empty commands', () => {
+            expect(TerminalExecuteSchema.safeParse({ t: 'execute', command: '' }).success).toBe(false);
+        });
+    });
+
     describe('TerminalAttachSchema', () => {
         it('accepts a bare attach request', () => {
             expect(TerminalAttachSchema.safeParse({ t: 'attach' }).success).toBe(true);
+        });
+
+        it('accepts a stable device terminal id while preserving legacy payloads', () => {
+            expect(TerminalAttachSchema.safeParse({ t: 'attach', terminalId: 'device-ios-1' }).success).toBe(true);
+            expect(TerminalInputSchema.safeParse({ t: 'input', terminalId: 'device-ios-1', data: 'Yw==' }).success).toBe(true);
+            expect(TerminalResizeSchema.safeParse({ t: 'resize', terminalId: 'device-web-1', cols: 120, rows: 40 }).success).toBe(true);
+            expect(TerminalAttachSchema.safeParse({ t: 'attach', terminalId: '' }).success).toBe(false);
         });
     });
 
@@ -65,9 +88,66 @@ describe('terminal wire schemas', () => {
         });
     });
 
+    describe('TerminalStreamEventSchema', () => {
+        it('accepts ordered command lifecycle, cwd and state events', () => {
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'command-start', seq: 1, commandId: 'cmd-1', command: 'pwd', startedAt: 100, cwd: '/tmp',
+            }).success).toBe(true);
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'cwd', seq: 2, path: '/work',
+            }).success).toBe(true);
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'command-end', seq: 3, commandId: 'cmd-1', endedAt: 160, durationMs: 60, exitCode: 0, cwd: '/work',
+            }).success).toBe(true);
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'state', seq: 4, state: 'idle',
+            }).success).toBe(true);
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'grid', seq: 5, cols: 42, rows: 28, controllerTerminalId: 'device-ios-1',
+            }).success).toBe(true);
+        });
+
+
+        it('scopes output to the originating device PTY', () => {
+            expect(TerminalOutputSchema.safeParse({
+                t: 'output', terminalId: 'device-ios-1', seq: 1, data: 'eA==',
+            }).success).toBe(true);
+        });
+
+        it('rejects malformed lifecycle metadata', () => {
+            expect(TerminalStreamEventSchema.safeParse({
+                t: 'command-end', seq: 3, commandId: 'cmd-1', endedAt: 160, durationMs: -1, exitCode: 0,
+            }).success).toBe(false);
+            expect(TerminalStreamEventSchema.safeParse({ t: 'state', seq: 4, state: 'unknown' }).success).toBe(false);
+            expect(TerminalStreamEventSchema.safeParse({ t: 'grid', seq: 5, cols: 0, rows: 24 }).success).toBe(false);
+        });
+    });
+
+    describe('TerminalAttachResponseSchema', () => {
+        it('allows new capabilities while retaining the empty legacy response', () => {
+            expect(TerminalAttachResponseSchema.safeParse({}).success).toBe(true);
+            expect(TerminalAttachResponseSchema.safeParse({
+                capabilities: {
+                    protocolVersion: 4,
+                    structuredCommands: true,
+                    shell: 'powershell',
+                    perDevicePty: false,
+                    adaptiveGrid: true,
+                    ptyBackend: 'rust-host-agent',
+                },
+                state: {
+                    status: 'running',
+                    cwd: 'C:\\work',
+                    activeCommand: { commandId: 'cmd-1', command: 'pnpm test', startedAt: 100, cwd: 'C:\\work' },
+                },
+            }).success).toBe(true);
+        });
+    });
+
     describe('TerminalRpcParamsSchema', () => {
         it('routes each variant by the t discriminator', () => {
             expect(TerminalRpcParamsSchema.safeParse({ t: 'input', data: 'x' }).success).toBe(true);
+            expect(TerminalRpcParamsSchema.safeParse({ t: 'execute', command: 'ls' }).success).toBe(true);
             expect(TerminalRpcParamsSchema.safeParse({ t: 'resize', cols: 80, rows: 24 }).success).toBe(true);
             expect(TerminalRpcParamsSchema.safeParse({ t: 'attach' }).success).toBe(true);
         });

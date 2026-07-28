@@ -53,6 +53,7 @@
     "bundle:server:all": "node scripts/bundle-server.cjs --all-platforms",
     "bundle:webapp": "node scripts/bundle-webapp.cjs",
     "build": "shx rm -rf dist && tsc --noEmit && pkgroll",
+    "host-agent:build": "node scripts/build-host-agent.cjs",
     "test": "pnpm run build && vitest run --project unit",
     "cli:install": "node scripts/install-local.cjs",
     "prepublishOnly": "pnpm test",

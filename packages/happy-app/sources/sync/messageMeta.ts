@@ -1,6 +1,4 @@
 import type { Session } from './storageTypes';
-import type { Settings } from './settings';
-import { getAgentDefaultOverride } from './agentDefaults';
 import {
     getRigCurrentModel,
     getRigModels,
@@ -21,7 +19,6 @@ export type MessageModeMeta = {
 
 export function resolveMessageModeMeta(
     session: Pick<Session, 'permissionMode' | 'modelMode' | 'metadata' | 'effortLevel'>,
-    settings?: Pick<Settings, 'agentDefaultOverrides'>,
 ): MessageModeMeta {
     if (isRigMetadataV1(session.metadata)) {
         const meta: MessageModeMeta = {};
@@ -52,24 +49,10 @@ export function resolveMessageModeMeta(
         return meta;
     }
 
-    const agentOverrides = getAgentDefaultOverride(settings?.agentDefaultOverrides, session.metadata?.flavor);
+    // Non-Rig sessions: use session fields directly — agent backends are removed.
     const meta: MessageModeMeta = {};
-
-    if (session.permissionMode !== null && session.permissionMode !== undefined) {
-        meta.permissionMode = session.permissionMode;
-    } else if (agentOverrides.permissionMode !== undefined) {
-        meta.permissionMode = agentOverrides.permissionMode;
-    }
-
-    const modelMode = session.modelMode ?? agentOverrides.modelMode;
-    if (modelMode !== undefined) {
-        meta.model = modelMode === 'default' ? null : modelMode;
-    }
-
-    const effort = session.effortLevel ?? agentOverrides.effortLevel;
-    if (effort !== undefined) {
-        meta.effort = effort;
-    }
-
+    if (session.permissionMode) meta.permissionMode = session.permissionMode;
+    if (session.modelMode && session.modelMode !== 'default') meta.model = session.modelMode;
+    if (session.effortLevel) meta.effort = session.effortLevel;
     return meta;
 }

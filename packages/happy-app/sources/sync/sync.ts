@@ -7,7 +7,7 @@ import { decodeBase64, encodeBase64 } from '@/encryption/base64';
 import { storage } from './storage';
 // Circular at module level (ops.ts imports sync) but safe: both sides only
 // touch each other's exports at runtime, never during module initialization.
-import { sessionSetAgentModes } from './ops';
+import { sessionSetModes } from './ops';
 import { getImageAttachmentSendPlan, isAttachmentAllowedByPolicy } from './attachmentSupport';
 import {
     errorMessageFromUnknown,
@@ -16,7 +16,7 @@ import {
 } from './attachmentDiagnostics';
 import { ApiEphemeralUpdateSchema, ApiMessage, ApiUpdateContainerSchema } from './apiTypes';
 import type { ApiEphemeralActivityUpdate } from './apiTypes';
-import { TerminalOutputSchema } from '@slopus/happy-wire';
+import { TerminalStreamEventSchema } from '@slopus/happy-wire';
 import { emitTerminalOutput } from '@/-session/terminal/terminalOutputBus';
 import { Session, Machine } from './storageTypes';
 import { InvalidateSync } from '@/utils/sync';
@@ -590,7 +590,7 @@ class Sync {
             }
         }
 
-        const modeMeta = resolveMessageModeMeta(session, storage.getState().settings);
+        const modeMeta = resolveMessageModeMeta(session);
         const { displayText, source = 'chat', attachments } = options ?? {};
 
         const flavor = session.metadata?.flavor;
@@ -2746,7 +2746,7 @@ class Sync {
                 }
             }
             const decrypted = await encryption.decryptRaw(encrypted);
-            const parsed = TerminalOutputSchema.safeParse(decrypted);
+            const parsed = TerminalStreamEventSchema.safeParse(decrypted);
             if (!parsed.success) {
                 console.warn('[terminal] Failed to decrypt/parse terminal output chunk, dropping');
                 return;
@@ -2767,7 +2767,7 @@ class Sync {
             // The EnterPlanMode auto-switch only wrote the local mirror; push
             // it into synced metadata so other devices see plan mode and the
             // next inbound metadata update doesn't revert it (#1492)
-            sessionSetAgentModes(sessionId, { permissionMode: 'plan' });
+            sessionSetModes(sessionId, { permissionMode: 'plan' });
         }
     }
 

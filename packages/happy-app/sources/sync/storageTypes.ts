@@ -246,10 +246,10 @@ export const TodoItemsSchema = z.array(TodoItemSchema);
 export type TodoItem = z.infer<typeof TodoItemSchema>;
 
 /**
- * Per-session agent mode picks that sync across devices via session metadata (#1492).
+ * Per-session mode picks that sync across devices via session metadata (#1492).
  * null clears a pick back to defaults, undefined leaves the field untouched.
  */
-export interface SessionAgentModesPatch {
+export interface SessionModesPatch {
     permissionMode?: string | null;
     modelMode?: string | null;
     effortLevel?: string | null;

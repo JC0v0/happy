@@ -13,7 +13,7 @@ vi.mock('./sync', () => ({
     sync: { refreshSessions },
 }));
 
-// ops.ts imports storage (for sessionSetAgentModes), which transitively pulls
+// ops.ts imports storage (for sessionSetModes), which transitively pulls
 // in react-native — mock it out, these tests never touch it.
 vi.mock('./storage', () => ({
     storage: { getState: vi.fn(() => ({ sessions: {} })) },

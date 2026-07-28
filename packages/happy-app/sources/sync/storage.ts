@@ -9,7 +9,7 @@ function useDeepEqual<T>(selector: (state: StorageState) => T): (state: StorageS
         return equal(prev.current, next) ? prev.current! : (prev.current = next);
     };
 }
-import { Session, Machine, GitStatus, SessionAgentModesPatch } from "./storageTypes";
+import { Session, Machine, GitStatus, SessionModesPatch } from "./storageTypes";
 import type { GitStatusFiles } from "./gitStatusFiles";
 import type { ProjectFilesList } from "./projectFiles";
 import { createReducer, reducer, ReducerState } from "./reducer/reducer";
@@ -23,7 +23,7 @@ import { Purchases, customerInfoToPurchases } from "./purchases";
 import { Profile } from "./profile";
 import { UserProfile, RelationshipUpdatedEvent } from "./friendTypes";
 import { loadSettings, loadLocalSettings, saveLocalSettings, saveSettings, loadPurchases, savePurchases, loadProfile, saveProfile, loadSessionDrafts, saveSessionDrafts } from "./persistence";
-import { isAgentModePushPending } from "./agentModesPending";
+import { isSessionModePushPending } from "./sessionModePending";
 import type { CustomerInfo } from './revenueCat/types';
 import React from "react";
 import { sync } from "./sync";
@@ -205,7 +205,7 @@ interface StorageState {
     setSocketStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void;
     getActiveSessions: () => Session[];
     updateSessionDraft: (sessionId: string, draft: string | null) => void;
-    updateSessionAgentModes: (sessionId: string, patch: SessionAgentModesPatch) => void;
+    updateSessionModes: (sessionId: string, patch: SessionModesPatch) => void;
     // Artifact methods
     applyArtifacts: (artifacts: DecryptedArtifact[]) => void;
     addArtifact: (artifact: DecryptedArtifact) => void;
@@ -414,7 +414,7 @@ export const storage = create<StorageState>()((set, get) => {
                 // the field keeps the local value.
                 const resolveModePick = (field: 'permissionMode' | 'modelMode' | 'effortLevel'): string | null => {
                     const existing = state.sessions[session.id]?.[field] ?? null;
-                    if (isAgentModePushPending(session.id, field)) {
+                    if (isSessionModePushPending(session.id, field)) {
                         return existing;
                     }
                     return session.metadata && session.metadata[field] !== undefined
@@ -927,9 +927,9 @@ export const storage = create<StorageState>()((set, get) => {
             };
         }),
         // Permission / model / effort picks are local mirrors of synced session
-        // metadata (#1492). Use sessionSetAgentModes from ops.ts to change them —
+        // metadata (#1492). Use sessionSetModes from ops.ts to change them —
         // it calls this for the optimistic update and pushes the pick to the server.
-        updateSessionAgentModes: (sessionId: string, patch: SessionAgentModesPatch) => set((state) => {
+        updateSessionModes: (sessionId: string, patch: SessionModesPatch) => set((state) => {
             const session = state.sessions[sessionId];
             if (!session) return state;
 
