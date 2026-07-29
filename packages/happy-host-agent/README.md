@@ -1,19 +1,37 @@
 # Happy Host Agent
 
-Native PTY runtime used incrementally by `happy-cli`. It owns only the local
-pseudoterminal lifecycle; authentication, end-to-end encryption, session RPCs,
-and server connectivity remain in TypeScript during the migration.
+The authoritative native terminal runtime for `happy-cli`.
 
-The helper communicates over newline-delimited JSON on stdin/stdout. PTY byte
-payloads are base64 inside this local IPC protocol so arbitrary byte boundaries
-remain intact. The public network protocol is unchanged.
+It owns shell selection, PTY lifecycle, raw I/O, resize, ordered events, replay
+snapshots, command metadata, needs-input detection, and the shared terminal
+grid. Authentication, end-to-end encryption, Socket.IO, and push delivery stay
+in the TypeScript control plane.
 
-Build locally:
+The local protocol is version 2: bounded length-prefixed binary frames over
+private stdin/stdout pipes. PTY bytes are no longer converted to Base64 on this
+local boundary.
 
-```powershell
-& "$HOME\.cargo\bin\cargo.exe" build --release --manifest-path packages/happy-host-agent/Cargo.toml
+Build:
+
+```bash
+cargo build --locked --release --manifest-path packages/happy-host-agent/Cargo.toml
 ```
 
-The CLI automatically discovers a workspace release build. Set
-`HAPPY_HOST_AGENT_BIN` to test another binary, or
-`HAPPY_HOST_AGENT_DISABLED=1` to force the existing `node-pty` fallback.
+Or from the monorepo:
+
+```bash
+pnpm --filter happy host-agent:build
+pnpm --filter happy host-agent:stage
+```
+
+Probe:
+
+```bash
+packages/happy-host-agent/target/release/happy-host-agent --probe
+```
+
+The Happy CLI requires a compatible Rust binary. Set `HAPPY_HOST_AGENT_BIN` to
+test a specific build.
+
+Release packaging builds and verifies Darwin, Linux, and Windows binaries for
+both ARM64 and x64 before the CLI tarball is produced.

@@ -1,0 +1,121 @@
+name: Rust Terminal Runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/happy-host-agent/**"
+      - "packages/happy-cli/package.json"
+      - "packages/happy-cli/src/terminal/**"
+      - "packages/happy-cli/scripts/build-host-agent.cjs"
+      - "packages/happy-cli/scripts/unpack-tools.cjs"
+      - "packages/happy-cli/scripts/verify-host-agent-binaries.cjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/host-agent.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/happy-host-agent/**"
+      - "packages/happy-cli/package.json"
+      - "packages/happy-cli/src/terminal/**"
+      - "packages/happy-cli/scripts/build-host-agent.cjs"
+      - "packages/happy-cli/scripts/unpack-tools.cjs"
+      - "packages/happy-cli/scripts/verify-host-agent-binaries.cjs"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/host-agent.yml"
+  workflow_dispatch:
+
+jobs:
+  rust-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Formatting
+        run: cargo fmt --manifest-path packages/happy-host-agent/Cargo.toml -- --check
+      - name: Clippy
+        run: cargo clippy --locked --manifest-path packages/happy-host-agent/Cargo.toml -- -D warnings
+      - name: Unit tests
+        run: cargo test --locked --manifest-path packages/happy-host-agent/Cargo.toml
+
+  build:
+    name: ${{ matrix.platform }}-${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            platform: darwin
+            arch: arm64
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            platform: darwin
+            arch: x64
+            target: x86_64-apple-darwin
+          - runner: ubuntu-latest
+            platform: linux
+            arch: arm64
+            target: aarch64-unknown-linux-gnu
+          - runner: ubuntu-latest
+            platform: linux
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+          - runner: windows-latest
+            platform: win32
+            arch: arm64
+            target: aarch64-pc-windows-msvc
+          - runner: windows-latest
+            platform: win32
+            arch: x64
+            target: x86_64-pc-windows-msvc
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: Install Linux ARM64 linker
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Build and stage
+        env:
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: aarch64-linux-gnu-gcc
+        run: >-
+          node packages/happy-cli/scripts/build-host-agent.cjs
+          --stage
+          --target ${{ matrix.target }}
+          --platform ${{ matrix.platform }}
+          --arch ${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: host-agent-${{ matrix.platform }}-${{ matrix.arch }}
+          path: packages/happy-cli/tools/host-agent
+          if-no-files-found: error
+
+  package:
+    needs: [rust-tests, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: host-agent-*
+          path: packages/happy-cli/tools/host-agent
+          merge-multiple: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter happy host-agent:verify-staged
+      - run: pnpm --filter @slopus/happy-wire build
+      - run: pnpm --filter happy build
+      - run: pnpm --filter happy pack --pack-destination packages/happy-cli
+      - uses: actions/upload-artifact@v4
+        with:
+          name: happy-cli-with-rust-terminal
+          path: packages/happy-cli/*.tgz
+          if-no-files-found: error

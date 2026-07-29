@@ -42,6 +42,25 @@ function getToolsDir() {
 }
 
 /**
+ * npm normalizes regular packaged files to mode 0644. Restore the executable
+ * bit for the staged Rust terminal runtime during postinstall.
+ */
+function prepareHostAgent(toolsDir) {
+    if (os.platform() === 'win32') {
+        return;
+    }
+    const hostAgentPath = path.join(
+        toolsDir,
+        'host-agent',
+        `${os.platform()}-${os.arch()}`,
+        'happy-host-agent'
+    );
+    if (fs.existsSync(hostAgentPath)) {
+        fs.chmodSync(hostAgentPath, 0o755);
+    }
+}
+
+/**
  * Check if tools are already unpacked for current platform
  */
 function areToolsUnpacked(toolsDir) {
@@ -111,6 +130,7 @@ async function unpackTools() {
         const toolsDir = getToolsDir();
         const archivesDir = path.join(toolsDir, 'archives');
         const unpackedPath = path.join(toolsDir, 'unpacked');
+        prepareHostAgent(toolsDir);
         
         // Check if already unpacked
         if (areToolsUnpacked(toolsDir)) {
@@ -149,7 +169,7 @@ async function unpackTools() {
 }
 
 // Export for use as module
-module.exports = { unpackTools, getPlatformDir, getToolsDir };
+module.exports = { unpackTools, getPlatformDir, getToolsDir, prepareHostAgent };
 
 // Run if executed directly
 if (require.main === module) {

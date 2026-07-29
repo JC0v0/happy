@@ -82,3 +82,4 @@ happy-workspaces/
 
 # Rust host-agent build output
 /packages/happy-host-agent/target/
+/packages/happy-cli/tools/host-agent/

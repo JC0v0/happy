@@ -1,72 +1,125 @@
-# Rust Host Agent Migration
+# Rust Terminal Runtime
 
-## Goal
+Status: host-side migration complete.
 
-Move host-local terminal responsibilities from Node.js to a small native Rust
-runtime without rewriting the Expo clients, the opaque relay server, account
-flows, or end-to-end encryption.
+## Scope
 
-## Runtime boundary
+The terminal's host-local runtime is entirely Rust. This deliberately does not
+rewrite the Expo clients, the payload-opaque relay server, account flows,
+Socket.IO, or end-to-end encryption.
 
-The TypeScript CLI remains the control plane during the migration:
+TypeScript is now only the control plane:
 
-- authentication and machine registration;
-- encrypted Socket.IO session transport;
-- terminal event sequencing, snapshots, Blocks metadata, and notifications;
-- compatibility fallback to `node-pty`.
+- authentication and machine/session registration;
+- encrypted Socket.IO transport;
+- server-routed push delivery;
+- process and disconnect lifecycle;
+- translation between Rust binary output and the existing encrypted public
+  terminal protocol.
 
-`happy-host-agent` is the native data plane:
+`happy-host-agent` is the authoritative terminal runtime:
 
-- create and own the platform PTY;
-- write input bytes and stream output bytes without changing boundaries;
-- apply the controller-owned terminal grid;
-- terminate the shell without opening a visible console window.
+- select and spawn the platform shell;
+- own the platform PTY;
+- accept raw input and stream raw output;
+- batch output and assign the single ordered sequence;
+- retain the bounded replay ring and produce attach snapshots;
+- parse shell integration markers;
+- own command, current-directory, and needs-input state;
+- own device viewports and the controller-selected shared terminal grid;
+- apply resize and terminate the shell.
 
-The two processes communicate through newline-delimited JSON over private
-stdin/stdout pipes. PTY byte fields are base64 only on this local IPC boundary.
-The public encrypted terminal protocol remains unchanged in phase 1.
+There is no `node-pty` fallback in the Happy CLI terminal path. A missing or
+incompatible Rust runtime is a startup error with a build instruction instead
+of a silent behavioral downgrade.
 
-## Selection and rollback
+## Local IPC protocol
 
-At session startup the CLI looks for the native binary in this order:
+Protocol version 2 uses bounded length-prefixed binary frames:
+
+```text
+u32 big-endian frame length
+u8  frame kind
+... payload
+```
+
+The maximum frame is 8 MiB. PTY input and output remain raw bytes on this
+boundary. Low-frequency spawn, resize, metadata, state, and request-correlation
+payloads use UTF-8 JSON inside their frames.
+
+The Rust process and TypeScript adapter both use bounded queues. If the
+TypeScript side stops reading, stdout applies backpressure, the Rust event loop
+stops draining its 256-message channel, and the PTY reader blocks rather than
+growing memory indefinitely.
+
+The public network protocol is unchanged in this migration. TypeScript converts
+Rust output bytes to the existing encrypted terminal event before Socket.IO
+delivery, so existing apps and the opaque server remain compatible.
+
+## Runtime discovery
+
+The CLI requires a protocol-2 binary and searches in this order:
 
 1. `HAPPY_HOST_AGENT_BIN`;
-2. a packaged `tools/host-agent/<platform>-<arch>` binary;
-3. the monorepo release build under `packages/happy-host-agent/target/release`.
+2. `packages/happy-cli/tools/unpacked/happy-host-agent[.exe]`;
+3. `packages/happy-cli/tools/host-agent/<platform>-<arch>/`;
+4. the monorepo release build under
+   `packages/happy-host-agent/target/release/`.
 
-The binary must pass a protocol probe. If it is absent, disabled, incompatible,
-or fails the probe, the CLI uses `node-pty`. Set
-`HAPPY_HOST_AGENT_DISABLED=1` for an explicit rollback.
+Every candidate must pass `happy-host-agent --probe`.
 
-## Delivery phases
+## Build and stage
 
-### Phase 1 — native PTY runtime
+```bash
+pnpm --filter happy host-agent:build
+pnpm --filter happy host-agent:stage
+```
 
-- Rust owns spawn, input, output, resize, kill, and exit status.
-- TypeScript preserves all network and product behavior.
-- Attach capabilities expose the active `ptyBackend` for diagnostics.
+`host-agent:build` produces the optimized Rust binary. `host-agent:stage` also
+copies it into the platform directory included by the CLI package.
 
-### Phase 2 — framed local IPC and backpressure
+The Rust Terminal Runtime workflow builds all supported targets, merges them
+into one CLI package, and runs `host-agent:verify-staged` before packing.
+`prepublishOnly` applies the same six-binary check, so an incomplete npm package
+cannot be published accidentally. The existing CLI postinstall restores the
+Unix executable bit that npm removes from ordinary packaged files. The runtime
+also repairs that bit lazily before probing, covering pnpm installations where
+dependency scripts are disabled.
 
-- Replace line JSON with a length-prefixed binary local protocol.
-- Add bounded write queues, high/low watermarks, and congestion metrics.
-- Package signed native binaries for Windows, macOS, and Linux in CI.
+The supported package directory names are:
 
-### Phase 3 — authoritative terminal state
+- `darwin-arm64`
+- `darwin-x64`
+- `linux-arm64`
+- `linux-x64`
+- `win32-arm64`
+- `win32-x64`
 
-- Evaluate a pinned `libghostty-vt` adapter behind the same Rust interface.
-- Add screen epochs, full state checkpoints, and cell/scrollback deltas.
-- Keep raw VT byte streaming as the compatibility path until parity tests pass.
+## Verification
 
-### Phase 4 — public binary transport
+```bash
+cargo test --manifest-path packages/happy-host-agent/Cargo.toml
+pnpm --filter @slopus/happy-wire build
+pnpm --filter happy typecheck
+pnpm --filter happy exec vitest run src/terminal/rustTerminalRuntime.test.ts
+```
 
-- Add an encrypted binary terminal envelope alongside the current JSON schema.
-- Negotiate capability per client and retain protocol downgrade support.
-- Keep the server payload-opaque and avoid server-side terminal parsing.
+The native integration test starts a real PTY through Rust, sends raw input,
+observes raw output, requests a Rust-owned snapshot, and exits the shell.
 
-### Phase 5 — renderer optimization
+## Rollback
 
-- Enable xterm WebGL with automatic fallback where stable.
-- Profile mobile WebView bridge and frame timing before considering a Skia grid.
-- A native Skia renderer is optional and must consume the same screen epochs;
-  it is not a prerequisite for the Rust Agent migration.
+Because the Node PTY implementation and dependency have been removed, rollback
+means installing or checking out the previous CLI release. There is no
+environment flag that changes the runtime implementation inside this version.
+
+## Intentionally separate future work
+
+These optimizations are not required to complete the Rust host migration and
+can evolve without changing runtime ownership:
+
+- adding an encrypted binary Socket.IO terminal envelope alongside the current
+  JSON-compatible public payload;
+- adding screen epochs and cell deltas as an optional rendering optimization;
+- enabling xterm WebGL where clients support it;
+- evaluating a native mobile renderer after profiling the WebView bridge.

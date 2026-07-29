@@ -927,9 +927,6 @@ importers:
       ink:
         specifier: ^6.5.1
         version: 6.6.0(@types/react@19.2.14)(react-devtools-core@6.1.5)(react@19.2.0)
-      node-pty:
-        specifier: ^1.1.0
-        version: 1.1.0
       open:
         specifier: ^10.2.0
         version: 10.2.0

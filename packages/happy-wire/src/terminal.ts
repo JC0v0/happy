@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 //
-// Terminal protocol: raw pty I/O relayed between the CLI (node-pty) and clients.
+// Terminal protocol: raw PTY I/O relayed between the Rust host runtime and clients.
 //
 // These schemas describe PLAINTEXT payloads that always travel encrypted:
 // - App -> CLI params are encrypted with the session key and sent via `rpc-call`
@@ -14,11 +14,11 @@ import * as z from 'zod';
 export const TerminalIdSchema = z.string().min(1).max(128);
 
 const TerminalScopeSchema = {
-    /** Stable per-device PTY identity. Absent means the legacy shared PTY. */
+    /** Stable device identity used to select the shared PTY grid controller. */
     terminalId: TerminalIdSchema.optional(),
 };
 
-/** Keystroke bytes (base64) from a client, to be written to its device PTY. */
+/** Keystroke bytes (base64) from a client, to be written to the shared PTY. */
 export const TerminalInputSchema = z.object({
     t: z.literal('input'),
     data: z.string(),
@@ -101,7 +101,7 @@ export const TerminalCapabilitiesSchema = z.object({
     perDevicePty: z.boolean().optional(),
     /** The shared PTY grid follows the device that most recently sent input. */
     adaptiveGrid: z.boolean().optional(),
-    /** Native host runtime selected for this terminal session. */
+    /** Runtime reported by current or backward-compatible CLI versions. */
     ptyBackend: z.enum(['node-pty', 'rust-host-agent']).optional(),
 });
 export type TerminalCapabilities = z.infer<typeof TerminalCapabilitiesSchema>;
@@ -134,8 +134,8 @@ export const TerminalRpcParamsSchema = z.discriminatedUnion('t', [
 export type TerminalRpcParams = z.infer<typeof TerminalRpcParamsSchema>;
 
 /**
- * A chunk of pty output (base64). `seq` is monotonically increasing within
- * one `terminalId`; legacy events without an id use the shared sequence.
+ * A chunk of PTY output (base64). `seq` is monotonically increasing within
+ * the shared terminal stream. Older per-device events may still carry an id.
  * `snapshot: true` marks chunks replayed from the CLI's
  * in-memory buffer in response to `terminal-attach`, so clients can dedupe
  * against the live stream.
@@ -205,9 +205,9 @@ export type TerminalGrid = z.infer<typeof TerminalGridSchema>;
 
 /**
  * Ordered plaintext event stream carried inside the existing encrypted
- * terminal-output relay. Keeping one `seq` domain per device PTY for bytes
- * and metadata makes snapshot/live reconciliation deterministic and leaves
- * the server blind to commands, paths and output.
+ * terminal-output relay. Keeping bytes and metadata in one Rust-owned `seq`
+ * domain makes snapshot/live reconciliation deterministic and leaves the
+ * server blind to commands, paths and output.
  */
 export const TerminalStreamEventSchema = z.discriminatedUnion('t', [
     TerminalOutputSchema,

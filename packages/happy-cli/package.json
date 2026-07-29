@@ -45,6 +45,7 @@
     "scripts",
     "tools/archives",
     "tools/licenses",
+    "tools/host-agent",
     "package.json"
   ],
   "scripts": {
@@ -54,9 +55,11 @@
     "bundle:webapp": "node scripts/bundle-webapp.cjs",
     "build": "shx rm -rf dist && tsc --noEmit && pkgroll",
     "host-agent:build": "node scripts/build-host-agent.cjs",
+    "host-agent:stage": "node scripts/build-host-agent.cjs --stage",
+    "host-agent:verify-staged": "node scripts/verify-host-agent-binaries.cjs",
     "test": "pnpm run build && vitest run --project unit",
     "cli:install": "node scripts/install-local.cjs",
-    "prepublishOnly": "pnpm test",
+    "prepublishOnly": "pnpm host-agent:verify-staged && pnpm test",
     "postinstall": "node scripts/unpack-tools.cjs"
   },
   "dependencies": {
@@ -73,7 +76,6 @@
     "fastify": "^5.6.2",
     "fastify-type-provider-zod": "^6.1.0",
     "ink": "^6.5.1",
-    "node-pty": "^1.1.0",
     "open": "^10.2.0",
     "ps-list": "^8.1.1",
     "qrcode-terminal": "^0.12.0",

@@ -5,12 +5,14 @@ on:
     branches: [ main ]
     paths:
       - 'packages/happy-cli/**'
+      - 'packages/happy-host-agent/**'
       - 'packages/happy-server/**'
       - '.github/workflows/cli-smoke-test.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'packages/happy-cli/**'
+      - 'packages/happy-host-agent/**'
       - 'packages/happy-server/**'
       - '.github/workflows/cli-smoke-test.yml'
   workflow_dispatch:
@@ -35,11 +37,16 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
 
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
 
     - name: Build package
-      run: pnpm --filter happy build
+      run: |
+        pnpm --filter happy host-agent:stage
+        pnpm --filter happy build
 
     # `happy server` resolves the self-host runtime and bundled webapp from
     # happy-server-self-host. The server package is JS/TS and lets npm install
@@ -87,6 +94,12 @@ jobs:
           exit 1
         }
 
+        echo "Testing packaged Rust terminal runtime..."
+        "$(npm root -g)/happy/tools/host-agent/linux-x64/happy-host-agent" --probe | grep -q '"authoritativeState":true' || {
+          echo "Error: packaged Rust terminal runtime is missing or incompatible"
+          exit 1
+        }
+
         echo "Binary smoke test passed on Linux!"
 
     - name: Test packaged server (happy server)
@@ -130,11 +143,16 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'pnpm'
 
+    - name: Setup Rust
+      uses: dtolnay/rust-toolchain@stable
+
     - name: Install dependencies
       run: pnpm install --frozen-lockfile
 
     - name: Build package
-      run: pnpm --filter happy build
+      run: |
+        pnpm --filter happy host-agent:stage
+        pnpm --filter happy build
 
     - name: Pack package
       run: pnpm --filter happy pack --pack-destination packages/happy-cli
@@ -248,6 +266,13 @@ jobs:
         )
         if errorlevel 1 (
           echo Error: happy daemon status failed
+          exit /b 1
+        )
+
+        rem Test packaged authoritative Rust terminal runtime
+        "%NPM_PREFIX%\node_modules\happy\tools\host-agent\win32-x64\happy-host-agent.exe" --probe | findstr authoritativeState
+        if errorlevel 1 (
+          echo Error: packaged Rust terminal runtime is missing or incompatible
           exit /b 1
         )
 
