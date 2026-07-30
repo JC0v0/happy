@@ -17,6 +17,7 @@ pub struct ShellLaunch {
     pub args: Vec<String>,
     pub shell: String,
     pub structured_commands: bool,
+    pub env: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +46,7 @@ pub fn resolve_shell_launch(env: &std::collections::HashMap<String, String>) -> 
             ],
             shell: "powershell".to_owned(),
             structured_commands: true,
+            env: Vec::new(),
         };
     }
 
@@ -58,13 +60,13 @@ pub fn resolve_shell_launch(env: &std::collections::HashMap<String, String>) -> 
         .and_then(|name| name.to_str())
         .unwrap_or("shell")
         .to_owned();
+    let (args, extra_env, structured_commands) = unix_shell_integration(&shell);
     ShellLaunch {
         file,
-        args: Vec::new(),
+        args,
         shell,
-        // PowerShell supplies OSC 133 command boundaries today. Raw Bash/zsh
-        // remains fully functional until their integration scripts land.
-        structured_commands: false,
+        structured_commands,
+        env: extra_env,
     }
 }
 
@@ -97,6 +99,77 @@ pub fn powershell_shell_integration_script() -> String {
         "}",
     ]
     .join("; ")
+}
+
+fn unix_shell_integration(shell: &str) -> (Vec<String>, Vec<(String, String)>, bool) {
+    // Only bash/zsh have OSC 133 integration scripts today.
+    if shell != "bash" && shell != "zsh" {
+        return (Vec::new(), Vec::new(), false);
+    }
+    let dir = std::env::temp_dir().join(format!(
+        "happy-shell-{}-{}",
+        std::process::id(),
+        shell
+    ));
+    if std::fs::create_dir_all(&dir).is_err() {
+        return (Vec::new(), Vec::new(), false);
+    }
+    let script = bash_zsh_integration_script(shell);
+    if shell == "bash" {
+        let rcfile = dir.join("rcfile.sh");
+        if std::fs::write(&rcfile, &script).is_err() {
+            return (Vec::new(), Vec::new(), false);
+        }
+        (
+            vec!["--init-file".to_owned(), rcfile.to_string_lossy().into_owned()],
+            Vec::new(),
+            true,
+        )
+    } else {
+        // zsh loads $ZDOTDIR/.zshrc in place of ~/.zshrc.
+        let zshrc = dir.join(".zshrc");
+        if std::fs::write(&zshrc, &script).is_err() {
+            return (Vec::new(), Vec::new(), false);
+        }
+        (
+            Vec::new(),
+            vec![("ZDOTDIR".to_owned(), dir.to_string_lossy().into_owned())],
+            true,
+        )
+    }
+}
+
+fn bash_zsh_integration_script(shell: &str) -> String {
+    let user_rc = if shell == "bash" { "$HOME/.bashrc" } else { "$HOME/.zshrc" };
+    let setup = if shell == "bash" {
+        r#"PROMPT_COMMAND="__happy_precmd${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+trap '__happy_preexec "$BASH_COMMAND"' DEBUG"#
+    } else {
+        r#"precmd_functions+=(__happy_precmd)
+preexec_functions+=(__happy_preexec)"#
+    };
+    format!(
+        r#"[ -f {user_rc} ] && source {user_rc}
+
+__happy_osc() {{ printf '\033]%s\007' "$1"; }}
+__happy_encode() {{ printf '%s' "$1" | base64 | tr -d '\n'; }}
+__happy_cmd=""
+__happy_preexec() {{
+  __happy_cmd="$1"
+  __happy_osc "133;C;$(__happy_encode "$1")"
+}}
+__happy_precmd() {{
+  local ec=$?
+  if [ -n "$__happy_cmd" ]; then
+    __happy_osc "133;D;$ec"
+    __happy_cmd=""
+  fi
+  __happy_osc "7;file://${{HOSTNAME}}${{PWD}}"
+  __happy_osc "133;A"
+}}
+{setup}
+"#
+    )
 }
 
 pub struct ShellIntegrationParser {

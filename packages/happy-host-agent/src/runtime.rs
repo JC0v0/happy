@@ -393,6 +393,9 @@ impl TerminalRuntime {
         for (key, value) in env {
             command.env(key, value);
         }
+        for (key, value) in &shell_launch.env {
+            command.env(key, value);
+        }
 
         let mut child = pair
             .slave
