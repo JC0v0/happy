@@ -85,14 +85,14 @@ export default function LanguageSettingsScreen() {
                         icon={<Ionicons 
                             name="language-outline" 
                             size={29} 
-                            color="#007AFF" 
+                            color={theme.semantic.focus}
                         />}
                         rightElement={
                             currentSelection === option.key ? (
                                 <Ionicons 
                                     name="checkmark" 
                                     size={20} 
-                                    color="#007AFF" 
+                                    color={theme.semantic.focus}
                                 />
                             ) : null
                         }

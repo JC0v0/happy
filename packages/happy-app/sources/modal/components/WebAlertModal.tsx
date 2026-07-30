@@ -34,18 +34,14 @@ export function WebAlertModal({ config, onClose, onConfirm }: WebAlertModalProps
 
     const styles = StyleSheet.create({
         container: {
-            backgroundColor: theme.colors.surface,
-            borderRadius: 14,
-            width: 270,
+            backgroundColor: theme.semantic.surfaceRaised,
+            borderRadius: theme.geometry.radius.structural,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: theme.semantic.borderStrong,
+            width: 320,
+            maxWidth: 'calc(100vw - 32px)' as any,
             overflow: 'hidden',
-            shadowColor: theme.colors.shadow.color,
-            shadowOffset: {
-                width: 0,
-                height: 2
-            },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 5
+            elevation: theme.geometry.elevation.overlay,
         },
         content: {
             paddingHorizontal: 16,
@@ -56,19 +52,19 @@ export function WebAlertModal({ config, onClose, onConfirm }: WebAlertModalProps
         title: {
             fontSize: 17,
             textAlign: 'center',
-            color: theme.colors.text,
+            color: theme.semantic.textPrimary,
             marginBottom: 4
         },
         message: {
             fontSize: 13,
             textAlign: 'center',
-            color: theme.colors.text,
+            color: theme.semantic.textSecondary,
             marginTop: 4,
             lineHeight: 18
         },
         buttonContainer: {
             borderTopWidth: 1,
-            borderTopColor: theme.colors.divider,
+            borderTopColor: theme.semantic.border,
             flexDirection: 'row'
         },
         button: {
@@ -78,21 +74,21 @@ export function WebAlertModal({ config, onClose, onConfirm }: WebAlertModalProps
             justifyContent: 'center'
         },
         buttonPressed: {
-            backgroundColor: theme.colors.divider
+            backgroundColor: theme.semantic.surfaceMuted,
         },
         buttonSeparator: {
             width: 1,
-            backgroundColor: theme.colors.divider
+            backgroundColor: theme.semantic.border,
         },
         buttonText: {
             fontSize: 17,
-            color: theme.colors.textLink
+            color: theme.semantic.focus,
         },
         cancelText: {
             fontWeight: '400'
         },
         destructiveText: {
-            color: theme.colors.textDestructive
+            color: theme.semantic.status.error,
         }
     });
 

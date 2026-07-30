@@ -45,22 +45,17 @@ const stylesheet = StyleSheet.create((theme) => ({
         backgroundColor: 'rgba(0, 0, 0, 0.12)',
     },
     card: {
-        backgroundColor: theme.colors.surface,
-        borderRadius: 16,
+        backgroundColor: theme.semantic.surfaceRaised,
+        borderRadius: 0,
         overflow: 'hidden',
-        shadowColor: theme.colors.shadow.color,
-        shadowOpacity: theme.colors.shadow.opacity,
-        shadowRadius: 18,
-        shadowOffset: {
-            width: 0,
-            height: 8,
-        },
-        elevation: 10,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.semantic.borderStrong,
+        elevation: 0,
     },
     handle: {
         width: 40,
         height: 4,
-        borderRadius: 999,
+        borderRadius: theme.geometry.radius.compact,
         marginTop: 10,
         marginBottom: 8,
         alignSelf: 'center',
@@ -73,11 +68,11 @@ const stylesheet = StyleSheet.create((theme) => ({
         gap: 12,
     },
     menuItemPressed: {
-        backgroundColor: theme.colors.surfaceSelected,
+        backgroundColor: theme.semantic.surfaceSelected,
     },
     menuItemDivider: {
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: theme.colors.divider,
+        borderBottomColor: theme.semantic.border,
     },
     menuItemLabel: {
         flex: 1,
@@ -90,8 +85,8 @@ const stylesheet = StyleSheet.create((theme) => ({
         justifyContent: 'flex-end',
     },
     nativeSheet: {
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
         overflow: 'hidden',
     },
     webContainer: {
@@ -155,7 +150,7 @@ export function SessionActionsPopover({
     }
 
     const content = (
-        <View style={[styles.card, { backgroundColor: theme.colors.header.background }]}>
+        <View style={styles.card}>
             {Platform.OS !== 'web' && (
                 <View style={[styles.handle, { backgroundColor: theme.colors.textSecondary }]} />
             )}

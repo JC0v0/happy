@@ -114,7 +114,7 @@ export default function TextSelectionScreen() {
 const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.semantic.canvas,
     },
     loadingText: {
         ...Typography.default(),
@@ -133,7 +133,7 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.mono(),
         fontSize: 14,
         lineHeight: 20,
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
         minHeight: 200,
         textAlignVertical: 'top',
         backgroundColor: 'transparent',
@@ -144,6 +144,6 @@ const styles = StyleSheet.create((theme) => ({
     copyButton: {
         padding: 8,
         marginRight: 8,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
     },
 }));

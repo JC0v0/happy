@@ -52,7 +52,7 @@ const stylesheet = StyleSheet.create((theme) => ({
     textInput: {
         backgroundColor: theme.colors.input.background,
         padding: 16,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
         marginBottom: 24,
         fontFamily: 'IBMPlexMono-Regular',
         fontSize: 14,

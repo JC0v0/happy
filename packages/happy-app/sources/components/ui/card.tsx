@@ -45,15 +45,11 @@ CardFooter.displayName = 'CardFooter';
 
 const styles = StyleSheet.create((theme) => ({
     card: {
-        borderRadius: 12,
+        borderRadius: theme.geometry.radius.structural,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.divider,
-        backgroundColor: theme.colors.surface,
-        shadowColor: theme.colors.shadow.color,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: theme.colors.shadow.opacity,
-        shadowRadius: 2,
-        elevation: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surface,
+        elevation: theme.geometry.elevation.structural,
     },
     header: {
         flexDirection: 'column',

@@ -47,18 +47,13 @@ export function WebPromptModal({ config, onClose, onConfirm }: WebPromptModalPro
 
     const styles = StyleSheet.create({
         container: {
-            backgroundColor: theme.colors.surface,
-            borderRadius: 14,
-            width: 270,
+            backgroundColor: theme.semantic.surfaceRaised,
+            borderRadius: theme.geometry.radius.structural,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: theme.semantic.borderStrong,
+            width: 320,
             overflow: 'hidden',
-            shadowColor: theme.colors.shadow.color,
-            shadowOffset: {
-                width: 0,
-                height: 2
-            },
-            shadowOpacity: 0.25,
-            shadowRadius: 4,
-            elevation: 5
+            elevation: theme.geometry.elevation.overlay,
         },
         content: {
             paddingHorizontal: 16,
@@ -69,13 +64,13 @@ export function WebPromptModal({ config, onClose, onConfirm }: WebPromptModalPro
         title: {
             fontSize: 17,
             textAlign: 'center',
-            color: theme.colors.text,
+            color: theme.semantic.textPrimary,
             marginBottom: 4
         },
         message: {
             fontSize: 13,
             textAlign: 'center',
-            color: theme.colors.text,
+            color: theme.semantic.textSecondary,
             marginTop: 4,
             lineHeight: 18
         },
@@ -83,17 +78,17 @@ export function WebPromptModal({ config, onClose, onConfirm }: WebPromptModalPro
             width: '100%',
             height: 36,
             borderWidth: 1,
-            borderColor: theme.colors.divider,
-            borderRadius: 8,
+            borderColor: theme.semantic.borderStrong,
+            borderRadius: theme.geometry.radius.interactive,
             paddingHorizontal: 10,
             marginTop: 16,
             fontSize: 14,
-            color: theme.colors.text,
-            backgroundColor: theme.colors.input.background
+            color: theme.semantic.textPrimary,
+            backgroundColor: theme.semantic.surfaceMuted,
         },
         buttonContainer: {
             borderTopWidth: 1,
-            borderTopColor: theme.colors.divider,
+            borderTopColor: theme.semantic.border,
             flexDirection: 'row'
         },
         button: {
@@ -103,15 +98,15 @@ export function WebPromptModal({ config, onClose, onConfirm }: WebPromptModalPro
             justifyContent: 'center'
         },
         buttonPressed: {
-            backgroundColor: theme.colors.divider
+            backgroundColor: theme.semantic.surfaceMuted,
         },
         buttonSeparator: {
             width: 1,
-            backgroundColor: theme.colors.divider
+            backgroundColor: theme.semantic.border,
         },
         buttonText: {
             fontSize: 17,
-            color: theme.colors.textLink
+            color: theme.semantic.focus,
         },
         cancelText: {
             fontWeight: '400'

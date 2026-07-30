@@ -1,7 +1,7 @@
 import { useAuth } from '@/auth/AuthContext';
 import * as React from 'react';
 import { Drawer } from 'expo-router/drawer';
-import { useIsTablet, useHeaderHeight } from '@/utils/responsive';
+import { useIsWideLayout, useHeaderHeight } from '@/utils/responsive';
 import { SidebarView } from './SidebarView';
 import { useWindowDimensions, View, Pressable, Platform } from 'react-native';
 import { useLocalSetting, useLocalSettingMutable } from '@/sync/storage';
@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import { isTauri } from '@/utils/isTauri';
 import { DEFAULT_APP_ZOOM } from '@/hooks/useTauriZoom';
@@ -20,9 +20,10 @@ const TAURI_HEADER_CONTROL_LEFT = Math.ceil(92 / DEFAULT_APP_ZOOM);
 
 export const SidebarNavigator = React.memo(() => {
     const auth = useAuth();
-    const isTablet = useIsTablet();
+    const { theme } = useUnistyles();
+    const isWideLayout = useIsWideLayout();
     const zenMode = useLocalSetting('zenMode');
-    const isDesktopLayout = auth.isAuthenticated && isTablet;
+    const isDesktopLayout = auth.isAuthenticated && isWideLayout;
     const showSidebar = isDesktopLayout && !zenMode;
     const { width: windowWidth } = useWindowDimensions();
 
@@ -60,8 +61,9 @@ export const SidebarNavigator = React.memo(() => {
             headerShown: false,
             drawerType: 'permanent' as const,
             drawerStyle: {
-                backgroundColor: 'white',
-                borderRightWidth: 0,
+                backgroundColor: theme.semantic.canvas,
+                borderRightWidth: StyleSheet.hairlineWidth,
+                borderRightColor: theme.semantic.border,
                 width: drawerWidth,
                 overflow: 'hidden' as const,
             } as any,
@@ -71,7 +73,7 @@ export const SidebarNavigator = React.memo(() => {
             drawerItemStyle: { display: 'none' as const },
             drawerLabelStyle: { display: 'none' as const },
         };
-    }, [isDesktopLayout, drawerWidth]);
+    }, [isDesktopLayout, drawerWidth, theme]);
 
     const drawerContent = React.useCallback(
         () => <SidebarView />,

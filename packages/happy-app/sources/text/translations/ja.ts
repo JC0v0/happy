@@ -5,7 +5,7 @@
  * - Functions with typed object parameters for dynamic text
  */
 
-import { TranslationStructure } from "../_default";
+import { en, TranslationStructure } from "../_default";
 
 /**
  * Japanese plural helper function
@@ -18,6 +18,7 @@ function plural({ count, singular, plural }: { count: number; singular: string; 
 }
 
 export const ja: TranslationStructure = {
+    deviceFirst: en.deviceFirst,
     tabs: {
         // Tab navigation labels
         inbox: '受信トレイ',

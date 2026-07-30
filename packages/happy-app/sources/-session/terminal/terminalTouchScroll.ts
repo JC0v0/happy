@@ -2,9 +2,9 @@
  * xterm 6's custom viewport handles mouse-wheel and scrollbar input, but it
  * does not turn a drag over the terminal content into scrollback movement.
  * Native WebViews therefore need a small touch bridge. Normal-buffer drags
- * move xterm scrollback. Alternate-buffer/TUI drags request the local Blocks
- * record view instead of emitting PTY input, so viewport browsing on one
- * client never changes the shared TUI state on every connected client.
+ * move xterm scrollback. Alternate-buffer/TUI drags are translated into wheel
+ * events so xterm can forward mouse-wheel input (or its arrow-key fallback)
+ * without changing the selected terminal view mode.
  *
  * This is kept as plain JavaScript because it is injected into the isolated
  * WebView document. The tests execute the same source against lightweight
@@ -16,7 +16,6 @@ export const TERMINAL_TOUCH_SCROLL_SCRIPT = `
   var touchLastY = null;
   var touchRemainderY = 0;
   var touchIsScrolling = false;
-  var touchRequestedLocalRecords = false;
   var touchContainer = document.getElementById('term-container');
   var touchThreshold = 6;
 
@@ -27,10 +26,18 @@ export const TERMINAL_TOUCH_SCROLL_SCRIPT = `
       || (mouseMode && mouseMode !== 'none');
   }
 
-  function openLocalRecords(lines){
-    if (!touchRequestedLocalRecords && typeof post === 'function') {
-      touchRequestedLocalRecords = true;
-      post({ type: 'local-records', deltaLines: lines });
+  function scrollInteractiveTerminal(lines, touch, cellHeight){
+    var target = term.element || touchContainer;
+    var direction = lines > 0 ? 1 : -1;
+    for (var index = 0; index < Math.abs(lines); index++) {
+      target.dispatchEvent(new WheelEvent('wheel', {
+        deltaY: direction * cellHeight,
+        deltaMode: 0,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        bubbles: true,
+        cancelable: true
+      }));
     }
   }
 
@@ -58,7 +65,6 @@ export const TERMINAL_TOUCH_SCROLL_SCRIPT = `
     touchLastY = null;
     touchRemainderY = 0;
     touchIsScrolling = false;
-    touchRequestedLocalRecords = false;
   }
 
   touchContainer.addEventListener('touchstart', function(event){
@@ -96,7 +102,7 @@ export const TERMINAL_TOUCH_SCROLL_SCRIPT = `
       : Math.ceil(touchRemainderY / cellHeight);
     if (lines !== 0) {
       if (isInteractiveTerminalBuffer()) {
-        openLocalRecords(lines);
+        scrollInteractiveTerminal(lines, touch, cellHeight);
       } else {
         term.scrollLines(lines);
       }

@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Typography, TypeScale } from '@/constants/Typography';
 
 /**
  * shadcn-style text component. `variant` maps to the design-system text roles
  * (mirrors the muted/foreground tokens used across the app).
  */
-export type TextVariant = 'default' | 'muted' | 'small' | 'xs' | 'title' | 'description';
+export type TextVariant = 'default' | 'muted' | 'small' | 'xs' | 'title' | 'description' | 'label' | 'mono' | 'display';
 
 const Text = React.forwardRef<
     React.ElementRef<typeof RNText>,
@@ -18,29 +19,45 @@ Text.displayName = 'Text';
 
 const styles = StyleSheet.create((theme) => ({
     default: {
-        fontSize: 14,
-        color: theme.colors.text,
+        ...Typography.proportionalBody(),
+        color: theme.semantic.textPrimary,
     },
     muted: {
-        fontSize: 14,
-        color: theme.colors.textSecondary,
+        ...Typography.proportionalBody(),
+        color: theme.semantic.textSecondary,
     },
     small: {
-        fontSize: 12,
-        color: theme.colors.text,
+        ...Typography.default(),
+        ...TypeScale.bodySmall,
+        color: theme.semantic.textPrimary,
     },
     xs: {
-        fontSize: 11,
-        color: theme.colors.textSecondary,
+        ...Typography.mono(),
+        ...TypeScale.label,
+        color: theme.semantic.textMuted,
     },
     title: {
-        fontSize: 16,
-        fontWeight: '600',
-        color: theme.colors.text,
+        ...Typography.title(),
+        color: theme.semantic.textPrimary,
     },
     description: {
-        fontSize: 12,
-        color: theme.colors.textSecondary,
+        ...Typography.default(),
+        ...TypeScale.bodySmall,
+        color: theme.semantic.textSecondary,
+    },
+    label: {
+        ...Typography.label(),
+        color: theme.semantic.textSecondary,
+        textTransform: 'uppercase',
+    },
+    mono: {
+        ...Typography.monoDeveloper(),
+        color: theme.semantic.textPrimary,
+    },
+    display: {
+        ...Typography.default('semiBold'),
+        ...TypeScale.display,
+        color: theme.semantic.textPrimary,
     },
 }));
 

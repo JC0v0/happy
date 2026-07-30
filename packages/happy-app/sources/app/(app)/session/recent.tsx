@@ -25,27 +25,29 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'stretch',
-        backgroundColor: theme.colors.groupped.background,
+        backgroundColor: theme.semantic.canvas,
     },
     contentContainer: {
         flex: 1,
         maxWidth: layout.maxWidth,
     },
     dateHeader: {
-        backgroundColor: theme.colors.groupped.background,
+        backgroundColor: theme.semantic.canvas,
         paddingTop: 20,
         paddingBottom: 8,
         paddingHorizontal: 24,
     },
     dateHeaderText: {
         ...Typography.default('semiBold'),
-        color: theme.colors.groupped.sectionTitle,
+        color: theme.semantic.textSecondary,
         fontSize: 14,
         fontWeight: '600',
         letterSpacing: 0.1,
     },
     sessionCard: {
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.semantic.surface,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.semantic.border,
         marginHorizontal: 16,
         marginBottom: 1,
         paddingVertical: 16,
@@ -54,16 +56,16 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: 'center',
     },
     sessionCardFirst: {
-        borderTopLeftRadius: 12,
-        borderTopRightRadius: 12,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
     },
     sessionCardLast: {
-        borderBottomLeftRadius: 12,
-        borderBottomRightRadius: 12,
+        borderBottomLeftRadius: 0,
+        borderBottomRightRadius: 0,
         marginBottom: 12,
     },
     sessionCardSingle: {
-        borderRadius: 12,
+        borderRadius: 0,
         marginBottom: 12,
     },
     sessionContent: {
@@ -73,13 +75,13 @@ const styles = StyleSheet.create((theme) => ({
     sessionTitle: {
         fontSize: 15,
         fontWeight: '500',
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
         marginBottom: 2,
         ...Typography.default('semiBold'),
     },
     sessionSubtitle: {
         fontSize: 13,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         ...Typography.default(),
     },
     emptyContainer: {
@@ -90,7 +92,7 @@ const styles = StyleSheet.create((theme) => ({
     },
     emptyText: {
         fontSize: 16,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         textAlign: 'center',
         ...Typography.default(),
     },

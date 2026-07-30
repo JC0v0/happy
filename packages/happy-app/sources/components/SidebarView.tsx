@@ -12,10 +12,7 @@ import { Typography } from '@/constants/Typography';
 const stylesheet = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
-        borderStyle: 'solid',
-        backgroundColor: theme.colors.groupped.background,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: theme.colors.divider,
+        backgroundColor: theme.semantic.canvas,
     },
     settingsRow: {
         flexDirection: 'row',
@@ -23,13 +20,13 @@ const stylesheet = StyleSheet.create((theme) => ({
         paddingHorizontal: 16,
         paddingVertical: 14,
         borderTopWidth: StyleSheet.hairlineWidth,
-        borderTopColor: theme.colors.divider,
+        borderTopColor: theme.semantic.border,
         gap: 10,
     },
     settingsText: {
         fontSize: 14,
         fontWeight: '500',
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
         ...Typography.default(),
     },
 }));

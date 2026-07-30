@@ -133,6 +133,10 @@ export default function RootLayout() {
                     headerTitle: t('settings.developerTools'),
                 }}
             />
+            <Stack.Screen
+                name="dev/device-first-qa"
+                options={{ headerTitle: 'Device-first UI QA' }}
+            />
 
             <Stack.Screen
                 name="dev/list-demo"

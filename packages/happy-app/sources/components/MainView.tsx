@@ -1,251 +1,67 @@
 import * as React from 'react';
-import { View, ActivityIndicator, Text, Pressable } from 'react-native';
-import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useSocketStatus } from '@/sync/storage';
-import { useIsTablet } from '@/utils/responsive';
+import { Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { TabBar, TabType } from './TabBar';
-import { SettingsViewWrapper } from './SettingsViewWrapper';
-import { TerminalsHomeView } from './TerminalsHomeView';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { DevicesHomeView } from './device/DevicesHomeView';
 import { Header } from './navigation/Header';
 import { HeaderLogo } from './HeaderLogo';
-import { StatusDot } from './StatusDot';
-import { Ionicons } from '@expo/vector-icons';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
-import { isUsingCustomServer } from '@/sync/serverConfig';
 
 interface MainViewProps {
     variant: 'phone' | 'sidebar';
 }
 
-const styles = StyleSheet.create((theme) => ({
-    container: {
-        flex: 1,
-    },
-    phoneContainer: {
-        flex: 1,
-    },
-    sidebarContentContainer: {
-        flex: 1,
-        flexBasis: 0,
-        flexGrow: 1,
-    },
-    loadingContainerWrapper: {
-        flex: 1,
-        flexBasis: 0,
-        flexGrow: 1,
-        backgroundColor: theme.colors.groupped.background,
-    },
-    loadingContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingBottom: 32,
-    },
-    tabletLoadingContainer: {
-        flex: 1,
-        flexBasis: 0,
-        flexGrow: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    emptyStateContainer: {
-        flex: 1,
-        flexBasis: 0,
-        flexGrow: 1,
-        flexDirection: 'column',
-        backgroundColor: theme.colors.groupped.background,
-    },
-    emptyStateContentContainer: {
-        flex: 1,
-        flexBasis: 0,
-        flexGrow: 1,
-    },
-    titleContainer: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    titleText: {
-        fontSize: 17,
-        color: theme.colors.header.tint,
-        fontWeight: '600',
-        ...Typography.default('semiBold'),
-    },
-    statusContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: -2,
-    },
-    statusText: {
-        fontSize: 12,
-        fontWeight: '500',
-        lineHeight: 16,
-        ...Typography.default(),
-    },
-    headerButton: {
-        width: 32,
-        height: 32,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-}));
-
-// Tab header configuration
-const TAB_TITLES = {
-    sessions: 'tabs.sessions',
-    settings: 'tabs.settings',
-} as const;
-
-// Active tabs
-type ActiveTabType = 'sessions' | 'settings';
-
-// Header title component with connection status
-const HeaderTitle = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => {
+export const MainView = React.memo(function MainView({ variant }: MainViewProps) {
+    const router = useRouter();
     const { theme } = useUnistyles();
-    const socketStatus = useSocketStatus();
 
-    const connectionStatus = React.useMemo(() => {
-        const { status } = socketStatus;
-        switch (status) {
-            case 'connected':
-                return {
-                    color: theme.colors.status.connected,
-                    isPulsing: false,
-                    text: t('status.connected'),
-                };
-            case 'connecting':
-                return {
-                    color: theme.colors.status.connecting,
-                    isPulsing: true,
-                    text: t('status.connecting'),
-                };
-            case 'disconnected':
-                return {
-                    color: theme.colors.status.disconnected,
-                    isPulsing: false,
-                    text: t('status.disconnected'),
-                };
-            case 'error':
-                return {
-                    color: theme.colors.status.error,
-                    isPulsing: false,
-                    text: t('status.error'),
-                };
-            default:
-                return {
-                    color: theme.colors.status.default,
-                    isPulsing: false,
-                    text: '',
-                };
-        }
-    }, [socketStatus, theme]);
+    if (variant === 'sidebar') {
+        return <DevicesHomeView variant="sidebar" />;
+    }
 
     return (
-        <View style={styles.titleContainer}>
-            <Text style={styles.titleText}>
-                {t(TAB_TITLES[activeTab])}
-            </Text>
-            {connectionStatus.text && (
-                <View style={styles.statusContainer}>
-                    <StatusDot
-                        color={connectionStatus.color}
-                        isPulsing={connectionStatus.isPulsing}
-                        size={6}
-                        style={{ marginRight: 4 }}
-                    />
-                    <Text style={[styles.statusText, { color: connectionStatus.color }]}>
-                        {connectionStatus.text}
-                    </Text>
-                </View>
-            )}
+        <View style={styles.container}>
+            <Header
+                title={<Text style={styles.title}>{t('terminals.machines')}</Text>}
+                headerLeft={() => <HeaderLogo />}
+                headerRight={() => (
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={t('settings.title')}
+                        hitSlop={8}
+                        onPress={() => router.push('/settings')}
+                        style={({ pressed }) => [styles.headerButton, pressed && styles.pressed]}
+                    >
+                        <Ionicons name="settings-outline" size={21} color={theme.semantic.textPrimary} />
+                    </Pressable>
+                )}
+                headerShadowVisible
+            />
+            <DevicesHomeView variant="phone" />
         </View>
     );
 });
 
-// Header right button - varies by tab
-const HeaderRight = React.memo(({ activeTab }: { activeTab: ActiveTabType }) => {
-    const router = useRouter();
-    const { theme } = useUnistyles();
-    const isCustomServer = isUsingCustomServer();
-
-    if (activeTab === 'settings') {
-        if (!isCustomServer) {
-            // Empty view to maintain header centering
-            return <View style={styles.headerButton} />;
-        }
-        return (
-            <Pressable
-                onPress={() => router.push('/server')}
-                hitSlop={15}
-                style={styles.headerButton}
-            >
-                <Ionicons name="server-outline" size={24} color={theme.colors.header.tint} />
-            </Pressable>
-        );
-    }
-
-    return <View style={styles.headerButton} />;
-});
-
-export const MainView = React.memo(({ variant }: MainViewProps) => {
-    const { theme } = useUnistyles();
-    const isTablet = useIsTablet();
-
-    // Tab state management
-    const [activeTab, setActiveTab] = React.useState<TabType>('sessions');
-
-    const handleTabPress = React.useCallback((tab: TabType) => {
-        setActiveTab(tab);
-    }, []);
-
-    // Regular phone mode with tabs - define this before any conditional returns
-    const renderTabContent = React.useCallback(() => {
-        switch (activeTab) {
-            case 'settings':
-                return <SettingsViewWrapper />;
-            case 'sessions':
-            default:
-                return <TerminalsHomeView />;
-        }
-    }, [activeTab]);
-
-    // Sidebar variant
-    if (variant === 'sidebar') {
-        return (
-            <View style={styles.sidebarContentContainer}>
-                <TerminalsHomeView />
-            </View>
-        );
-    }
-
-    // Phone variant
-    // Tablet in phone mode - special case (when showing index view on tablets, show empty view)
-    if (isTablet) {
-        // Just show an empty view on tablets for the index view
-        // The sessions list is shown in the sidebar, so the main area should be blank
-        return <View style={styles.emptyStateContentContainer} />;
-    }
-
-    // Regular phone mode with tabs
-    return (
-        <>
-            <View style={styles.phoneContainer}>
-                <View style={{ backgroundColor: theme.colors.groupped.background }}>
-                    <Header
-                        title={<HeaderTitle activeTab={activeTab as ActiveTabType} />}
-                        headerRight={() => <HeaderRight activeTab={activeTab as ActiveTabType} />}
-                        headerLeft={() => <HeaderLogo />}
-                        headerShadowVisible={false}
-                        headerTransparent={true}
-                    />
-                </View>
-                {renderTabContent()}
-            </View>
-            <TabBar
-                activeTab={activeTab}
-                onTabPress={handleTabPress}
-            />
-        </>
-    );
-});
+const styles = StyleSheet.create((theme) => ({
+    container: {
+        flex: 1,
+        backgroundColor: theme.semantic.canvas,
+    },
+    title: {
+        color: theme.semantic.textPrimary,
+        fontSize: 15,
+        ...Typography.default('semiBold'),
+    },
+    headerButton: {
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: theme.geometry.radius.interactive,
+    },
+    pressed: {
+        backgroundColor: theme.semantic.surfaceSelected,
+    },
+}));

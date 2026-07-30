@@ -15,6 +15,36 @@ function plural({ count, singular, plural }: { count: number; singular: string; 
 }
 
 export const en = {
+    deviceFirst: {
+        devices: 'Devices',
+        devicesEyebrow: 'Connected workspace',
+        devicesIntro: 'Choose a connected device to resume or start a terminal.',
+        presenceUnverified: 'Device presence is not verified',
+        presenceUnverifiedDescription: 'Known devices remain available while the connection recovers.',
+        workspace: 'Device workspace',
+        activeTerminals: 'Active terminals',
+        recentTerminals: 'Recent terminals',
+        noTerminalHistory: 'No terminal history',
+        noTerminalHistoryDescription: "Start a terminal in this device's home directory or choose a path below.",
+        reconnectToStart: 'Reconnect before starting a new terminal. Existing terminal history remains available.',
+        homeDirectoryPlaceholder: '~  (home directory)',
+        startTerminal: 'Start terminal',
+        deviceManagement: 'Device management',
+        renameDevice: 'Rename device',
+        deviceNotFound: 'Device not found',
+        stopDaemonTitle: 'Stop Daemon?',
+        stopDaemonDescription: 'You will not be able to start new terminals on this device until the daemon restarts. Existing sessions remain available.',
+        stopDaemon: 'Stop Daemon',
+        daemonStopped: 'Daemon Stopped',
+        daemonStopFailed: 'Failed to stop daemon. It may not be running.',
+        renameDeviceTitle: 'Rename Device',
+        renameDeviceDescription: 'Give this device a custom name. Leave empty to use its hostname.',
+        deviceNamePlaceholder: 'Device name',
+        deviceRenamed: 'Device renamed successfully',
+        renameDeviceFailed: 'Failed to rename device',
+        createDirectoryTitle: 'Create Directory?',
+        createDirectoryDescription: ({ directory }: { directory: string }) => `The directory '${directory}' does not exist. Would you like to create it?`,
+    },
     tabs: {
         // Tab navigation labels
         inbox: 'Inbox',

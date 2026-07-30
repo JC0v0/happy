@@ -20,7 +20,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         flex: 1,
     },
     contentContainer: {
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.semantic.surface,
         paddingHorizontal: 16,
         paddingVertical: 12,
         width: '100%',
@@ -28,21 +28,23 @@ const stylesheet = StyleSheet.create((theme) => ({
         alignSelf: 'center',
     },
     labelText: {
-        ...Typography.default('semiBold'),
+        ...Typography.label(),
         fontSize: 12,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
         marginBottom: 8,
     },
     textInput: {
-        backgroundColor: theme.colors.input.background,
+        backgroundColor: theme.semantic.surfaceMuted,
         padding: 12,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.semantic.borderStrong,
         marginBottom: 8,
-        ...Typography.mono(),
+        ...Typography.monoDeveloper(),
         fontSize: 14,
-        color: theme.colors.input.text,
+        color: theme.semantic.textPrimary,
     },
     textInputValidating: {
         opacity: 0.6,
@@ -50,13 +52,13 @@ const stylesheet = StyleSheet.create((theme) => ({
     errorText: {
         ...Typography.default(),
         fontSize: 12,
-        color: theme.colors.textDestructive,
+        color: theme.semantic.status.error,
         marginBottom: 12,
     },
     validatingText: {
         ...Typography.default(),
         fontSize: 12,
-        color: theme.colors.status.connecting,
+        color: theme.semantic.status.warning,
         marginBottom: 12,
     },
     buttonRow: {
@@ -70,7 +72,7 @@ const stylesheet = StyleSheet.create((theme) => ({
     statusText: {
         ...Typography.default(),
         fontSize: 12,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         textAlign: 'center',
     },
 }));
@@ -187,7 +189,7 @@ export default function ServerConfigScreen() {
                                     setError(null);
                                 }}
                                 placeholder={t('common.urlPlaceholder')}
-                                placeholderTextColor={theme.colors.input.placeholder}
+                                placeholderTextColor={theme.semantic.textMuted}
                                 autoCapitalize="none"
                                 autoCorrect={false}
                                 keyboardType="url"

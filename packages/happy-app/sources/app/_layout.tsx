@@ -238,17 +238,6 @@ export default function RootLayout() {
 
                 let credentials = await TokenStorage.getCredentials();
 
-                // When EXPO_PUBLIC_HAPPY_SERVER_URL is explicitly set (dev / local
-                // server), any stored credentials were almost certainly issued by a
-                // different server and will produce 401 loops. Wipe them so the app
-                // starts in a clean, usable state.
-                if (process.env.EXPO_PUBLIC_HAPPY_SERVER_URL && credentials) {
-                    console.warn('[Init] EXPO_PUBLIC_HAPPY_SERVER_URL is set — clearing stale credentials from previous server');
-                    await TokenStorage.removeCredentials();
-                    clearPersistence();
-                    credentials = null;
-                }
-
                 const devCredentials = getDevWebQueryCredentials() ?? getDevEnvironmentCredentials();
 
                 if (devCredentials) {

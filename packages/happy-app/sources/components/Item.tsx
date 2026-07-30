@@ -46,18 +46,18 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         flexDirection: 'row',
         alignItems: 'center',
         paddingHorizontal: 16,
-        minHeight: Platform.select({ ios: 44, default: 56 }),
+        minHeight: 48,
     },
     containerWithSubtitle: {
-        paddingVertical: Platform.select({ ios: 11, default: 16 }),
+        paddingVertical: 10,
     },
     containerWithoutSubtitle: {
-        paddingVertical: Platform.select({ ios: 12, default: 16 }),
+        paddingVertical: 8,
     },
     iconContainer: {
         marginRight: 12,
-        width: Platform.select({ ios: 29, default: 32 }),
-        height: Platform.select({ ios: 29, default: 32 }),
+        width: 28,
+        height: 28,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -66,27 +66,23 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         justifyContent: 'center',
     },
     title: {
-        ...Typography.default('regular'),
-        fontSize: Platform.select({ ios: 17, default: 16 }),
-        lineHeight: Platform.select({ ios: 22, default: 24 }),
-        letterSpacing: Platform.select({ ios: -0.41, default: 0.15 }),
+        ...Typography.proportionalBody(),
     },
     titleNormal: {
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
     },
     titleSelected: {
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
     },
     titleDestructive: {
         color: theme.colors.textDestructive,
     },
     subtitle: {
         ...Typography.default('regular'),
-        color: theme.colors.textSecondary,
-        fontSize: Platform.select({ ios: 15, default: 14 }),
-        lineHeight: 20,
-        letterSpacing: Platform.select({ ios: -0.24, default: 0.1 }),
-        marginTop: Platform.select({ ios: 2, default: 0 }),
+        color: theme.semantic.textSecondary,
+        fontSize: 13,
+        lineHeight: 18,
+        marginTop: 2,
     },
     rightSection: {
         flexDirection: 'row',
@@ -94,17 +90,18 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         marginLeft: 8,
     },
     detail: {
-        ...Typography.default('regular'),
-        color: theme.colors.textSecondary,
-        fontSize: 17,
-        letterSpacing: -0.41,
+        ...Typography.monoDeveloper(),
+        color: theme.semantic.textSecondary,
     },
     divider: {
-        height: Platform.select({ ios: 0.33, default: 0 }),
-        backgroundColor: theme.colors.divider,
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: theme.semantic.border,
     },
-    pressablePressed: {
-        backgroundColor: theme.colors.surfacePressedOverlay,
+    selected: {
+        backgroundColor: theme.semantic.surfaceSelected,
+    },
+    pressed: {
+        backgroundColor: theme.semantic.surfaceMuted,
     },
 }));
 
@@ -294,10 +291,9 @@ export const Item = React.memo<ItemProps>((props) => {
                 onPressOut={handlePressOut}
                 disabled={disabled || loading}
                 style={({ pressed }) => [
-                    {
-                        backgroundColor: pressed && isIOS && !isWeb ? theme.colors.surfacePressedOverlay : 'transparent',
-                        opacity: disabled ? 0.5 : 1
-                    },
+                    selected && styles.selected,
+                    pressed && styles.pressed,
+                    { opacity: disabled ? 0.5 : 1 },
                     pressableStyle
                 ]}
                 android_ripple={(isAndroid || isWeb) ? {

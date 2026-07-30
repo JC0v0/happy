@@ -3,6 +3,7 @@ import { useWindowDimensions } from 'react-native';
 import { useMemo } from 'react';
 import { calculateDeviceDimensions, determineDeviceType, calculateHeaderHeight } from './deviceCalculations';
 import { isRunningOnMac } from './platform';
+import { resolveResponsiveLayout, type ResponsiveLayout } from './responsiveLayout';
 
 // Re-export calculation functions for use in other components
 export { calculateDeviceDimensions, determineDeviceType, calculateHeaderHeight };
@@ -84,4 +85,13 @@ export function useHeaderHeight(): number {
             isMacCatalyst: isRunningOnMac()
         });
     }, [isLandscape, deviceType]);
+}
+
+export function useResponsiveLayout(): ResponsiveLayout {
+    const { width } = useWindowDimensions();
+    return useMemo(() => resolveResponsiveLayout(width), [width]);
+}
+
+export function useIsWideLayout(): boolean {
+    return useResponsiveLayout().isWide;
 }

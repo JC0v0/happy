@@ -1,20 +1,15 @@
 import * as React from 'react';
-import { Platform } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 const stylesheet = StyleSheet.create((theme, runtime) => ({
     container: {
-        borderRadius: 12,
+        borderRadius: 0,
         overflow: 'hidden',
-        backgroundColor: theme.colors.surface,
-        borderWidth: Platform.OS === 'web' ? 0 : 0.5,
-        borderColor: theme.colors.modal.border,
-        shadowColor: theme.colors.shadow.color,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 3.84,
-        shadowOpacity: theme.colors.shadow.opacity,
-        elevation: 5,
+        backgroundColor: theme.semantic.surfaceRaised,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.semantic.borderStrong,
+        elevation: 0,
     },
 }));
 

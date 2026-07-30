@@ -4,9 +4,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackHeaderProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { layout } from '../layout';
-import { useHeaderHeight, useIsTablet } from '@/utils/responsive';
+import { useHeaderHeight, useIsWideLayout } from '@/utils/responsive';
 import { Typography } from '@/constants/Typography';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 interface HeaderProps {
     title?: React.ReactNode;
@@ -92,7 +92,17 @@ interface ExtendedNavigationOptions extends Partial<NativeStackHeaderProps['opti
 // Default back button component
 const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> = ({ tintColor = '#000', onPress }) => {
     return (
-        <Pressable onPress={onPress} hitSlop={15}>
+        <Pressable
+            onPress={onPress}
+            hitSlop={8}
+            style={({ pressed }) => ({
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: pressed ? 0.65 : 1,
+            })}
+        >
             <Ionicons
                 name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                 size={24}
@@ -106,10 +116,12 @@ const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> =
 const NavigationHeaderComponent: React.FC<NativeStackHeaderProps> = React.memo((props) => {
     const { options, route, back, navigation } = props;
     const extendedOptions = options as ExtendedNavigationOptions;
-    const isTablet = useIsTablet();
+    const isWideLayout = useIsWideLayout();
+    const { theme } = useUnistyles();
+    const resolvedTint = options.headerTintColor || theme.semantic.textPrimary;
 
     // Hide back button on tablet — navigation is handled via sidebar and persistent header
-    const shouldHideBackButton = isTablet;
+    const shouldHideBackButton = isWideLayout;
 
     // Extract title - handle both string and function types
     let title: React.ReactNode | null = null;
@@ -117,7 +129,7 @@ const NavigationHeaderComponent: React.FC<NativeStackHeaderProps> = React.memo((
         if (typeof options.headerTitle === 'string') {
             title = (
                 <Text style={[
-                    { fontSize: 17, fontWeight: '600', textAlign: Platform.OS === 'ios' ? 'center' : 'left', color: options.headerTintColor || '#000' },
+                    { fontSize: 17, fontWeight: '600', textAlign: Platform.OS === 'ios' ? 'center' : 'left', color: resolvedTint },
                     Typography.default('semiBold'),
                     options.headerTitleStyle
                 ]}>
@@ -131,7 +143,7 @@ const NavigationHeaderComponent: React.FC<NativeStackHeaderProps> = React.memo((
     } else if (typeof options.title === 'string') {
         title = (
             <Text style={[
-                { fontSize: 17, fontWeight: '600', textAlign: Platform.OS === 'ios' ? 'center' : 'left', color: options.headerTintColor || '#000' },
+                { fontSize: 17, fontWeight: '600', textAlign: Platform.OS === 'ios' ? 'center' : 'left', color: resolvedTint },
                 Typography.default('semiBold'),
                 options.headerTitleStyle
             ]}>
@@ -191,7 +203,7 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         backgroundColor: 'transparent',
     },
     containerNormal: {
-        backgroundColor: theme.colors.header.background,
+        backgroundColor: theme.semantic.canvas,
     },
     contentWrapper: {
         width: '100%',
@@ -239,12 +251,9 @@ const stylesheet = StyleSheet.create((theme, runtime) => ({
         ...Typography.default('regular'),
     },
     shadow: {
-        shadowColor: theme.colors.shadow.color,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: theme.colors.shadow.opacity,
-        shadowRadius: 3,
-        elevation: 4,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.15)',
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: theme.semantic.border,
+        elevation: theme.geometry.elevation.structural,
     },
     backButton: {
         color: theme.colors.header.tint,

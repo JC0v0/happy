@@ -245,6 +245,12 @@ export default function DevScreen() {
             {/* Component Demos */}
             <ItemGroup title={devText('Component Demos', '组件演示', '元件示範')}>
                 <Item
+                    title="Device-first UI QA"
+                    subtitle="Read-only deterministic redesign states"
+                    icon={<Ionicons name="desktop-outline" size={28} color={theme.semantic.focus} />}
+                    onPress={() => router.push('/dev/device-first-qa')}
+                />
+                <Item
                     title={devText('Device Info', '设备信息', '裝置資訊')}
                     subtitle={devText('Safe area insets and device parameters', '查看安全区域和设备参数', '查看安全區域和裝置參數')}
                     icon={<Ionicons name="phone-portrait-outline" size={28} color="#007AFF" />}

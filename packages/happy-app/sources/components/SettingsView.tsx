@@ -20,7 +20,7 @@ import { Modal } from '@/modal';
 import { useMultiClick } from '@/hooks/useMultiClick';
 import { useAllMachines } from '@/sync/storage';
 import { isMachineOnline } from '@/utils/machineUtils';
-import { useUnistyles } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
 import { useHappyAction } from '@/hooks/useHappyAction';
 import { getGitHubOAuthParams, disconnectGitHub } from '@/sync/apiGithub';
@@ -165,7 +165,15 @@ export const SettingsView = React.memo(function SettingsView() {
         <ItemList style={{ paddingTop: 0 }}>
             {/* App Info Header */}
             <View style={{ maxWidth: layout.maxWidth, alignSelf: 'center', width: '100%' }}>
-                <View style={{ alignItems: 'center', paddingVertical: 24, backgroundColor: theme.colors.surface, marginTop: 16, borderRadius: 12, marginHorizontal: 16 }}>
+                <View style={{
+                    alignItems: 'center',
+                    paddingVertical: 24,
+                    backgroundColor: theme.semantic.surface,
+                    marginTop: 16,
+                    marginHorizontal: 16,
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: theme.semantic.border,
+                }}>
                     {profile.firstName ? (
                         // Profile view: Avatar + name + version
                         <>
@@ -177,11 +185,11 @@ export const SettingsView = React.memo(function SettingsView() {
                                     thumbhash={profile.avatar?.thumbhash}
                                 />
                             </View>
-                            <Text style={{ fontSize: 20, fontWeight: '600', color: theme.colors.text, marginBottom: bio ? 4 : 8 }}>
+                            <Text style={{ ...Typography.title(), color: theme.semantic.textPrimary, marginBottom: bio ? 4 : 8 }}>
                                 {displayName}
                             </Text>
                             {bio && (
-                                <Text style={{ fontSize: 14, color: theme.colors.textSecondary, textAlign: 'center', marginBottom: 8, paddingHorizontal: 16 }}>
+                                <Text style={{ ...Typography.proportionalBody(), color: theme.semantic.textSecondary, textAlign: 'center', marginBottom: 8, paddingHorizontal: 16 }}>
                                     {bio}
                                 </Text>
                             )}
@@ -204,14 +212,14 @@ export const SettingsView = React.memo(function SettingsView() {
                 <ItemGroup>
                     <Item
                         title={t('settings.scanQrCodeToAuthenticate')}
-                        icon={<Ionicons name="qr-code-outline" size={29} color="#007AFF" />}
+                        icon={<Ionicons name="qr-code-outline" size={24} color={theme.semantic.focus} />}
                         onPress={connectTerminal}
                         loading={isLoading}
                         showChevron={false}
                     />
                     <Item
                         title={t('connect.enterUrlManually')}
-                        icon={<Ionicons name="link-outline" size={29} color="#007AFF" />}
+                        icon={<Ionicons name="link-outline" size={24} color={theme.semantic.focus} />}
                         onPress={async () => {
                             const url = await Modal.prompt(
                                 t('modals.authenticateTerminal'),
@@ -320,19 +328,30 @@ export const SettingsView = React.memo(function SettingsView() {
                 <Item
                     title={t('settings.account')}
                     subtitle={t('settings.accountSubtitle')}
-                    icon={<Ionicons name="person-circle-outline" size={29} color="#007AFF" />}
+                    icon={<Ionicons name="person-circle-outline" size={24} color={theme.semantic.focus} />}
                     onPress={() => router.push('/settings/account')}
+                />
+                <Item
+                    title={t('settingsLanguage.title')}
+                    icon={<Ionicons name="language-outline" size={24} color={theme.semantic.focus} />}
+                    onPress={() => router.push('/settings/language')}
+                />
+                <Item
+                    title={t('server.serverConfiguration')}
+                    detail={isCustomServer ? t('server.currentlyUsingCustomServer') : undefined}
+                    icon={<Ionicons name="server-outline" size={24} color={theme.semantic.focus} />}
+                    onPress={() => router.push('/server')}
                 />
                 <Item
                     title={t('settings.appearance')}
                     subtitle={t('settings.appearanceSubtitle')}
-                    icon={<Ionicons name="color-palette-outline" size={29} color="#5856D6" />}
+                    icon={<Ionicons name="color-palette-outline" size={24} color={theme.semantic.focus} />}
                     onPress={() => router.push('/settings/appearance')}
                 />
                 <Item
                     title={t('settings.featuresTitle')}
                     subtitle={t('settings.featuresSubtitle')}
-                    icon={<Ionicons name="flask-outline" size={29} color="#FF9500" />}
+                    icon={<Ionicons name="flask-outline" size={24} color={theme.semantic.status.warning} />}
                     onPress={() => router.push('/settings/features')}
                 />
             </ItemGroup>

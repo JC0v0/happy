@@ -13,7 +13,7 @@ const appThemes = {
     dark: darkTheme
 };
 
-const breakpoints = {
+export const APP_BREAKPOINTS = {
     xs: 0, // <-- make sure to register one breakpoint with value 0
     sm: 300,
     md: 500,
@@ -51,7 +51,7 @@ const settings = themePreference === 'adaptive'
 //
 
 type AppThemes = typeof appThemes
-type AppBreakpoints = typeof breakpoints
+type AppBreakpoints = typeof APP_BREAKPOINTS
 
 declare module 'react-native-unistyles' {
     export interface UnistylesThemes extends AppThemes { }
@@ -60,7 +60,7 @@ declare module 'react-native-unistyles' {
 
 StyleSheet.configure({
     settings,
-    breakpoints,
+    breakpoints: APP_BREAKPOINTS,
     themes: appThemes,
 })
 
@@ -68,11 +68,11 @@ StyleSheet.configure({
 const setRootBackgroundColor = () => {
     if (themePreference === 'adaptive') {
         const systemTheme = Appearance.getColorScheme();
-        const color = systemTheme === 'dark' ? appThemes.dark.colors.groupped.background : appThemes.light.colors.groupped.background;
+        const color = systemTheme === 'dark' ? appThemes.dark.semantic.canvas : appThemes.light.semantic.canvas;
         UnistylesRuntime.setRootViewBackgroundColor(color);
         SystemUI.setBackgroundColorAsync(color);
     } else {
-        const color = themePreference === 'dark' ? appThemes.dark.colors.groupped.background : appThemes.light.colors.groupped.background;
+        const color = themePreference === 'dark' ? appThemes.dark.semantic.canvas : appThemes.light.semantic.canvas;
         UnistylesRuntime.setRootViewBackgroundColor(color);
         SystemUI.setBackgroundColorAsync(color);
     }
@@ -90,7 +90,7 @@ if (Platform.OS === 'web' && themePreference === 'adaptive') {
             UnistylesRuntime.setAdaptiveThemes(false);
             UnistylesRuntime.setTheme(themeName);
             UnistylesRuntime.setAdaptiveThemes(true);
-            const color = appThemes[themeName].colors.groupped.background;
+            const color = appThemes[themeName].semantic.canvas;
             UnistylesRuntime.setRootViewBackgroundColor(color);
         }
     });

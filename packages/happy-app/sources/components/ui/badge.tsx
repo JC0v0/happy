@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { View, type ViewProps } from 'react-native';
-import { StyleSheet } from 'react-native-unistyles';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Text } from '@/components/ui/text';
 
 export type BadgeVariant = 'default' | 'secondary' | 'destructive' | 'outline';
@@ -12,11 +12,12 @@ interface BadgeProps extends ViewProps {
 
 const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
     ({ variant = 'default', style, children, ...props }, ref) => {
+        const { theme } = useUnistyles();
         styles.useVariants({ variant: variant === 'default' ? undefined : variant });
         return (
             <View ref={ref} style={[styles.base, style]} {...props}>
                 {typeof children === 'string' ? (
-                    <Text style={{ color: textColorFor(variant), fontSize: 11, fontWeight: '600' }}>
+                    <Text variant="label" style={{ color: textColorFor(theme.semantic, variant) }}>
                         {children}
                     </Text>
                 ) : (
@@ -28,13 +29,16 @@ const Badge = React.forwardRef<React.ElementRef<typeof View>, BadgeProps>(
 );
 Badge.displayName = 'Badge';
 
-function textColorFor(variant: BadgeVariant): string | undefined {
+function textColorFor(
+    semantic: { textPrimary: string; textInverse: string },
+    variant: BadgeVariant,
+): string {
     switch (variant) {
         case 'default':
         case 'destructive':
-            return '#FFFFFF';
+            return semantic.textInverse;
         default:
-            return undefined;
+            return semantic.textPrimary;
     }
 }
 
@@ -43,18 +47,24 @@ const styles = StyleSheet.create((theme) => ({
         flexDirection: 'row',
         alignItems: 'center',
         alignSelf: 'flex-start',
-        borderRadius: 999,
-        paddingHorizontal: 10,
-        paddingVertical: 3,
+        borderRadius: theme.geometry.radius.interactive,
+        paddingHorizontal: 8,
+        paddingVertical: 2,
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: 'transparent',
         // variant: default
-        backgroundColor: theme.colors.text,
+        backgroundColor: theme.semantic.control,
+        borderColor: theme.semantic.control,
         variants: {
             variant: {
-                secondary: { backgroundColor: theme.colors.surfaceHigh },
-                destructive: { backgroundColor: theme.colors.status.error },
-                outline: { backgroundColor: 'transparent', borderColor: theme.colors.divider },
+                secondary: {
+                    backgroundColor: theme.semantic.surfaceMuted,
+                    borderColor: theme.semantic.border,
+                },
+                destructive: {
+                    backgroundColor: theme.semantic.status.error,
+                    borderColor: theme.semantic.status.error,
+                },
+                outline: { backgroundColor: 'transparent', borderColor: theme.semantic.borderStrong },
             },
         },
     },

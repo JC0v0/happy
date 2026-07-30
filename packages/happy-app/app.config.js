@@ -61,6 +61,7 @@ export default {
         ios: {
             supportsTablet: true,
             bundleIdentifier: bundleId,
+            jsEngine: "jsc",
             config: {
                 usesNonExemptEncryption: false
             },

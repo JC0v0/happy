@@ -71,7 +71,7 @@ export default function ChangelogScreen() {
 const styles = StyleSheet.create((theme) => ({
     container: {
         flex: 1,
-        backgroundColor: theme.colors.surface,
+        backgroundColor: theme.semantic.canvas,
     },
     content: {
         paddingHorizontal: 16,
@@ -84,19 +84,21 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default('semiBold'),
         fontSize: 20,
         lineHeight: 28,
-        color: theme.colors.text,
+        color: theme.semantic.textPrimary,
         marginBottom: 8,
     },
     summaryText: {
         ...Typography.default('regular'),
         fontSize: 15,
         lineHeight: 22,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         marginBottom: 16,
     },
     card: {
-        backgroundColor: theme.colors.surfaceHigh,
-        borderRadius: 12,
+        backgroundColor: theme.semantic.surface,
+        borderRadius: 0,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.semantic.border,
         padding: 16,
     },
     emptyState: {
@@ -109,7 +111,7 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default('regular'),
         fontSize: 16,
         lineHeight: 24,
-        color: theme.colors.textSecondary,
+        color: theme.semantic.textSecondary,
         textAlign: 'center',
     }
 }));

@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { ActivityIndicator, Keyboard, Text, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Text, useWindowDimensions, View, TextInput, Pressable, type LayoutChangeEvent } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
-import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -23,11 +22,8 @@ import { t } from '@/text';
 import { Button } from '@/components/ui/button';
 import { Text as UiText } from '@/components/ui/text';
 import { subscribeTerminalOutput } from './terminalOutputBus';
-import { TerminalOrderer, type TerminalMetadataEvent } from './terminalOrdering';
+import { TerminalOrderer } from './terminalOrdering';
 import { TerminalRecordMux, terminalEventBelongsToDevice } from './terminalRecordMux';
-import { DEFAULT_TERMINAL_ANSI_COLORS_DARK, DEFAULT_TERMINAL_ANSI_COLORS_LIGHT } from './terminalTheme';
-import { loadTerminalWebviewAssets, type TerminalWebviewAssets } from './terminalWebviewAsset';
-import { TERMINAL_TOUCH_SCROLL_SCRIPT } from './terminalTouchScroll';
 import { TerminalCommandDock, TerminalToolbar, type TerminalConnectionState } from './TerminalToolbar';
 import { TerminalBlockTranscript } from './TerminalBlockTranscript';
 import { TerminalHistorySheet } from './TerminalHistorySheet';
@@ -47,15 +43,13 @@ import { resolveTerminalPalette } from './terminalVisualTheme';
 import { SHARED_TERMINAL_COLS, SHARED_TERMINAL_ROWS } from './terminalSharedGrid';
 import type { TerminalAttachResponse, TerminalExecuteResponse } from '@slopus/happy-wire';
 import { SkiaTerminalView } from './skia/SkiaTerminalView';
-import { useSkiaTerminal } from './skia/useSkiaTerminal';
+import { useSkiaTerminal, type RenderData } from './skia/useSkiaTerminal';
 
-/** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
+/** Keystroke text (UTF-16 JS string) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
     return encodeBase64(new TextEncoder().encode(text), 'base64');
 }
 
-// Coalesce output chunks before crossing the JS bridge - terminal output can
-// burst, and one injectJavaScript per 16ms keeps the bridge quiet without lag.
 const WRITE_BATCH_MS = 16;
 const DEFAULT_FONT_SIZE = 13;
 const PHONE_FONT_SIZE = 10;
@@ -63,221 +57,25 @@ const PHONE_MAX_WIDTH = 480;
 const MIN_FONT_SIZE = 8;
 const MAX_FONT_SIZE = 24;
 const COPIED_FEEDBACK_MS = 2000;
+const CELL_WIDTH_RATIO = 0.6;
+const CELL_HEIGHT_RATIO = 1.2;
 
-function buildHtml(
-    assets: TerminalWebviewAssets,
-    colors: { background: string; foreground: string; selection: string; ansi: Record<string, string> },
-    initialFontSize: number,
-): string {
-    // Escape the script-terminator sequence so the inlined JS bundles can't
-    // prematurely close the <script> tag.
-    const safeJs = (js: string) => js.replace(/<\/script>/gi, '<\\/script>');
-    const bg = JSON.stringify(colors.background);
-    const fg = JSON.stringify(colors.foreground);
-    const sel = JSON.stringify(colors.selection);
-    const ansi = JSON.stringify(colors.ansi);
-    return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<style>
-${assets.css}
-@font-face {
-  font-family: 'SarasaTerm';
-  src: url(data:font/woff2;base64,${assets.fontBase64}) format('woff2');
-  font-weight: normal;
-  font-style: normal;
-  font-display: block;
-}
-html,body{margin:0;padding:0;height:100%;background:${colors.background};overflow:hidden;-webkit-user-select:none;user-select:none;}
-#term-container{width:100%;height:100%;padding:4px;box-sizing:border-box;touch-action:none;overscroll-behavior:contain;}
-.xterm .xterm-viewport{background-color:${colors.background};}
-</style>
-</head>
-<body>
-<div id="term-container"></div>
-<script>${safeJs(assets.xtermJs)}</script>
-<script>${safeJs(assets.fitJs)}</script>
-<script>
-(function(){
-  var post = function(msg){ window.ReactNativeWebView.postMessage(JSON.stringify(msg)); };
-  var ansi = ${ansi};
-  var term = new Terminal({
-    allowProposedApi: true,
-    cursorBlink: true,
-    fontSize: ${initialFontSize},
-    // Embedded Sarasa Term SC first: one font covers Latin + box drawing +
-    // CJK, so the WebView never depends on (broken) system font fallback.
-    fontFamily: '"SarasaTerm", ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace',
-    theme: Object.assign({ background: ${bg}, foreground: ${fg}, cursor: ${fg}, cursorAccent: ${bg}, selectionBackground: ${sel} }, ansi)
-  });
-  var fit = new FitAddon.FitAddon();
-  var happyBaseFontSize = ${initialFontSize};
-  var happyFontZoom = 0;
-  var happyGridCols = ${SHARED_TERMINAL_COLS};
-  var happyGridRows = ${SHARED_TERMINAL_ROWS};
-  term.loadAddon(fit);
-  term.open(document.getElementById('term-container'));
-
-  function fitSharedGrid(reportViewport){
-    term.options.fontSize = happyBaseFontSize;
-    try { fit.fit(); } catch (e) {}
-    var measuredCols = term.cols;
-    var measuredRows = term.rows;
-    var scale = Math.min(measuredCols / happyGridCols, measuredRows / happyGridRows);
-    if (!isFinite(scale) || scale <= 0) { scale = 1; }
-    var fittedFontSize = Math.floor((happyBaseFontSize * scale + happyFontZoom) * 10) / 10;
-    fittedFontSize = Math.max(${MIN_FONT_SIZE}, Math.min(${MAX_FONT_SIZE}, fittedFontSize));
-    term.options.fontSize = fittedFontSize;
-    term.resize(happyGridCols, happyGridRows);
-    document.getElementById('term-container').dataset.grid = term.cols + 'x' + term.rows;
-    if (reportViewport) {
-      post({ type: 'resize', cols: measuredCols, rows: measuredRows });
-    }
-  }
-  // App -> WebView control bridge (toolbar actions, host theme sync).
-  window.__happyTermSetTheme = function(theme){ term.options.theme = theme; var vp=document.querySelector('.xterm-viewport'); if(vp&&theme.background)vp.style.backgroundColor=theme.background; };
-  window.__happyTermClear = function(){ term.clear(); };
-  window.__happyTermReset = function(){ term.reset(); };
-  window.__happyTermSetFontSize = function(size){ happyFontZoom = size - happyBaseFontSize; fitSharedGrid(false); };
-  window.__happyTermGetBuffer = function(){
-    var buf = term.buffer.active;
-    var lines = [];
-    for (var i = 0; i < buf.length; i++) {
-      var line = buf.getLine ? buf.getLine(i) : buf.get(i);
-      lines.push(line ? line.translateToString(true) : '');
-    }
-    while (lines.length > 0 && lines[lines.length - 1].trim() === '') { lines.pop(); }
-    post({ type: 'buffer', data: lines.join('\\n') });
-  };
-  var happyBlocks = Object.create(null);
-  function decorateBlock(record){
-    if (!record || !record.startMarker || !term.registerDecoration) { return; }
-    try {
-      var decoration = term.registerDecoration({ marker: record.startMarker, x: 0, width: term.cols, layer: 'bottom' });
-      if (!decoration) { return; }
-      record.decoration = decoration;
-      decoration.onRender(function(element){
-        record.element = element;
-        element.style.borderLeft = '3px solid ' + (record.color || '#B86BFF');
-        element.style.background = record.background || 'rgba(184,107,255,0.10)';
-        element.style.boxSizing = 'border-box';
-        element.style.pointerEvents = 'none';
-      });
-    } catch (e) {}
-  }
-  window.__happyTermApplyMetadata = function(event){
-    if (!event || !event.t) { return; }
-    if (event.t === 'grid') {
-      happyGridCols = event.cols;
-      happyGridRows = event.rows;
-      fitSharedGrid(false);
-    } else if (event.t === 'command-start') {
-      var existing = happyBlocks[event.commandId];
-      if (existing && existing.startMarker) { return; }
-      var marker = term.registerMarker ? term.registerMarker(0) : null;
-      var record = { startMarker: marker, command: event.command, color: '#B86BFF', background: 'rgba(184,107,255,0.10)' };
-      happyBlocks[event.commandId] = record;
-      decorateBlock(record);
-    } else if (event.t === 'command-end') {
-      var record = happyBlocks[event.commandId] || {};
-      record.endMarker = term.registerMarker ? term.registerMarker(0) : null;
-      record.endColumn = term.buffer.active.cursorX;
-      record.color = event.exitCode === 0 ? '#6DD58C' : '#FF6B78';
-      record.background = event.exitCode === 0 ? 'rgba(109,213,140,0.07)' : 'rgba(255,107,120,0.08)';
-      if (record.element) {
-        record.element.style.borderLeftColor = record.color;
-        record.element.style.background = record.background;
-      }
-      happyBlocks[event.commandId] = record;
-    }
-  };
-  window.__happyTermGetBlockBuffer = function(commandId){
-    var record = happyBlocks[commandId];
-    if (!record || !record.startMarker) { post({ type: 'block-buffer', commandId: commandId, data: '' }); return; }
-    var buf = term.buffer.active;
-    var start = Math.max(0, record.startMarker.line + 1);
-    var end = record.endMarker ? record.endMarker.line : (buf.baseY + buf.cursorY);
-    var lines = [];
-    if (start > end) { post({ type: 'block-buffer', commandId: commandId, data: '' }); return; }
-    for (var i = start; i <= end; i++) {
-      var line = buf.getLine ? buf.getLine(i) : buf.get(i);
-      var text = line ? line.translateToString(true) : '';
-      if (i === end && typeof record.endColumn === 'number') { text = text.slice(0, record.endColumn); }
-      lines.push(text);
-    }
-    while (lines.length > 0 && lines[lines.length - 1].trim() === '') { lines.pop(); }
-    post({ type: 'block-buffer', commandId: commandId, data: lines.join('\\n') });
-  };
-  window.__happyTermScrollToBlock = function(commandId){
-    var record = happyBlocks[commandId];
-    if (record && record.startMarker) { term.scrollToLine(record.startMarker.line); }
-    term.focus();
-  };
-
-  function b64ToBytes(b64){
-    var bin = atob(b64);
-    var len = bin.length;
-    var bytes = new Uint8Array(len);
-    for (var i = 0; i < len; i++) { bytes[i] = bin.charCodeAt(i); }
-    return bytes;
-  }
-  // App -> WebView: write an array of base64-encoded UTF-8 byte chunks. Each
-  // chunk is decoded to a Uint8Array (not a string) so xterm can buffer
-  // split multibyte sequences across chunk boundaries.
-  window.__happyTermWriteBase64 = function(arr){
-    window.__happyTermRender(arr.map(function(data){ return { type: 'write', data: data }; }));
-  };
-  var happyRenderQueue = [];
-  var happyRenderActive = false;
-  function drainHappyRenderQueue(){
-    if (happyRenderActive || happyRenderQueue.length === 0) { return; }
-    happyRenderActive = true;
-    var item = happyRenderQueue.shift();
-    if (item.type === 'write') {
-      try {
-        term.write(b64ToBytes(item.data), function(){ happyRenderActive = false; drainHappyRenderQueue(); });
-      } catch (e) {
-        happyRenderActive = false;
-        drainHappyRenderQueue();
-      }
-    } else if (item.type === 'metadata') {
-      try { window.__happyTermApplyMetadata(item.event); } catch (e) {}
-      happyRenderActive = false;
-      drainHappyRenderQueue();
-    } else {
-      happyRenderActive = false;
-      drainHappyRenderQueue();
-    }
-  }
-  window.__happyTermRender = function(items){
-    for (var i = 0; i < items.length; i++) { happyRenderQueue.push(items[i]); }
-    drainHappyRenderQueue();
-  };
-  // WebView -> App: keystrokes
-  term.onData(function(data){ post({ type: 'input', data: data }); });
-  // Keep xterm's hidden textarea focused. The touch bridge focuses it again
-  // after a tap, while leaving vertical drags available for scrollback.
-  term.focus();
-${TERMINAL_TOUCH_SCROLL_SCRIPT}
-  window.__happyTermFocus = function(){ term.focus(); };
-  // Report physical capacity; render only the sequenced grid confirmed by
-  // the CLI, so passive viewers never resize the collaborative PTY.
-  var ro = new ResizeObserver(function(){ fitSharedGrid(true); });
-  ro.observe(document.getElementById('term-container'));
-  if (document.fonts && document.fonts.ready) { document.fonts.ready.then(function(){ fitSharedGrid(true); }); }
-  setTimeout(function(){ fitSharedGrid(false); post({ type: 'ready' }); fitSharedGrid(true); }, 0);
-})();
-</script>
-</body>
-</html>`;
-}
-
-type MessageHandler = (event: WebViewMessageEvent) => void;
-type TerminalRenderEvent =
-    | { type: 'write'; data: string }
-    | { type: 'metadata'; event: TerminalMetadataEvent };
+/** Maps React Native `onKeyPress` key names to terminal escape sequences. */
+const SPECIAL_KEYS: Record<string, string> = {
+    'Enter': '\r',
+    'Backspace': '\x7f',
+    'Tab': '\t',
+    'Escape': '\x1b',
+    'ArrowUp': '\x1b[A',
+    'ArrowDown': '\x1b[B',
+    'ArrowRight': '\x1b[C',
+    'ArrowLeft': '\x1b[D',
+    'Home': '\x1b[H',
+    'End': '\x1b[F',
+    'PageUp': '\x1b[5~',
+    'PageDown': '\x1b[6~',
+    'Delete': '\x1b[3~',
+};
 
 interface TerminalControls {
     focus: () => void;
@@ -285,7 +83,6 @@ interface TerminalControls {
     copyAll: () => void;
     clear: () => void;
     changeFontSize: (delta: number) => void;
-    copyBlock: (commandId: string) => void;
     focusBlock: (commandId: string) => void;
 }
 
@@ -298,19 +95,17 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         () => resolveTerminalPalette(theme.semantic, theme.dark ? 'dark' : 'light'),
         [theme],
     );
-    const themeRef = React.useRef(theme);
-    themeRef.current = theme;
 
     const terminalIdRef = React.useRef(loadOrCreateTerminalDeviceId());
     const terminalId = terminalIdRef.current;
-    const webviewRef = React.useRef<WebView>(null);
-    const messageHandlerRef = React.useRef<MessageHandler>(() => {});
     const controlsRef = React.useRef<TerminalControls | null>(null);
     const capabilitiesRef = React.useRef<TerminalAttachResponse['capabilities']>(undefined);
     const fontSizeRef = React.useRef(loadTerminalFontSize(windowWidth <= PHONE_MAX_WIDTH ? PHONE_FONT_SIZE : DEFAULT_FONT_SIZE));
     const restoredBlockSessionRef = React.useRef<string | null>(null);
     const copiedTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
     const autoRawCommandIdRef = React.useRef<string | null>(null);
+    const inputRef = React.useRef<TextInput>(null);
+    const lastReportedViewportRef = React.useRef('');
     const [attaching, setAttaching] = React.useState(false);
     const [copied, setCopied] = React.useState(false);
     const [fontSize, setFontSize] = React.useState(fontSizeRef.current);
@@ -330,13 +125,17 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             .map((entry) => entry.id.slice(sessionId.length + 1)),
     ));
 
+    // Skia + WASM terminal
+    const { ready: skiaReady, termRef } = useSkiaTerminal(SHARED_TERMINAL_COLS, SHARED_TERMINAL_ROWS);
+    const [renderData, setRenderData] = React.useState<RenderData | null>(null);
+    const [containerSize, setContainerSize] = React.useState({ width: 0, height: 0 });
+
     const isConnected = props.session.presence === 'online' && props.session.active;
     const connectionState: TerminalConnectionState = !isConnected
         ? 'disconnected'
         : attaching
             ? 'connecting'
             : 'connected';
-    const [html, setHtml] = React.useState<string | null>(null);
 
     const sendRawTerminalInput = React.useCallback((data: string) => {
         if (data.length === 0) {
@@ -385,45 +184,19 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         };
     }, []);
 
-    // Load the vendored xterm assets once and build the WebView HTML. Built on
-    // mount only - rebuilding would reload the WebView and drop terminal state.
+    // Wire ordering + the output bus to the WASM terminal once Skia is ready.
     React.useEffect(() => {
-        let cancelled = false;
-        const variant = theme.dark ? 'dark' : 'light';
-        const variantAnsi = variant === 'dark' ? DEFAULT_TERMINAL_ANSI_COLORS_DARK : DEFAULT_TERMINAL_ANSI_COLORS_LIGHT;
-        const colors = {
-            background: terminalPalette.canvas,
-            foreground: terminalPalette.text,
-            selection: terminalPalette.selection,
-            ansi: variantAnsi,
-        };
-        loadTerminalWebviewAssets()
-            .then((assets) => {
-                if (!cancelled) {
-                    setHtml(buildHtml(assets, colors, fontSizeRef.current));
-                }
-            })
-            .catch((error) => console.warn('[terminal] Failed to load webview assets:', error));
-        return () => { cancelled = true; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Wire ordering + the output bus to the WebView once the HTML is ready.
-    React.useEffect(() => {
-        if (!html) {
+        if (!skiaReady) {
             return;
         }
         let disposed = false;
-        let webviewReady = false;
-        let lastReportedViewport = '';
-        const pendingRenderEvents: TerminalRenderEvent[] = [];
-        let flushTimer: ReturnType<typeof setTimeout> | null = null;
         const transcriptStreams = new Map<string, {
             decoder: TerminalTranscriptDecoder;
             pendingText: string;
             pendingRawPreferred: boolean;
         }>();
         let transcriptFlushTimer: ReturnType<typeof setTimeout> | null = null;
+        let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
         const getTranscriptStream = (scopeId: string) => {
             const existing = transcriptStreams.get(scopeId);
@@ -470,46 +243,18 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
         };
 
-        const inject = (js: string) => {
-            webviewRef.current?.injectJavaScript(`;(function(){ ${js} })();`);
-        };
-
-        const flush = () => {
-            flushTimer = null;
-            if (pendingRenderEvents.length === 0) {
-                return;
-            }
-            const batch = JSON.stringify(pendingRenderEvents);
-            pendingRenderEvents.length = 0;
-            // IIFE so the evaluated program's completion value is undefined
-            // (iOS WKWebView crashes on non-null/non-undefined results).
-            inject(`window.__happyTermRender(${batch});`);
-        };
-        const scheduleFlush = () => {
-            if (flushTimer === null) {
-                flushTimer = setTimeout(flush, WRITE_BATCH_MS);
-            }
-        };
-
-        // Keep the host ANSI palette, while the surrounding canvas remains
-        // stable and Warp-like across light/dark app themes.
-        const applySyncedTheme = (response: TerminalAttachResponse) => {
-            if (disposed || !response.theme) {
-                return;
-            }
-            const synced = response.theme;
-            const themeObj = {
-                ...DEFAULT_TERMINAL_ANSI_COLORS_DARK,
-                ...Object.fromEntries(
-                    Object.entries(synced).filter(([, v]) => v != null),
-                ),
-                background: terminalPalette.canvas,
-                foreground: terminalPalette.text,
-                cursor: terminalPalette.accent,
-                cursorAccent: terminalPalette.canvas,
-                selectionBackground: terminalPalette.selection,
-            };
-            inject(`window.__happyTermSetTheme(${JSON.stringify(themeObj)});`);
+        // Batch WASM render calls to at most one per frame.
+        let renderPending = false;
+        const scheduleRender = () => {
+            if (renderPending) return;
+            renderPending = true;
+            renderTimer = setTimeout(() => {
+                renderPending = false;
+                renderTimer = null;
+                if (disposed) return;
+                const data = termRef.current?.render();
+                if (data) setRenderData(data);
+            }, WRITE_BATCH_MS);
         };
 
         let attach = () => {};
@@ -517,16 +262,18 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             if (disposed) {
                 return;
             }
+            const term = termRef.current;
+            if (!term) {
+                return;
+            }
             if (event.type === 'write') {
-                // Buffer always; flush only once the WebView can render.
-                pendingRenderEvents.push({ type: 'write', data: event.data });
-                if (webviewReady) {
-                    scheduleFlush();
-                }
+                const bytes = decodeBase64(event.data, 'base64');
+                term.write(bytes);
+                scheduleRender();
             } else if (event.type === 'metadata') {
-                pendingRenderEvents.push({ type: 'metadata', event: event.event });
-                if (webviewReady) {
-                    scheduleFlush();
+                if (event.event.t === 'grid') {
+                    term.resize(event.event.cols, event.event.rows);
+                    scheduleRender();
                 }
             } else {
                 attach();
@@ -561,8 +308,6 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
         });
 
-        // Attach replays every device ring for Blocks, while the RAW orderer
-        // accepts only this device's terminalId below.
         attach = () => {
             setAttaching(true);
             apiSocket.sessionRPC<TerminalAttachResponse, { t: 'attach'; terminalId: string }>(
@@ -571,7 +316,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 { t: 'attach', terminalId },
             )
                 .then((response) => {
-                    applySyncedTheme(response);
+                    if (disposed) return;
                     capabilitiesRef.current = response.capabilities;
                     const supportsBlocks = (response.capabilities?.protocolVersion ?? 0) >= 2
                         && response.capabilities?.structuredCommands === true;
@@ -591,6 +336,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                         rawOrderer.settle();
                         recordMux.settle();
                         setAttaching(false);
+                        scheduleRender();
                     }
                 });
         };
@@ -604,15 +350,17 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
         });
 
+        // Initial attach - no WebView readiness gate needed, WASM terminal is
+        // already created by useSkiaTerminal.
+        attach();
+
         controlsRef.current = {
             focus: () => {
-                inject('window.__happyTermFocus();');
+                inputRef.current?.focus();
             },
             reconnect: () => {
-                // Wipe the WebView's screen and re-fetch the snapshot; the
-                // orderers' pending buffers merge it with any live chunks
-                // that arrive while the attach is in flight.
-                inject('window.__happyTermReset();');
+                termRef.current?.clear();
+                setRenderData(null);
                 rawOrderer.reset();
                 recordMux.reset();
                 if (transcriptFlushTimer !== null) {
@@ -624,11 +372,23 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 attach();
             },
             copyAll: () => {
-                // The buffer text comes back as a { type: 'buffer' } message.
-                inject('window.__happyTermGetBuffer();');
+                const data = termRef.current?.render();
+                if (!data) return;
+                const lines: string[] = [];
+                for (const row of data.rows) {
+                    lines.push(row.cells.map(c => c.ch).join('').trimEnd());
+                }
+                while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+                const text = lines.join('\n');
+                if (text.length > 0) {
+                    Clipboard.setStringAsync(text)
+                        .then(showCopiedFeedback)
+                        .catch((error) => console.warn('[terminal] Copy failed:', error));
+                }
             },
             clear: () => {
-                inject('window.__happyTermClear();');
+                termRef.current?.clear();
+                scheduleRender();
             },
             changeFontSize: (delta: number) => {
                 const clamped = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, fontSizeRef.current + delta));
@@ -638,97 +398,58 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 fontSizeRef.current = clamped;
                 setFontSize(clamped);
                 saveTerminalFontSize(clamped);
-                // The WebView refits and posts the new cols/rows back to us.
-                inject(`window.__happyTermSetFontSize(${clamped});`);
             },
-            copyBlock: (commandId: string) => {
-                inject(`window.__happyTermGetBlockBuffer(${JSON.stringify(commandId)});`);
+            focusBlock: (_commandId: string) => {
+                // Scrollback positioning not supported in the WASM model.
             },
-            focusBlock: (commandId: string) => {
-                inject(`window.__happyTermScrollToBlock(${JSON.stringify(commandId)});`);
-            },
-        };
-
-        // The WebView signals readiness once xterm is mounted. At that point we
-        // flush anything buffered and request the snapshot (settle flushes any
-        // live chunks that arrived in the meantime in seq order).
-        const onReady = () => {
-            if (disposed || webviewReady) {
-                return;
-            }
-            webviewReady = true;
-            flush();
-            attach();
-        };
-
-        messageHandlerRef.current = (event: WebViewMessageEvent) => {
-            let msg: { type?: string; data?: string; commandId?: string; cols?: number; rows?: number };
-            try {
-                msg = JSON.parse(event.nativeEvent.data);
-            } catch {
-                return;
-            }
-            if (msg.type === 'ready') {
-                onReady();
-            } else if (msg.type === 'input' && typeof msg.data === 'string') {
-                sendTerminalInput(msg.data);
-            } else if (
-                msg.type === 'resize'
-                && Number.isInteger(msg.cols)
-                && Number.isInteger(msg.rows)
-                && (msg.cols ?? 0) > 0
-                && (msg.rows ?? 0) > 0
-            ) {
-                const viewportKey = `${msg.cols}x${msg.rows}`;
-                if (viewportKey === lastReportedViewport) {
-                    return;
-                }
-                lastReportedViewport = viewportKey;
-                apiSocket.sessionRPC<void, { t: 'resize'; terminalId: string; cols: number; rows: number }>(
-                    sessionId,
-                    'terminal-resize',
-                    { t: 'resize', terminalId, cols: msg.cols!, rows: msg.rows! },
-                ).catch((error) => {
-                    if (lastReportedViewport === viewportKey) {
-                        lastReportedViewport = '';
-                    }
-                    console.warn('[terminal] terminal-resize failed:', error);
-                });
-            } else if (msg.type === 'keyboard-dismiss') {
-                Keyboard.dismiss();
-            } else if (msg.type === 'local-records') {
-                Keyboard.dismiss();
-                clearModifiers();
-                setViewMode('blocks');
-            } else if (msg.type === 'buffer' && typeof msg.data === 'string') {
-                if (msg.data.length > 0) {
-                    Clipboard.setStringAsync(msg.data)
-                        .then(showCopiedFeedback)
-                        .catch((error) => console.warn('[terminal] Copy failed:', error));
-                }
-            } else if (msg.type === 'block-buffer' && typeof msg.data === 'string' && msg.data.length > 0) {
-                Clipboard.setStringAsync(msg.data)
-                    .then(showCopiedFeedback)
-                    .catch((error) => console.warn('[terminal] Copy block failed:', error));
-            }
         };
 
         return () => {
             disposed = true;
             controlsRef.current = null;
-            if (flushTimer !== null) {
-                clearTimeout(flushTimer);
+            if (renderTimer !== null) {
+                clearTimeout(renderTimer);
             }
             if (transcriptFlushTimer !== null) {
                 clearTimeout(transcriptFlushTimer);
             }
             unsubscribe();
         };
-    }, [clearModifiers, html, sendTerminalInput, sessionId, showCopiedFeedback, terminalId]);
+    }, [clearModifiers, skiaReady, sendTerminalInput, sessionId, showCopiedFeedback, terminalId]);
 
+    // Report physical viewport capacity to the server when the container or
+    // font size changes, so the shared PTY grid can be adjusted.
+    React.useEffect(() => {
+        if (!skiaReady || containerSize.width === 0 || containerSize.height === 0) return;
+        const cellWidth = fontSize * CELL_WIDTH_RATIO;
+        const cellHeight = fontSize * CELL_HEIGHT_RATIO;
+        const measuredCols = Math.floor(containerSize.width / cellWidth);
+        const measuredRows = Math.floor(containerSize.height / cellHeight);
+        if (measuredCols <= 0 || measuredRows <= 0) return;
+        const viewportKey = `${measuredCols}x${measuredRows}`;
+        if (lastReportedViewportRef.current === viewportKey) return;
+        lastReportedViewportRef.current = viewportKey;
+        apiSocket.sessionRPC<void, { t: 'resize'; terminalId: string; cols: number; rows: number }>(
+            sessionId,
+            'terminal-resize',
+            { t: 'resize', terminalId, cols: measuredCols, rows: measuredRows },
+        ).catch((error) => {
+            lastReportedViewportRef.current = '';
+            console.warn('[terminal] terminal-resize failed:', error);
+        });
+    }, [containerSize, fontSize, skiaReady, sessionId, terminalId]);
+
+    // Focus the hidden TextInput when entering RAW mode.
     const latestBlock = latestTerminalCommandBlock(commandState);
     const localLatestBlock = latestTerminalCommandBlock(localCommandState);
     const effectiveViewMode: TerminalViewMode = blocksEnabled ? viewMode : 'raw';
+
+    React.useEffect(() => {
+        if (skiaReady && effectiveViewMode === 'raw') {
+            const timeout = setTimeout(() => inputRef.current?.focus(), 200);
+            return () => clearTimeout(timeout);
+        }
+    }, [skiaReady, effectiveViewMode]);
 
     React.useEffect(() => {
         clearModifiers();
@@ -814,7 +535,8 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         }
         const nextMode: TerminalViewMode = effectiveViewMode === 'blocks' ? 'raw' : 'blocks';
         clearModifiers();
-        if (nextMode === 'raw') {
+        if (nextMode === 'blocks') {
+            inputRef.current?.blur();
             Keyboard.dismiss();
         }
         setViewMode(nextMode);
@@ -848,6 +570,31 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         }
     }, [effectiveViewMode]);
 
+    const onContainerLayout = React.useCallback((event: LayoutChangeEvent) => {
+        const { width, height } = event.nativeEvent.layout;
+        setContainerSize(prev => {
+            if (prev.width === width && prev.height === height) return prev;
+            return { width, height };
+        });
+    }, []);
+
+    const handleKeyPress = React.useCallback((e: { nativeEvent: { key: string } }) => {
+        const data = SPECIAL_KEYS[e.nativeEvent.key];
+        if (data) {
+            sendTerminalInput(data);
+        }
+    }, [sendTerminalInput]);
+
+    const handleInputChange = React.useCallback((text: string) => {
+        if (text.length > 0) {
+            const filtered = text.replace(/\n/g, '');
+            if (filtered.length > 0) {
+                sendTerminalInput(filtered);
+            }
+            inputRef.current?.setNativeProps({ text: '' });
+        }
+    }, [sendTerminalInput]);
+
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: terminalPalette.canvas }}
@@ -863,11 +610,12 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 onFontSizeChange={(delta) => controlsRef.current?.changeFontSize(delta)}
             />
             <View style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                {html ? (
+                {skiaReady ? (
                     <View
                         pointerEvents={effectiveViewMode === 'raw' ? 'auto' : 'none'}
                         accessibilityElementsHidden={effectiveViewMode !== 'raw'}
                         importantForAccessibility={effectiveViewMode === 'raw' ? 'auto' : 'no-hide-descendants'}
+                        onLayout={onContainerLayout}
                         style={{
                             position: 'absolute',
                             top: 0,
@@ -879,24 +627,38 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                             borderTopColor: terminalPalette.border,
                         }}
                     >
-                    <WebView
-                        ref={webviewRef}
-                        source={{ html }}
-                        style={{ flex: 1, backgroundColor: terminalPalette.canvas }}
-                        scrollEnabled={false}
-                        javaScriptEnabled={true}
-                        onMessage={(event) => messageHandlerRef.current(event)}
-                        // Let the page raise the software keyboard from JS focus
-                        // calls; without this iOS swallows them outside a gesture.
-                        keyboardDisplayRequiresUserAction={false}
-                        // WKWebView's previous/next/done bar covers terminal rows
-                        // and has no useful semantics for a single xterm textarea.
-                        hideKeyboardAccessoryView
-                    />
+                        <Pressable
+                            onPress={() => inputRef.current?.focus()}
+                            style={{ flex: 1 }}
+                        >
+                            <SkiaTerminalView
+                                renderData={renderData}
+                                fontSize={fontSize}
+                                palette={terminalPalette}
+                            />
+                        </Pressable>
+                        <TextInput
+                            ref={inputRef}
+                            style={{
+                                position: 'absolute',
+                                opacity: 0,
+                                width: 1,
+                                height: 1,
+                                top: 0,
+                                left: 0,
+                            }}
+                            multiline
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            keyboardType="default"
+                            onKeyPress={handleKeyPress}
+                            onChangeText={handleInputChange}
+                        />
                     </View>
                 ) : effectiveViewMode === 'raw' ? (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator color={terminalPalette.textMuted} />
+                        <ActivityIndicator color={terminalPalette.textMuted} />
                     </View>
                 ) : null}
                 {effectiveViewMode === 'blocks' ? (
@@ -948,18 +710,17 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                     bottom: 0,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: terminalPalette.canvas,
                 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginBottom: 16 }}>
+                    <Text style={{ color: terminalPalette.text, fontSize: 16, fontWeight: '600' }}>
                         {t('terminal.disconnected')}
                     </Text>
                     <Button
-                        variant="secondary"
+                        variant="ghost"
                         onPress={() => controlsRef.current?.reconnect()}
-                        disabled={attaching}
+                        style={{ marginTop: 12 }}
                     >
-                        {attaching && <ActivityIndicator size="small" style={{ marginRight: 4 }} />}
-                        <UiText>{attaching ? t('terminal.connecting') : t('terminal.reconnect')}</UiText>
+                        <UiText>{t('terminal.reconnect')}</UiText>
                     </Button>
                 </View>
             )}

@@ -1,14 +1,13 @@
 import * as React from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleProp, Text, TextStyle, View, ViewStyle } from 'react-native';
-import { iOSUIKit } from 'react-native-typography';
+import { ActivityIndicator, Pressable, StyleProp, Text, TextStyle, View, ViewStyle } from 'react-native';
 import { Typography } from '@/constants/Typography';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 export type RoundButtonSize = 'large' | 'normal' | 'small';
 const sizes: { [key in RoundButtonSize]: { height: number, fontSize: number, hitSlop: number, pad: number } } = {
-    large: { height: 48, fontSize: 21, hitSlop: 0, pad: Platform.OS == 'ios' ? 0 : -1 },
-    normal: { height: 32, fontSize: 16, hitSlop: 8, pad: Platform.OS == 'ios' ? 1 : -2 },
-    small: { height: 24, fontSize: 14, hitSlop: 12, pad: Platform.OS == 'ios' ? -1 : -1 }
+    large: { height: 48, fontSize: 15, hitSlop: 0, pad: 0 },
+    normal: { height: 40, fontSize: 13, hitSlop: 4, pad: 0 },
+    small: { height: 32, fontSize: 12, hitSlop: 6, pad: 0 }
 }
 
 export type RoundButtonDisplay = 'default' | 'inverted';
@@ -28,7 +27,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         justifyContent: 'center',
         minWidth: 64,
         paddingHorizontal: 16,
-        borderRadius: 9999,
+        borderRadius: theme.geometry.radius.interactive,
     },
     text: {
         ...Typography.default('semiBold'),
@@ -64,14 +63,14 @@ export const RoundButton = React.memo((props: { size?: RoundButtonSize, display?
         borderColor: string,
     } } = {
         default: {
-            backgroundColor: theme.colors.button.primary.background,
-            borderColor: 'transparent',
-            textColor: theme.colors.button.primary.tint
+            backgroundColor: theme.semantic.control,
+            borderColor: theme.semantic.control,
+            textColor: theme.semantic.textInverse
         },
         inverted: {
             backgroundColor: 'transparent',
-            borderColor: 'transparent',
-            textColor: theme.colors.text,
+            borderColor: theme.semantic.borderStrong,
+            textColor: theme.semantic.textPrimary,
         }
     }
 
@@ -85,7 +84,7 @@ export const RoundButton = React.memo((props: { size?: RoundButtonSize, display?
             style={(p) => ([
                 {
                     borderWidth: 1,
-                    borderRadius: size.height / 2,
+                    borderRadius: theme.geometry.radius.interactive,
                     backgroundColor: display.backgroundColor,
                     borderColor: display.borderColor,
                     opacity: props.disabled ? 0.5 : 1,
@@ -110,7 +109,6 @@ export const RoundButton = React.memo((props: { size?: RoundButtonSize, display?
                 )}
                 <Text 
                     style={[
-                        iOSUIKit.title3, 
                         styles.text,
                         { 
                             marginTop: size.pad, 

@@ -17,6 +17,36 @@ function plural({ count, singular, plural }: { count: number; singular: string; 
 }
 
 export const zhHans: TranslationStructure = {
+    deviceFirst: {
+        devices: '设备',
+        devicesEyebrow: '已连接的工作区',
+        devicesIntro: '选择一台已连接的设备，继续或启动终端。',
+        presenceUnverified: '无法确认设备在线状态',
+        presenceUnverifiedDescription: '连接恢复期间仍可查看已知设备。',
+        workspace: '设备工作区',
+        activeTerminals: '活动终端',
+        recentTerminals: '最近终端',
+        noTerminalHistory: '暂无终端记录',
+        noTerminalHistoryDescription: '在该设备的主目录启动终端，或在下方选择路径。',
+        reconnectToStart: '请先重新连接再启动新终端。现有终端记录仍可查看。',
+        homeDirectoryPlaceholder: '~  （主目录）',
+        startTerminal: '启动终端',
+        deviceManagement: '设备管理',
+        renameDevice: '重命名设备',
+        deviceNotFound: '未找到设备',
+        stopDaemonTitle: '停止守护进程？',
+        stopDaemonDescription: '守护进程重新启动前，将无法在此设备上启动新终端。现有会话仍可使用。',
+        stopDaemon: '停止守护进程',
+        daemonStopped: '守护进程已停止',
+        daemonStopFailed: '无法停止守护进程，它可能并未运行。',
+        renameDeviceTitle: '重命名设备',
+        renameDeviceDescription: '为此设备设置自定义名称。留空则使用主机名。',
+        deviceNamePlaceholder: '设备名称',
+        deviceRenamed: '设备重命名成功',
+        renameDeviceFailed: '设备重命名失败',
+        createDirectoryTitle: '创建目录？',
+        createDirectoryDescription: ({ directory }: { directory: string }) => `目录“${directory}”不存在，是否创建？`,
+    },
     tabs: {
         // Tab navigation labels
         inbox: '收件箱',

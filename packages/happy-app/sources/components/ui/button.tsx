@@ -19,6 +19,7 @@ interface ButtonProps extends PressableProps {
  */
 const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>(
     ({ variant = 'default', size = 'default', style, textStyle, children, disabled, ...props }, ref) => {
+        const { theme } = useUnistyles();
         styles.useVariants({
             variant: variant === 'default' ? undefined : variant,
             size: size === 'default' ? undefined : size,
@@ -37,7 +38,7 @@ const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>
                 {...props}
             >
                 {typeof children === 'string' ? (
-                    <Text style={[{ color: textColorFor(variant), fontSize: 14, fontWeight: '500' }, textStyle]}>
+                    <Text variant="label" style={[{ color: textColorFor(theme.semantic, variant) }, textStyle]}>
                         {children}
                     </Text>
                 ) : (
@@ -49,13 +50,18 @@ const Button = React.forwardRef<React.ElementRef<typeof Pressable>, ButtonProps>
 );
 Button.displayName = 'Button';
 
-function textColorFor(variant: ButtonVariant): string | undefined {
+function textColorFor(
+    semantic: { textPrimary: string; textInverse: string; focus: string },
+    variant: ButtonVariant,
+): string {
     switch (variant) {
         case 'default':
         case 'destructive':
-            return '#FFFFFF';
+            return semantic.textInverse;
+        case 'link':
+            return semantic.focus;
         default:
-            return undefined;
+            return semantic.textPrimary;
     }
 }
 
@@ -65,33 +71,40 @@ const styles = StyleSheet.create((theme) => ({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: theme.semantic.control,
         // variant: default
-        backgroundColor: theme.colors.text,
+        backgroundColor: theme.semantic.control,
         // size: default
-        height: 40,
+        minHeight: 44,
         paddingHorizontal: 16,
         variants: {
             variant: {
-                destructive: { backgroundColor: theme.colors.status.error },
+                destructive: {
+                    backgroundColor: theme.semantic.status.error,
+                    borderColor: theme.semantic.status.error,
+                },
                 outline: {
                     backgroundColor: 'transparent',
-                    borderWidth: 1,
-                    borderColor: theme.colors.divider,
+                    borderColor: theme.semantic.borderStrong,
                 },
-                secondary: { backgroundColor: theme.colors.surfaceHigh },
-                ghost: { backgroundColor: 'transparent' },
-                link: { backgroundColor: 'transparent' },
+                secondary: {
+                    backgroundColor: theme.semantic.surfaceMuted,
+                    borderColor: theme.semantic.border,
+                },
+                ghost: { backgroundColor: 'transparent', borderColor: 'transparent' },
+                link: { backgroundColor: 'transparent', borderColor: 'transparent' },
             },
             size: {
-                sm: { height: 36, paddingHorizontal: 12, borderRadius: 8 },
-                lg: { height: 44, paddingHorizontal: 24 },
-                icon: { height: 40, width: 40, paddingHorizontal: 0 },
+                sm: { minHeight: 40, paddingHorizontal: 12 },
+                lg: { minHeight: 48, paddingHorizontal: 24 },
+                icon: { minHeight: 44, width: 44, paddingHorizontal: 0 },
             },
         },
     },
     pressed: {
-        opacity: 0.8,
+        opacity: 0.88,
     },
     disabled: {
         opacity: 0.5,

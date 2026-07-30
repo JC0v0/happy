@@ -375,7 +375,7 @@ export default React.memo(() => {
                         <Item
                             title={t('settingsAccount.linkNewDevice')}
                             subtitle={isConnecting ? t('common.scanning') : t('settingsAccount.linkNewDeviceSubtitle')}
-                            icon={<Ionicons name="qr-code-outline" size={29} color="#007AFF" />}
+                            icon={<Ionicons name="qr-code-outline" size={24} color={theme.semantic.focus} />}
                             onPress={connectAccount}
                             disabled={isConnecting}
                             showChevron={false}
@@ -426,7 +426,7 @@ export default React.memo(() => {
                     <Item
                         title={t('settingsAccount.secretKey')}
                         subtitle={showSecret ? t('settingsAccount.tapToHide') : t('settingsAccount.tapToReveal')}
-                        icon={<Ionicons name={showSecret ? "eye-off-outline" : "eye-outline"} size={29} color="#FF9500" />}
+                        icon={<Ionicons name={showSecret ? "eye-off-outline" : "eye-outline"} size={24} color={theme.semantic.status.warning} />}
                         onPress={handleShowSecret}
                         showChevron={false}
                     />
@@ -457,7 +457,7 @@ export default React.memo(() => {
                                     <Ionicons
                                         name={copiedRecently ? "checkmark-circle" : "copy-outline"}
                                         size={18}
-                                        color={copiedRecently ? "#34C759" : theme.colors.textSecondary}
+                                        color={copiedRecently ? theme.semantic.status.success : theme.semantic.textSecondary}
                                     />
                                 </View>
                                 <Text style={{
@@ -489,8 +489,8 @@ export default React.memo(() => {
                                     const optOut = !value;
                                     setAnalyticsOptOut(optOut);
                                 }}
-                                trackColor={{ false: '#767577', true: '#34C759' }}
-                                thumbColor="#FFFFFF"
+                                trackColor={{ false: theme.semantic.borderStrong, true: theme.semantic.status.success }}
+                                thumbColor={theme.semantic.surface}
                             />
                         }
                         showChevron={false}
@@ -509,7 +509,7 @@ export default React.memo(() => {
                         title={localizedText('Permission', '通知权限', '通知權限')}
                         detail={formatPushPermissionLabel(pushPermission)}
                         subtitle={formatPushPermissionSubtitle(pushPermission)}
-                        icon={<Ionicons name="notifications-outline" size={29} color="#007AFF" />}
+                        icon={<Ionicons name="notifications-outline" size={24} color={theme.semantic.focus} />}
                         loading={loadingPushSettings}
                         showChevron={false}
                     />
@@ -532,7 +532,7 @@ export default React.memo(() => {
                                 '如果 iOS 不再弹出提示，将直接打开系统设置。',
                                 '如果 iOS 不再顯示提示，將直接開啟系統設定。',
                             )}
-                        icon={<Ionicons name="shield-checkmark-outline" size={29} color="#34C759" />}
+                        icon={<Ionicons name="shield-checkmark-outline" size={24} color={theme.semantic.status.success} />}
                         onPress={handlePushPermissionRequest}
                         loading={requestingPushPermission}
                         disabled={requestingPushPermission || loadingPushSettings || pushPermission?.status === 'unsupported' || !auth.credentials}
@@ -551,7 +551,7 @@ export default React.memo(() => {
                                 '重新获取当前 Expo 推送令牌并完成注册。',
                                 '重新取得目前 Expo 推播權杖並完成註冊。',
                             )}
-                        icon={<Ionicons name="refresh-outline" size={29} color="#FF9500" />}
+                        icon={<Ionicons name="refresh-outline" size={24} color={theme.semantic.status.warning} />}
                         onPress={handleRefreshCurrentPushToken}
                         loading={refreshingPushToken}
                         disabled={refreshingPushToken || loadingPushSettings || !auth.credentials}
@@ -602,7 +602,7 @@ export default React.memo(() => {
                                             <Ionicons
                                                 name={isCurrentDevice ? 'phone-portrait-outline' : 'trash-outline'}
                                                 size={29}
-                                                color={isCurrentDevice ? theme.colors.textSecondary : '#FF3B30'}
+                                                color={isCurrentDevice ? theme.semantic.textSecondary : theme.semantic.status.error}
                                             />
                                         )}
                                         onPress={isCurrentDevice ? undefined : () => handleDeletePushToken(pushToken)}
@@ -622,7 +622,7 @@ export default React.memo(() => {
                     <Item
                         title={t('settingsAccount.logout')}
                         subtitle={t('settingsAccount.logoutSubtitle')}
-                        icon={<Ionicons name="log-out-outline" size={29} color="#FF3B30" />}
+                        icon={<Ionicons name="log-out-outline" size={24} color={theme.semantic.status.error} />}
                         destructive
                         onPress={handleLogout}
                     />

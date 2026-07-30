@@ -17,6 +17,36 @@ function plural({ count, singular, plural }: { count: number; singular: string; 
 }
 
 export const zhHant: TranslationStructure = {
+    deviceFirst: {
+        devices: '裝置',
+        devicesEyebrow: '已連線的工作區',
+        devicesIntro: '選擇一台已連線的裝置，繼續或啟動終端。',
+        presenceUnverified: '無法確認裝置在線狀態',
+        presenceUnverifiedDescription: '連線恢復期間仍可查看已知裝置。',
+        workspace: '裝置工作區',
+        activeTerminals: '活動終端',
+        recentTerminals: '最近終端',
+        noTerminalHistory: '暫無終端記錄',
+        noTerminalHistoryDescription: '在該裝置的主目錄啟動終端，或在下方選擇路徑。',
+        reconnectToStart: '請先重新連線再啟動新終端。現有終端記錄仍可查看。',
+        homeDirectoryPlaceholder: '~  （主目錄）',
+        startTerminal: '啟動終端',
+        deviceManagement: '裝置管理',
+        renameDevice: '重新命名裝置',
+        deviceNotFound: '找不到裝置',
+        stopDaemonTitle: '停止守護程序？',
+        stopDaemonDescription: '守護程序重新啟動前，將無法在此裝置上啟動新終端。現有工作階段仍可使用。',
+        stopDaemon: '停止守護程序',
+        daemonStopped: '守護程序已停止',
+        daemonStopFailed: '無法停止守護程序，它可能並未執行。',
+        renameDeviceTitle: '重新命名裝置',
+        renameDeviceDescription: '為此裝置設定自訂名稱。留空則使用主機名稱。',
+        deviceNamePlaceholder: '裝置名稱',
+        deviceRenamed: '裝置重新命名成功',
+        renameDeviceFailed: '裝置重新命名失敗',
+        createDirectoryTitle: '建立目錄？',
+        createDirectoryDescription: ({ directory }: { directory: string }) => `目錄「${directory}」不存在，是否建立？`,
+    },
     tabs: {
         // Tab navigation labels
         inbox: '收件匣',

@@ -1,5 +1,7 @@
 # Warp-inspired Terminal Blocks — Design QA
 
+Whole-app redesign QA: [design-qa-device-first.md](./design-qa-device-first.md)
+
 Date: 2026-07-28
 
 ## Visual evidence

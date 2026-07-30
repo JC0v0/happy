@@ -1,4 +1,4 @@
-import type { TranslationStructure } from '../_default';
+import { en, type TranslationStructure } from '../_default';
 
 /**
  * Italian plural helper function
@@ -15,6 +15,7 @@ function plural({ count, singular, plural }: { count: number; singular: string; 
  * Must match the exact structure of the English translations
  */
 export const it: TranslationStructure = {
+    deviceFirst: en.deviceFirst,
     tabs: {
         // Tab navigation labels
         inbox: 'Posta',

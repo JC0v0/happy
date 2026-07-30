@@ -6,8 +6,10 @@ import { ItemList } from '@/components/ItemList';
 import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
 import { Switch } from '@/components/Switch';
 import { localizedText, t } from '@/text';
+import { useUnistyles } from 'react-native-unistyles';
 
 export default function FeaturesSettingsScreen() {
+    const { theme } = useUnistyles();
     const [experiments, setExperiments] = useSettingMutable('experiments');
     const [analyticsOptOut, setAnalyticsOptOut] = useSettingMutable('analyticsOptOut');
     const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
@@ -28,7 +30,7 @@ export default function FeaturesSettingsScreen() {
                         '按最后活动时间排列会话，而不是按创建时间',
                         '依最後活動時間排列工作階段，而不是依建立時間',
                     )}
-                    icon={<Ionicons name="swap-vertical-outline" size={29} color="#FF9500" />}
+                    icon={<Ionicons name="swap-vertical-outline" size={24} color={theme.semantic.status.warning} />}
                     rightElement={
                         <Switch
                             value={sortSessionsByActivity}
@@ -47,7 +49,7 @@ export default function FeaturesSettingsScreen() {
                 <Item
                     title={t('settingsFeatures.experimentalFeatures')}
                     subtitle={experiments ? t('settingsFeatures.experimentalFeaturesEnabled') : t('settingsFeatures.experimentalFeaturesDisabled')}
-                    icon={<Ionicons name="flask-outline" size={29} color="#5856D6" />}
+                    icon={<Ionicons name="flask-outline" size={24} color={theme.semantic.focus} />}
                     rightElement={
                         <Switch
                             value={experiments}
@@ -59,7 +61,7 @@ export default function FeaturesSettingsScreen() {
                 <Item
                     title={t('settingsFeatures.hideInactiveSessions')}
                     subtitle={t('settingsFeatures.hideInactiveSessionsSubtitle')}
-                    icon={<Ionicons name="eye-off-outline" size={29} color="#FF9500" />}
+                    icon={<Ionicons name="eye-off-outline" size={24} color={theme.semantic.status.warning} />}
                     rightElement={
                         <Switch
                             value={hideInactiveSessions}
@@ -78,7 +80,7 @@ export default function FeaturesSettingsScreen() {
                 <Item
                     title={t('settingsFeatures.disableAnalytics')}
                     subtitle={analyticsOptOut ? t('settingsFeatures.analyticsDisabled') : t('settingsFeatures.analyticsEnabled')}
-                    icon={<Ionicons name="analytics-outline" size={29} color="#FF3B30" />}
+                    icon={<Ionicons name="analytics-outline" size={24} color={theme.semantic.status.error} />}
                     rightElement={
                         <Switch
                             value={analyticsOptOut}
@@ -98,7 +100,7 @@ export default function FeaturesSettingsScreen() {
                     <Item
                         title={t('settingsFeatures.commandPalette')}
                         subtitle={commandPaletteEnabled ? t('settingsFeatures.commandPaletteEnabled') : t('settingsFeatures.commandPaletteDisabled')}
-                        icon={<Ionicons name="keypad-outline" size={29} color="#007AFF" />}
+                        icon={<Ionicons name="keypad-outline" size={24} color={theme.semantic.focus} />}
                         rightElement={
                             <Switch
                                 value={commandPaletteEnabled}

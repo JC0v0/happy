@@ -69,7 +69,7 @@ describe('native terminal touch scrolling', () => {
         expect(term.scrollLines).toHaveBeenCalledWith(-3);
     });
 
-    it('opens local records for an alternate-buffer swipe without sending PTY input', () => {
+    it('sends wheel events for an alternate-buffer swipe without changing views', () => {
         const { fire, term, terminalElement, post } = setup();
         term.buffer.active.type = 'alternate';
 
@@ -79,12 +79,15 @@ describe('native terminal touch scrolling', () => {
 
         expect(term.scrollLines).not.toHaveBeenCalled();
         expect(term.input).not.toHaveBeenCalled();
-        expect(terminalElement.dispatchEvent).not.toHaveBeenCalled();
-        expect(post).toHaveBeenCalledOnce();
-        expect(post).toHaveBeenCalledWith({ type: 'local-records', deltaLines: 3 });
+        expect(terminalElement.dispatchEvent).toHaveBeenCalledTimes(6);
+        expect(terminalElement.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+            type: 'wheel',
+            options: expect.objectContaining({ deltaY: 10, clientX: 20, clientY: 70 }),
+        }));
+        expect(post).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'local-records' }));
     });
 
-    it('keeps mouse-tracked TUI scrolling local in the normal buffer', () => {
+    it('sends wheel events to a mouse-tracked TUI in the normal buffer', () => {
         const { fire, term, terminalElement, post } = setup();
         term.modes.mouseTrackingMode = 'vt200';
 
@@ -93,8 +96,12 @@ describe('native terminal touch scrolling', () => {
 
         expect(term.scrollLines).not.toHaveBeenCalled();
         expect(term.input).not.toHaveBeenCalled();
-        expect(terminalElement.dispatchEvent).not.toHaveBeenCalled();
-        expect(post).toHaveBeenCalledWith({ type: 'local-records', deltaLines: -3 });
+        expect(terminalElement.dispatchEvent).toHaveBeenCalledTimes(3);
+        expect(terminalElement.dispatchEvent).toHaveBeenCalledWith(expect.objectContaining({
+            type: 'wheel',
+            options: expect.objectContaining({ deltaY: -10, clientX: 20, clientY: 100 }),
+        }));
+        expect(post).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'local-records' }));
     });
 
     it('focuses on a tap but not after a scroll gesture', () => {

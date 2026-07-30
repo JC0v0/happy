@@ -77,6 +77,15 @@ export const FontWeights = {
   bold: '700',
 } as const;
 
+export const TypeScale = {
+  display: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
+  title: { fontSize: 18, lineHeight: 24, letterSpacing: -0.2 },
+  body: { fontSize: 15, lineHeight: 22, letterSpacing: 0 },
+  bodySmall: { fontSize: 13, lineHeight: 19, letterSpacing: 0 },
+  label: { fontSize: 12, lineHeight: 16, letterSpacing: 0.35 },
+  developer: { fontSize: 13, lineHeight: 18, letterSpacing: 0 },
+} as const;
+
 // Style utilities for easy inline usage
 export const Typography = {
   // Default font styles (IBM Plex Sans)
@@ -103,6 +112,26 @@ export const Typography = {
   body: () => ({
     fontFamily: getDefaultFont('regular'),
   }),
+
+  proportionalBody: (weight: 'regular' | 'italic' | 'semiBold' = 'regular') => ({
+    fontFamily: getDefaultFont(weight),
+    ...TypeScale.body,
+  }),
+
+  title: () => ({
+    fontFamily: getDefaultFont('semiBold'),
+    ...TypeScale.title,
+  }),
+
+  label: () => ({
+    fontFamily: getMonoFont('semiBold'),
+    ...TypeScale.label,
+  }),
+
+  monoDeveloper: (weight: 'regular' | 'italic' | 'semiBold' = 'regular') => ({
+    fontFamily: getMonoFont(weight),
+    ...TypeScale.developer,
+  }),
   
   // Legacy font styles (for backward compatibility)
   legacy: {
@@ -113,4 +142,4 @@ export const Typography = {
       fontFamily: FontFamilies.legacy.systemMono,
     }),
   }
-}; 
+};
