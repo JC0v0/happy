@@ -1,4 +1,13 @@
-import { Platform } from 'react-native';
+﻿import { Platform } from 'react-native';
+import {
+    darkThemeSemantics,
+    lightThemeSemantics,
+    semanticGeometry,
+    type ThemeSemantics,
+} from './themeSemantics';
+
+const lightSemantic: ThemeSemantics = lightThemeSemantics;
+const darkSemantic: ThemeSemantics = darkThemeSemantics;
 
 // Shared spacing, sizing constants (DRY - used by both themes)
 const sharedSpacing = {
@@ -12,13 +21,13 @@ const sharedSpacing = {
         xxl: 24, // Section spacing
     },
 
-    // Border radii (based on actual usage patterns in codebase)
+    // OpenCode-inspired geometry: structure is square, controls are compact.
     borderRadius: {
-        sm: 4,   // Checkboxes (20x20 boxes use 4px corners)
-        md: 8,   // Buttons, items (most common - 31 uses)
-        lg: 10,  // Input fields (matches "new session panel input fields")
-        xl: 12,  // Cards, containers (20 uses)
-        xxl: 16, // Main containers
+        sm: semanticGeometry.radius.compact,
+        md: semanticGeometry.radius.interactive,
+        lg: semanticGeometry.radius.interactive,
+        xl: semanticGeometry.radius.structural,
+        xxl: semanticGeometry.radius.structural,
     },
 
     // Icon sizes (based on actual usage patterns)
@@ -32,31 +41,33 @@ const sharedSpacing = {
 
 export const lightTheme = {
     dark: false,
+    semantic: lightSemantic,
+    geometry: semanticGeometry,
     colors: {
 
         //
         // Main colors
         //
 
-        text: '#000000',
+        text: lightSemantic.textPrimary,
         textDestructive: Platform.select({ ios: '#FF3B30', default: '#F44336' }),
-        textSecondary: Platform.select({ ios: '#8E8E93', default: '#49454F' }),
-        textLink: '#2BACCC',
+        textSecondary: lightSemantic.textSecondary,
+        textLink: lightSemantic.focus,
         deleteAction: '#FF6B6B', // Delete/remove button color
         warningCritical: '#FF3B30',
         warning: '#8E8E93',
         success: '#34C759',
-        surface: '#ffffff',
+        surface: lightSemantic.surface,
         surfaceRipple: 'rgba(0, 0, 0, 0.08)',
-        surfacePressed: '#f0f0f2',
-        surfaceSelected: Platform.select({ ios: '#C6C6C8', default: '#eaeaea' }),
-        surfacePressedOverlay: Platform.select({ ios: '#D1D1D6', default: 'transparent' }),
-        surfaceHigh: '#F8F8F8',
-        surfaceHighest: '#f0f0f0',
-        divider: Platform.select({ ios: '#eaeaea', default: '#eaeaea' }),
+        surfacePressed: lightSemantic.surfaceSelected,
+        surfaceSelected: lightSemantic.surfaceSelected,
+        surfacePressedOverlay: lightSemantic.surfaceSelected,
+        surfaceHigh: lightSemantic.surfaceMuted,
+        surfaceHighest: lightSemantic.surfaceRaised,
+        divider: lightSemantic.border,
         shadow: {
-            color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
-            opacity: 0.1,
+            color: 'transparent',
+            opacity: 0,
         },
 
         //
@@ -64,13 +75,13 @@ export const lightTheme = {
         //
 
         groupped: {
-            background: Platform.select({ ios: '#F2F2F7', default: '#F5F5F5' }),
-            chevron: Platform.select({ ios: '#C7C7CC', default: '#49454F' }),
-            sectionTitle: Platform.select({ ios: '#8E8E93', default: '#49454F' }),
+            background: lightSemantic.canvas,
+            chevron: lightSemantic.textMuted,
+            sectionTitle: lightSemantic.textSecondary,
         },
         header: {
-            background: '#ffffff',
-            tint: '#18171C'
+            background: lightSemantic.canvas,
+            tint: lightSemantic.textPrimary,
         },
         switch: {
             track: {
@@ -97,18 +108,18 @@ export const lightTheme = {
         },
         button: {
             primary: {
-                background: '#000000',
-                tint: '#FFFFFF',
-                disabled: '#C0C0C0',
+                background: lightSemantic.control,
+                tint: lightSemantic.textInverse,
+                disabled: lightSemantic.controlDisabled,
             },
             secondary: {
                 tint: '#666666',
             }
         },
         input: {
-            background: '#F5F5F5',
-            text: '#000000',
-            placeholder: '#999999',
+            background: lightSemantic.surfaceMuted,
+            text: lightSemantic.textPrimary,
+            placeholder: lightSemantic.textMuted,
         },
         box: {
             warning: {
@@ -128,11 +139,11 @@ export const lightTheme = {
         //
 
         status: {
-            connected: '#34C759',
-            connecting: '#007AFF',
-            disconnected: '#999999',
-            error: '#FF3B30',
-            default: '#8E8E93',
+            connected: lightSemantic.status.success,
+            connecting: lightSemantic.status.info,
+            disconnected: lightSemantic.status.offline,
+            error: lightSemantic.status.error,
+            default: lightSemantic.textMuted,
         },
 
         // Permission mode colors
@@ -223,16 +234,6 @@ export const lightTheme = {
         gitAddedText: '#22c55e',
         gitRemovedText: '#ef4444',
 
-        // Terminal/Command colors
-        terminal: {
-            background: '#1E1E1E',
-            prompt: '#34C759',
-            command: '#E0E0E0',
-            stdout: '#E0E0E0',
-            stderr: '#FFB86C',
-            error: '#FF5555',
-            emptyOutput: '#6272A4',
-        },
 
     },
 
@@ -241,32 +242,33 @@ export const lightTheme = {
 
 export const darkTheme = {
     dark: true,
+    semantic: darkSemantic,
+    geometry: semanticGeometry,
     colors: {
 
         //
         // Main colors
         //
 
-        text: '#ffffff',
+        text: darkSemantic.textPrimary,
         textDestructive: Platform.select({ ios: '#FF453A', default: '#F48FB1' }),
-        textSecondary: Platform.select({ ios: '#8E8E93', default: '#CAC4D0' }),
-        textLink: '#2BACCC',
+        textSecondary: darkSemantic.textSecondary,
+        textLink: darkSemantic.focus,
         deleteAction: '#FF6B6B', // Delete/remove button color (same in both themes)
         warningCritical: '#FF453A',
         warning: '#8E8E93',
         success: '#32D74B',
-        surface: Platform.select({ ios: '#18171C', default: '#212121' }),
+        surface: darkSemantic.surface,
         surfaceRipple: 'rgba(255, 255, 255, 0.08)',
-        surfacePressed: '#2C2C2E',
-        surfaceSelected: '#2C2C2E',
-        surfacePressedOverlay: Platform.select({ ios: '#2C2C2E', default: 'transparent' }),
-        // iOS dark theme is #1c1c1e for items, and #000 for the background
-        surfaceHigh: Platform.select({ ios: '#2C2C2E', default: '#171717' }),
-        surfaceHighest: Platform.select({ ios: '#38383A', default: '#292929' }),
-        divider: Platform.select({ ios: '#38383A', default: '#292929' }),
+        surfacePressed: darkSemantic.surfaceSelected,
+        surfaceSelected: darkSemantic.surfaceSelected,
+        surfacePressedOverlay: darkSemantic.surfaceSelected,
+        surfaceHigh: darkSemantic.surfaceMuted,
+        surfaceHighest: darkSemantic.surfaceRaised,
+        divider: darkSemantic.border,
         shadow: {
-            color: Platform.select({ default: '#000000', web: 'rgba(0, 0, 0, 0.1)' }),
-            opacity: 0.1,
+            color: 'transparent',
+            opacity: 0,
         },
 
         //
@@ -274,8 +276,8 @@ export const darkTheme = {
         //
 
         header: {
-            background: Platform.select({ ios: '#18171C', default: '#212121' }),
-            tint: '#ffffff'
+            background: darkSemantic.canvas,
+            tint: darkSemantic.textPrimary,
         },
         switch: {
             track: {
@@ -288,9 +290,9 @@ export const darkTheme = {
             },
         },
         groupped: {
-            background: Platform.select({ ios: '#1C1C1E', default: '#1e1e1e' }),
-            chevron: Platform.select({ ios: '#48484A', default: '#CAC4D0' }),
-            sectionTitle: Platform.select({ ios: '#8E8E93', default: '#CAC4D0' }),
+            background: darkSemantic.canvas,
+            chevron: darkSemantic.textMuted,
+            sectionTitle: darkSemantic.textSecondary,
         },
         fab: {
             background: '#FFFFFF',
@@ -307,18 +309,18 @@ export const darkTheme = {
         },
         button: {
             primary: {
-                background: '#000000',
-                tint: '#FFFFFF',
-                disabled: '#C0C0C0',
+                background: darkSemantic.control,
+                tint: darkSemantic.textInverse,
+                disabled: darkSemantic.controlDisabled,
             },
             secondary: {
                 tint: '#8E8E93',
             }
         },
         input: {
-            background: Platform.select({ ios: '#1C1C1E', default: '#303030' }),
-            text: '#FFFFFF',
-            placeholder: '#8E8E93',
+            background: darkSemantic.surfaceMuted,
+            text: darkSemantic.textPrimary,
+            placeholder: darkSemantic.textMuted,
         },
         box: {
             warning: {
@@ -338,11 +340,11 @@ export const darkTheme = {
         //
 
         status: { // App Connection Status
-            connected: '#34C759',
-            connecting: '#FFFFFF',
-            disconnected: '#8E8E93',
-            error: '#FF453A',
-            default: '#8E8E93',
+            connected: darkSemantic.status.success,
+            connecting: darkSemantic.status.info,
+            disconnected: darkSemantic.status.offline,
+            error: darkSemantic.status.error,
+            default: darkSemantic.textMuted,
         },
 
         // Permission mode colors
@@ -433,16 +435,6 @@ export const darkTheme = {
         gitAddedText: '#34C759',
         gitRemovedText: '#FF453A',
 
-        // Terminal/Command colors
-        terminal: {
-            background: '#1E1E1E',
-            prompt: '#32D74B',
-            command: '#E0E0E0',
-            stdout: '#E0E0E0',
-            stderr: '#FFB86C',
-            error: '#FF6B6B',
-            emptyOutput: '#7B7B93',
-        },
 
     },
 

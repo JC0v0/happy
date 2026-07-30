@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import {
     Alert,
     FlatList,
@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FontFamilies } from '@/constants/Typography';
 import {
     clearTerminalHistory,
     isTerminalHistoryEnabled,
@@ -19,7 +21,6 @@ import {
     type PersistedTerminalHistoryEntry,
 } from '@/sync/persistence';
 import { queryTerminalHistory } from './terminalHistorySearch';
-import { TERMINAL_VISUAL_THEME as palette } from './terminalVisualTheme';
 
 function formatWhen(timestamp: number): string {
     const delta = Math.max(0, Date.now() - timestamp);
@@ -33,6 +34,170 @@ function formatDuration(ms: number): string {
     return ms < 1000 ? `${ms}ms` : `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`;
 }
 
+const stylesheet = StyleSheet.create((theme) => ({
+    backdrop: {
+        flex: 1,
+        justifyContent: 'flex-end' as const,
+        backgroundColor: theme.dark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.35)',
+    },
+    sheet: {
+        height: '78%' as const,
+        backgroundColor: theme.semantic.surface,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderWidth: 1,
+        borderBottomWidth: 0,
+        borderColor: theme.semantic.border,
+    },
+    handle: {
+        width: 36,
+        height: 4,
+        marginTop: 9,
+        marginBottom: 5,
+        borderRadius: 2,
+        alignSelf: 'center' as const,
+        backgroundColor: theme.semantic.border,
+    },
+    header: {
+        minHeight: 62,
+        paddingHorizontal: 14,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+    },
+    title: {
+        color: theme.semantic.textPrimary,
+        fontSize: 16,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    subtitle: {
+        color: theme.semantic.textSecondary,
+        fontSize: 11,
+        fontFamily: FontFamilies.default.regular,
+        marginTop: 3,
+    },
+    headerActions: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 2 },
+    iconButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+    },
+    iconCompact: {
+        width: 30,
+        height: 30,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+    },
+    pressed: { backgroundColor: theme.semantic.surfaceSelected },
+    searchBar: {
+        height: 44,
+        marginHorizontal: 14,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 8,
+        paddingHorizontal: 11,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surfaceMuted,
+    },
+    searchInput: {
+        flex: 1,
+        height: 42,
+        paddingVertical: 0,
+        color: theme.semantic.textPrimary,
+        fontSize: 13,
+        fontFamily: FontFamilies.mono.regular,
+    },
+    filters: {
+        minHeight: 48,
+        paddingHorizontal: 14,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 8,
+    },
+    chip: {
+        height: 30,
+        paddingHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 5,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surfaceMuted,
+    },
+    chipSelected: {
+        borderColor: theme.semantic.borderStrong,
+        backgroundColor: theme.semantic.surfaceSelected,
+    },
+    chipText: {
+        color: theme.semantic.textSecondary,
+        fontSize: 10,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    chipTextSelected: { color: theme.semantic.textPrimary },
+    paused: {
+        marginLeft: 'auto' as const,
+        color: theme.semantic.status.warning,
+        fontSize: 9,
+        fontFamily: FontFamilies.mono.semiBold,
+        letterSpacing: 0.5,
+    },
+    listContent: { paddingHorizontal: 10, paddingBottom: 18 },
+    emptyContainer: { flexGrow: 1, justifyContent: 'center' as const },
+    empty: { alignItems: 'center' as const, gap: 8 },
+    emptyTitle: {
+        color: theme.semantic.textMuted,
+        fontSize: 12,
+        fontFamily: FontFamilies.default.regular,
+    },
+    row: {
+        minHeight: 68,
+        marginBottom: 5,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        borderRadius: 0,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surface,
+        overflow: 'hidden' as const,
+    },
+    rowMain: {
+        flex: 1,
+        minWidth: 0,
+        minHeight: 66,
+        paddingHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 9,
+    },
+    exitDot: { width: 7, height: 7, borderRadius: 4 },
+    rowContent: { flex: 1, minWidth: 0 },
+    command: {
+        color: theme.semantic.textPrimary,
+        fontSize: 12,
+        lineHeight: 17,
+        fontFamily: FontFamilies.mono.semiBold,
+    },
+    rowMeta: {
+        marginTop: 5,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        gap: 10,
+    },
+    meta: {
+        flexShrink: 1,
+        color: theme.semantic.textSecondary,
+        fontSize: 9,
+        fontFamily: FontFamilies.mono.regular,
+    },
+}));
+
 export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(props: {
     visible: boolean;
     currentMachineId?: string;
@@ -40,6 +205,8 @@ export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(pro
     onClose: () => void;
     onRun: (command: string) => void;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const safeArea = useSafeAreaInsets();
     const [entries, setEntries] = React.useState<PersistedTerminalHistoryEntry[]>([]);
     const [query, setQuery] = React.useState('');
@@ -88,6 +255,20 @@ export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(pro
         );
     }, [reload]);
 
+    const renderItem = React.useCallback(({ item }: { item: PersistedTerminalHistoryEntry }) => (
+        <HistoryRow
+            entry={item}
+            onRun={() => {
+                props.onRun(item.command);
+                props.onClose();
+            }}
+            onFavorite={() => {
+                setTerminalHistoryFavorite(item.id, !item.favorite);
+                reload();
+            }}
+        />
+    ), [props, reload]);
+
     return (
         <Modal visible={props.visible} transparent animationType="slide" onRequestClose={props.onClose}>
             <Pressable style={styles.backdrop} onPress={props.onClose}>
@@ -114,19 +295,17 @@ export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(pro
                     </View>
 
                     <View style={styles.searchBar}>
-                        <Ionicons name="search" size={17} color={palette.textMuted} />
+                        <Ionicons name="search" size={17} color={theme.semantic.textMuted} />
                         <TextInput
                             value={query}
                             onChangeText={setQuery}
                             placeholder="Search commands, paths, machines"
-                            placeholderTextColor={palette.textMuted}
+                            placeholderTextColor={theme.semantic.textMuted}
                             autoCapitalize="none"
                             autoCorrect={false}
                             style={styles.searchInput}
                         />
-                        {query ? (
-                            <IconButton icon="close-circle" label="Clear search" compact onPress={() => setQuery('')} />
-                        ) : null}
+                        {!historyEnabled ? <Text style={styles.paused}>PAUSED</Text> : null}
                     </View>
 
                     <View style={styles.filters}>
@@ -134,43 +313,31 @@ export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(pro
                             label="Favorites"
                             icon="star-outline"
                             selected={favoritesOnly}
-                            onPress={() => setFavoritesOnly((value) => !value)}
+                            onPress={() => setFavoritesOnly((v) => !v)}
                         />
-                        {props.currentMachineId ? (
-                            <FilterChip
-                                label="This machine"
-                                icon="desktop-outline"
-                                selected={currentMachineOnly}
-                                onPress={() => setCurrentMachineOnly((value) => !value)}
-                            />
-                        ) : null}
-                        {!historyEnabled ? <Text style={styles.paused}>HISTORY PAUSED</Text> : null}
+                        <FilterChip
+                            label="This device"
+                            icon="desktop-outline"
+                            selected={currentMachineOnly}
+                            onPress={() => setCurrentMachineOnly((v) => !v)}
+                        />
                     </View>
 
                     <FlatList
                         data={visibleEntries}
-                        keyExtractor={(entry) => entry.id}
+                        keyExtractor={(item) => item.id}
+                        renderItem={renderItem}
+                        contentContainerStyle={styles.listContent}
+                        contentInsetAdjustmentBehavior="automatic"
                         keyboardShouldPersistTaps="handled"
-                        contentContainerStyle={visibleEntries.length === 0 ? styles.emptyContainer : styles.listContent}
-                        renderItem={({ item }) => (
-                            <HistoryRow
-                                entry={item}
-                                onFavorite={() => {
-                                    setTerminalHistoryFavorite(item.id, !item.favorite);
-                                    reload();
-                                }}
-                                onRun={() => {
-                                    props.onClose();
-                                    props.onRun(item.command);
-                                }}
-                            />
-                        )}
-                        ListEmptyComponent={(
-                            <View style={styles.empty}>
-                                <Ionicons name="time-outline" size={24} color={palette.textMuted} />
-                                <Text style={styles.emptyTitle}>{query ? 'No matching commands' : 'No command history yet'}</Text>
+                        ListEmptyComponent={
+                            <View style={styles.emptyContainer}>
+                                <View style={styles.empty}>
+                                    <Ionicons name="search-outline" size={28} color={theme.semantic.textMuted} />
+                                    <Text style={styles.emptyTitle}>No matching commands</Text>
+                                </View>
                             </View>
-                        )}
+                        }
                     />
                 </Pressable>
             </Pressable>
@@ -180,27 +347,35 @@ export const TerminalHistorySheet = React.memo(function TerminalHistorySheet(pro
 
 function HistoryRow(props: {
     entry: PersistedTerminalHistoryEntry;
-    onFavorite: () => void;
     onRun: () => void;
+    onFavorite: () => void;
 }) {
-    const success = props.entry.exitCode === 0;
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const exitOk = props.entry.exitCode === 0;
+    const dotColor = props.entry.exitCode === undefined
+        ? theme.semantic.status.offline
+        : exitOk
+            ? theme.semantic.status.success
+            : theme.semantic.status.error;
+
     return (
         <View style={styles.row}>
-            <Pressable
-                onPress={props.onRun}
-                accessibilityRole="button"
-                accessibilityLabel={`Run ${props.entry.command}`}
-                style={({ pressed }) => [styles.rowMain, pressed && styles.pressed]}
-            >
-                <View style={[styles.exitDot, { backgroundColor: success ? palette.success : palette.danger }]} />
+            <Pressable onPress={props.onRun} style={styles.rowMain}>
+                <View style={[styles.exitDot, { backgroundColor: dotColor }]} />
                 <View style={styles.rowContent}>
                     <Text style={styles.command} numberOfLines={2}>{props.entry.command}</Text>
                     <View style={styles.rowMeta}>
-                        <Text style={styles.meta} numberOfLines={1}>{props.entry.cwd ?? props.entry.host ?? 'Terminal'}</Text>
-                        <Text style={styles.meta}>{formatDuration(props.entry.durationMs)} · {formatWhen(props.entry.endedAt)}</Text>
+                        <Text style={styles.meta}>{formatWhen(props.entry.startedAt)}</Text>
+                        {props.entry.durationMs !== undefined ? (
+                            <Text style={styles.meta}>{formatDuration(props.entry.durationMs)}</Text>
+                        ) : null}
+                        {props.entry.host ? (
+                            <Text style={styles.meta} numberOfLines={1}>{props.entry.host}</Text>
+                        ) : null}
                     </View>
                 </View>
-                <Ionicons name="play" size={14} color={palette.accent} />
+                <Ionicons name="play" size={14} color={theme.semantic.textPrimary} />
             </Pressable>
             <IconButton
                 icon={props.entry.favorite ? 'star' : 'star-outline'}
@@ -218,9 +393,12 @@ function FilterChip(props: {
     selected: boolean;
     onPress: () => void;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const iconColor = props.selected ? theme.semantic.textPrimary : theme.semantic.textMuted;
     return (
         <Pressable onPress={props.onPress} style={[styles.chip, props.selected && styles.chipSelected]}>
-            <Ionicons name={props.icon} size={13} color={props.selected ? palette.text : palette.textMuted} />
+            <Ionicons name={props.icon} size={13} color={iconColor} />
             <Text style={[styles.chipText, props.selected && styles.chipTextSelected]}>{props.label}</Text>
         </Pressable>
     );
@@ -234,6 +412,13 @@ function IconButton(props: {
     danger?: boolean;
     compact?: boolean;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const color = props.danger
+        ? theme.semantic.status.error
+        : props.active
+            ? theme.semantic.textPrimary
+            : theme.semantic.textMuted;
     return (
         <Pressable
             onPress={props.onPress}
@@ -244,40 +429,9 @@ function IconButton(props: {
             <Ionicons
                 name={props.icon}
                 size={props.compact ? 16 : 18}
-                color={props.danger ? palette.danger : props.active ? palette.accent : palette.textMuted}
+                color={color}
             />
         </Pressable>
     );
 }
 
-const styles = {
-    backdrop: { flex: 1, justifyContent: 'flex-end' as const, backgroundColor: 'rgba(0,0,0,0.62)' },
-    sheet: { height: '78%' as const, backgroundColor: palette.chrome, borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, borderBottomWidth: 0, borderColor: palette.border },
-    handle: { width: 36, height: 4, marginTop: 9, marginBottom: 5, borderRadius: 2, alignSelf: 'center' as const, backgroundColor: palette.border },
-    header: { minHeight: 62, paddingHorizontal: 14, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
-    title: { color: palette.text, fontSize: 16, fontWeight: '700' as const },
-    subtitle: { color: palette.textMuted, fontSize: 10, marginTop: 3 },
-    headerActions: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 2 },
-    iconButton: { width: 38, height: 38, borderRadius: 9, alignItems: 'center' as const, justifyContent: 'center' as const },
-    iconCompact: { width: 30, height: 30, borderRadius: 8, alignItems: 'center' as const, justifyContent: 'center' as const },
-    pressed: { backgroundColor: palette.controlPressed },
-    searchBar: { height: 44, marginHorizontal: 14, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8, paddingHorizontal: 11, borderRadius: 11, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.chromeRaised },
-    searchInput: { flex: 1, height: 42, paddingVertical: 0, color: palette.text, fontSize: 13, fontFamily: 'monospace' },
-    filters: { minHeight: 48, paddingHorizontal: 14, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
-    chip: { height: 30, paddingHorizontal: 10, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, borderRadius: 8, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.control },
-    chipSelected: { borderColor: palette.accent, backgroundColor: 'rgba(184,107,255,0.16)' },
-    chipText: { color: palette.textMuted, fontSize: 10, fontWeight: '600' as const },
-    chipTextSelected: { color: palette.text },
-    paused: { marginLeft: 'auto' as const, color: palette.warning, fontSize: 9, fontWeight: '800' as const, letterSpacing: 0.5 },
-    listContent: { paddingHorizontal: 10, paddingBottom: 18 },
-    emptyContainer: { flexGrow: 1, justifyContent: 'center' as const },
-    empty: { alignItems: 'center' as const, gap: 8 },
-    emptyTitle: { color: palette.textMuted, fontSize: 12 },
-    row: { minHeight: 68, marginBottom: 5, flexDirection: 'row' as const, alignItems: 'center' as const, borderRadius: 11, borderWidth: 1, borderColor: palette.border, backgroundColor: palette.chromeRaised, overflow: 'hidden' as const },
-    rowMain: { flex: 1, minWidth: 0, minHeight: 66, paddingHorizontal: 10, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 9 },
-    exitDot: { width: 7, height: 7, borderRadius: 4 },
-    rowContent: { flex: 1, minWidth: 0 },
-    command: { color: palette.text, fontSize: 12, lineHeight: 17, fontWeight: '600' as const, fontFamily: 'monospace' },
-    rowMeta: { marginTop: 5, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: 10 },
-    meta: { flexShrink: 1, color: palette.textMuted, fontSize: 9, fontFamily: 'monospace' },
-};

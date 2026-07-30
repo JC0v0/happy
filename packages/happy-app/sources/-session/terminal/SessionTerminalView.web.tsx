@@ -1,9 +1,10 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 import { ActivityIndicator, Text, View } from 'react-native';
+import { useUnistyles } from 'react-native-unistyles';
 import { decodeBase64, encodeBase64 } from '@/encryption/base64';
 import { apiSocket } from '@/sync/apiSocket';
 import {
@@ -25,7 +26,8 @@ import { Text as UiText } from '@/components/ui/text';
 import { subscribeTerminalOutput } from './terminalOutputBus';
 import { TerminalOrderer } from './terminalOrdering';
 import { TerminalRecordMux, terminalEventBelongsToDevice } from './terminalRecordMux';
-import { DEFAULT_TERMINAL_ANSI_COLORS } from './terminalTheme';
+import { DEFAULT_TERMINAL_ANSI_COLORS_DARK, DEFAULT_TERMINAL_ANSI_COLORS_LIGHT } from './terminalTheme';
+import { type ThemeSemantics } from '@/themeSemantics';
 import { TerminalCommandDock, TerminalToolbar, type TerminalConnectionState } from './TerminalToolbar';
 import { TerminalBlockTranscript } from './TerminalBlockTranscript';
 import { TerminalHistorySheet } from './TerminalHistorySheet';
@@ -41,7 +43,7 @@ import {
 } from './terminalCommandState';
 import { TerminalTranscriptDecoder, terminalBlockOutputText, terminalTranscriptText } from './terminalTranscript';
 import { useTerminalModifierInput } from './use-terminal-modifiers';
-import { TERMINAL_VISUAL_THEME as palette } from './terminalVisualTheme';
+import { resolveTerminalPalette } from './terminalVisualTheme';
 import {
     SHARED_TERMINAL_COLS,
     SHARED_TERMINAL_ROWS,
@@ -49,6 +51,19 @@ import {
 } from './terminalSharedGrid';
 import type { TerminalAttachResponse, TerminalExecuteResponse } from '@slopus/happy-wire';
 
+
+function buildTerminalTheme(semantic: ThemeSemantics, variant: 'light' | 'dark'): Record<string, string> {
+    const ansi = variant === 'dark' ? DEFAULT_TERMINAL_ANSI_COLORS_DARK : DEFAULT_TERMINAL_ANSI_COLORS_LIGHT;
+    const p = resolveTerminalPalette(semantic, variant);
+    return {
+        background: p.canvas,
+        foreground: p.text,
+        cursor: p.accent,
+        cursorAccent: p.canvas,
+        selectionBackground: p.selection,
+        ...ansi,
+    };
+}
 /** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
     return encodeBase64(new TextEncoder().encode(text), 'base64');
@@ -86,11 +101,13 @@ interface TerminalControls {
 }
 
 export const SessionTerminalView = React.memo(function SessionTerminalView(props: { session: Session }) {
+    const { theme } = useUnistyles();
     const sessionId = props.session.id;
     const terminalIdRef = React.useRef(loadOrCreateTerminalDeviceId());
     const terminalId = terminalIdRef.current;
     const containerRef = React.useRef<HTMLDivElement | null>(null);
     const controlsRef = React.useRef<TerminalControls | null>(null);
+    const termRef = React.useRef<Terminal | null>(null);
     const capabilitiesRef = React.useRef<TerminalAttachResponse['capabilities']>(undefined);
     const restoredBlockSessionRef = React.useRef<string | null>(null);
     const copiedTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -102,6 +119,13 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
     const [viewMode, setViewMode] = React.useState<TerminalViewMode>(() => loadTerminalViewMode());
     const [blocksEnabled, setBlocksEnabled] = React.useState(true);
     const [terminalStates, setTerminalStates] = React.useState<TerminalCommandStatesById>({});
+
+    const terminalPalette = React.useMemo(
+        () => resolveTerminalPalette(theme.semantic, theme.dark ? 'dark' : 'light'),
+        [theme],
+    );
+    const themeRef = React.useRef(theme);
+    themeRef.current = theme;
     const localCommandState = terminalStates[terminalId] ?? EMPTY_TERMINAL_COMMAND_STATE;
     const commandState = React.useMemo(
         () => mergeTerminalCommandStates(terminalStates, terminalId),
@@ -183,18 +207,21 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             fontSize: initialFontSize,
             fontFamily: 'ui-monospace, "SF Mono", "Cascadia Code", "Segoe UI Mono", Menlo, Monaco, Consolas, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", monospace',
             theme: {
-                background: palette.canvas,
-                foreground: palette.text,
-                cursor: palette.accent,
-                cursorAccent: palette.canvas,
-                selectionBackground: palette.selection,
-                ...DEFAULT_TERMINAL_ANSI_COLORS,
+                background: terminalPalette.canvas,
+                foreground: terminalPalette.text,
+                cursor: terminalPalette.accent,
+                cursorAccent: terminalPalette.canvas,
+                selectionBackground: terminalPalette.selection,
+                // ANSI colors come from buildTerminalTheme
             },
         });
         const fitAddon = new FitAddon();
         term.loadAddon(fitAddon);
         term.loadAddon(new WebLinksAddon());
         term.open(container);
+        const viewport = container.querySelector('.xterm-viewport') as HTMLElement | null;
+        if (viewport) { viewport.style.backgroundColor = terminalPalette.canvas; }
+        termRef.current = term;
         let fontZoomDelta = 0;
         let sharedGridCols = SHARED_TERMINAL_COLS;
         let sharedGridRows = SHARED_TERMINAL_ROWS;
@@ -247,18 +274,6 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         };
         fitSharedGrid(false);
         term.focus();
-        term.attachCustomWheelEventHandler((event) => {
-            const interactive = term.buffer.active.type === 'alternate'
-                || term.modes.mouseTrackingMode !== 'none';
-            if (!interactive || event.deltaY === 0) {
-                return true;
-            }
-            event.preventDefault();
-            clearModifiers();
-            setViewMode('blocks');
-            return false;
-        });
-
         let renderQueue = Promise.resolve();
         const transcriptStreams = new Map<string, {
             decoder: TerminalTranscriptDecoder;
@@ -332,8 +347,9 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 record.decoration = decoration;
                 decoration?.onRender((element) => {
                     record.element = element;
-                    element.style.borderLeft = `3px solid ${palette.accent}`;
-                    element.style.background = 'rgba(184,107,255,0.10)';
+                    const p = resolveTerminalPalette(themeRef.current.semantic, themeRef.current.dark ? 'dark' : 'light');
+                    element.style.borderLeft = `3px solid ${p.accent}`;
+                    element.style.background = p.accentBg;
                     element.style.boxSizing = 'border-box';
                     element.style.pointerEvents = 'none';
                 });
@@ -343,10 +359,9 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 record.end = term.registerMarker(0);
                 record.endColumn = term.buffer.active.cursorX;
                 if (record.element) {
-                    record.element.style.borderLeftColor = event.exitCode === 0 ? palette.success : palette.danger;
-                    record.element.style.background = event.exitCode === 0
-                        ? 'rgba(109,213,140,0.07)'
-                        : 'rgba(255,107,120,0.08)';
+                    const p = resolveTerminalPalette(themeRef.current.semantic, themeRef.current.dark ? 'dark' : 'light');
+                    record.element.style.borderLeftColor = event.exitCode === 0 ? p.success : p.danger;
+                    record.element.style.background = event.exitCode === 0 ? p.successBg : p.dangerBg;
                 }
                 blockMarkers.set(event.commandId, record);
             }
@@ -483,15 +498,10 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                     // Sync the host's local terminal colors. Override the ANSI
                     // palette entirely; fill any gaps from the app/default theme.
                     term.options.theme = {
-                        ...DEFAULT_TERMINAL_ANSI_COLORS,
                         ...Object.fromEntries(
                             Object.entries(response.theme).filter(([, v]) => v != null),
                         ),
-                        background: palette.canvas,
-                        foreground: palette.text,
-                        cursor: palette.accent,
-                        cursorAccent: palette.canvas,
-                        selectionBackground: palette.selection,
+                        ...buildTerminalTheme(theme.semantic, theme.dark ? 'dark' : 'light'),
                     };
                 })
                 .catch((error) => {
@@ -610,8 +620,16 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             unsubscribe();
             term.dispose();
         };
-    }, [clearModifiers, sendTerminalInput, sessionId, showCopiedFeedback, terminalId]);
+}, [clearModifiers, sendTerminalInput, sessionId, showCopiedFeedback, terminalId]);
 
+    // Sync terminal canvas colors with the app theme.
+    React.useEffect(() => {
+        const term = termRef.current;
+        if (!term) return;
+        term.options.theme = buildTerminalTheme(theme.semantic, theme.dark ? 'dark' : 'light');
+        const vp = containerRef.current?.querySelector('.xterm-viewport') as HTMLElement | null;
+        if (vp) { vp.style.backgroundColor = terminalPalette.canvas; }
+    }, [theme]);
     const latestBlock = latestTerminalCommandBlock(commandState);
     const localLatestBlock = latestTerminalCommandBlock(localCommandState);
     const effectiveViewMode: TerminalViewMode = blocksEnabled ? viewMode : 'raw';
@@ -732,7 +750,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
     }, [effectiveViewMode]);
 
     return (
-        <View style={{ flex: 1, backgroundColor: palette.canvas }}>
+        <View style={{ flex: 1, backgroundColor: terminalPalette.canvas }}>
             <TerminalToolbar
                 connectionState={connectionState}
                 copied={copied}
@@ -754,7 +772,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                         left: 0,
                         opacity: effectiveViewMode === 'raw' ? 1 : 0,
                         borderTopWidth: 1,
-                        borderTopColor: palette.border,
+                        borderTopColor: theme.semantic.border,
                     }}
                 >
                     <div
@@ -765,29 +783,38 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                             minHeight: 0,
                             overflow: 'hidden',
                             padding: 6,
-                            backgroundColor: palette.canvas,
+                            backgroundColor: terminalPalette.canvas,
                         }}
                     />
                 </View>
                 {effectiveViewMode === 'blocks' ? (
-                    <TerminalBlockTranscript
-                        blocks={commandState.blocks}
-                        localTerminalId={terminalId}
-                        fontSize={fontSize}
-                        initialSelectedBlockId={selectedBlockId}
-                        favoriteCommandIds={favoriteCommandIds}
-                        onSelectBlock={selectBlock}
-                        onCopyCommand={(block) => copyText(block.command, 'command')}
-                        onCopyOutput={(block) => copyText(terminalBlockOutputText(block), 'output')}
-                        onRerun={(block) => executeTerminalCommand(block.command)}
-                        onToggleFavorite={toggleFavorite}
-                        onOpenRaw={(block) => {
-                            if (block.terminalId === undefined || block.terminalId === terminalId) {
-                                selectBlock(block);
-                                setViewMode('raw');
-                            }
-                        }}
-                    />
+                    attaching && commandState.blocks.length === 0 ? (
+                        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                            <ActivityIndicator size='small' color={terminalPalette.textMuted} />
+                            <Text style={{ color: terminalPalette.textMuted, fontSize: 13, marginTop: 12 }}>
+                                {t('terminal.connecting')}
+                            </Text>
+                        </View>
+                    ) : (
+                        <TerminalBlockTranscript
+                            blocks={commandState.blocks}
+                            localTerminalId={terminalId}
+                            fontSize={fontSize}
+                            initialSelectedBlockId={selectedBlockId}
+                            favoriteCommandIds={favoriteCommandIds}
+                            onSelectBlock={selectBlock}
+                            onCopyCommand={(block) => copyText(block.command, 'command')}
+                            onCopyOutput={(block) => copyText(terminalBlockOutputText(block), 'output')}
+                            onRerun={(block) => executeTerminalCommand(block.command)}
+                            onToggleFavorite={toggleFavorite}
+                            onOpenRaw={(block) => {
+                                if (block.terminalId === undefined || block.terminalId === terminalId) {
+                                    selectBlock(block);
+                                    setViewMode('raw');
+                                }
+                            }}
+                        />
+                    )
                 ) : null}
             </View>
             <TerminalCommandDock
@@ -818,9 +845,9 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                     bottom: 0,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: terminalPalette.scrim,
                 }}>
-                    <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600', marginBottom: 16 }}>
+                    <Text style={{ color: theme.semantic.textInverse, fontSize: 15, fontWeight: '600', marginBottom: 16 }}>
                         {t('terminal.disconnected')}
                     </Text>
                     <Button
@@ -836,3 +863,11 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
         </View>
     );
 });
+
+
+
+
+
+
+
+

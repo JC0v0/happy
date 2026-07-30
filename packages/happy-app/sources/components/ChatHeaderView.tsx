@@ -1,9 +1,9 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import { View, Text, StyleSheet, Platform, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Typography } from '@/constants/Typography';
-import { useHeaderHeight, useIsTablet } from '@/utils/responsive';
+import { useHeaderHeight, useIsWideLayout } from '@/utils/responsive';
 import { layout } from '@/components/layout';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -39,13 +39,12 @@ export const ChatHeaderView: React.FC<ChatHeaderViewProps> = ({
     const { theme } = useUnistyles();
     const insets = useSafeAreaInsets();
     const headerHeight = useHeaderHeight();
-    const isTablet = useIsTablet();
-    const showBackButton = !isTablet && !!onBackPress;
+    const isWideLayout = useIsWideLayout();
+    const showBackButton = !isWideLayout && !!onBackPress;
     const hasExtra = !!extraPathSegment;
     const resolvedBackground = backgroundColor ?? theme.colors.header.background;
     const resolvedTint = tintColor ?? theme.colors.header.tint;
-    const resolvedMutedTint = tintColor ? 'rgba(243, 244, 246, 0.58)' : theme.colors.textSecondary;
-
+    const resolvedMutedTint = tintColor ? theme.semantic.textMuted : theme.colors.textSecondary;
     return (
         <View style={[styles.container, { paddingTop: insets.top, backgroundColor: resolvedBackground }]}>
             <View style={styles.contentWrapper}>

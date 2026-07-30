@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import {
     Pressable,
     SectionList,
@@ -8,9 +8,10 @@ import {
     type NativeSyntheticEvent,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
+import { FontFamilies } from '@/constants/Typography';
 import type { TerminalCommandBlock } from './terminalCommandState';
 import { terminalBlockOutputText } from './terminalTranscript';
-import { TERMINAL_VISUAL_THEME as palette } from './terminalVisualTheme';
 
 interface TerminalBlockTranscriptProps {
     blocks: TerminalCommandBlock[];
@@ -46,24 +47,205 @@ function formatDuration(durationMs: number | undefined): string {
     return `${minutes}m ${seconds}s`;
 }
 
-function statusPresentation(block: TerminalCommandBlock): {
-    color: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-} {
-    if (block.status === 'running') {
-        return { color: palette.warning, icon: 'sync-outline', label: 'RUNNING' };
-    }
-    if (block.status === 'waiting') {
-        return { color: palette.warning, icon: 'alert-circle-outline', label: 'INPUT' };
-    }
-    if (block.status === 'succeeded') {
-        return { color: palette.success, icon: 'checkmark-circle-outline', label: 'DONE' };
-    }
-    return { color: palette.danger, icon: 'close-circle-outline', label: `EXIT ${block.exitCode ?? 1}` };
-}
+const stylesheet = StyleSheet.create((theme) => ({
+    root: { flex: 1, position: 'relative' as const, backgroundColor: theme.semantic.canvas },
+    content: { paddingTop: 4 },
+    emptyContent: { flexGrow: 1 },
+    headerShell: {
+        backgroundColor: theme.semantic.canvas,
+        borderTopWidth: 1,
+        borderTopColor: theme.semantic.border,
+        borderLeftWidth: 2,
+        borderLeftColor: 'transparent',
+    },
+    headerSelected: {
+        borderLeftColor: theme.semantic.borderStrong,
+        backgroundColor: theme.semantic.surface,
+    },
+    header: { minHeight: 64, flexDirection: 'row' as const, alignItems: 'flex-start' as const, paddingRight: 6 },
+    headerMain: {
+        flex: 1,
+        minWidth: 0,
+        flexDirection: 'row' as const,
+        alignItems: 'flex-start' as const,
+        gap: 8,
+        paddingLeft: 12,
+        paddingVertical: 10,
+    },
+    prompt: {
+        color: theme.semantic.textPrimary,
+        fontSize: 18,
+        lineHeight: 22,
+        fontFamily: FontFamilies.mono.semiBold,
+    },
+    headerContent: { flex: 1, minWidth: 0, gap: 7 },
+    command: {
+        color: theme.semantic.textPrimary,
+        fontSize: 13,
+        lineHeight: 18,
+        fontFamily: FontFamilies.mono.semiBold,
+    },
+    metaRow: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        gap: 8,
+    },
+    statusGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4 },
+    status: {
+        fontSize: 9,
+        fontFamily: FontFamilies.mono.semiBold,
+        letterSpacing: 0.45,
+    },
+    deviceLabel: {
+        color: theme.semantic.textMuted,
+        fontSize: 9,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    duration: {
+        color: theme.semantic.textSecondary,
+        fontSize: 10,
+        fontVariant: ['tabular-nums'] as ('tabular-nums')[],
+        fontFamily: FontFamilies.mono.regular,
+    },
+    cwd: {
+        flex: 1,
+        color: theme.semantic.textMuted,
+        fontSize: 10,
+        textAlign: 'right' as const,
+        fontFamily: FontFamilies.mono.regular,
+    },
+    collapseButton: {
+        width: 36,
+        height: 36,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        borderRadius: 4,
+    },
+    actions: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 2,
+        paddingHorizontal: 10,
+        paddingBottom: 8,
+    },
+    action: {
+        minWidth: 54,
+        height: 36,
+        paddingHorizontal: 7,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        gap: 4,
+        borderRadius: 4,
+    },
+    actionText: {
+        color: theme.semantic.textSecondary,
+        fontSize: 10,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    disabled: { opacity: 0.35 },
+    outputShell: {
+        paddingHorizontal: 16,
+        paddingTop: 7,
+        paddingBottom: 18,
+        backgroundColor: theme.semantic.canvas,
+    },
+    outputSelected: {
+        borderLeftWidth: 2,
+        borderLeftColor: theme.semantic.borderStrong,
+        paddingLeft: 14,
+        backgroundColor: theme.semantic.surface,
+    },
+    output: {
+        color: theme.semantic.textPrimary,
+        fontFamily: FontFamilies.mono.regular,
+    },
+    emptyOutput: {
+        color: theme.semantic.textMuted,
+        fontSize: 12,
+        fontStyle: 'italic' as const,
+    },
+    rawBanner: {
+        minHeight: 54,
+        marginTop: 12,
+        paddingHorizontal: 11,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 9,
+        borderRadius: 4,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    rawBannerText: { flex: 1, minWidth: 0, gap: 2 },
+    rawTitle: {
+        color: theme.semantic.textPrimary,
+        fontSize: 12,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    rawSubtitle: {
+        color: theme.semantic.textSecondary,
+        fontSize: 10,
+        lineHeight: 14,
+        fontFamily: FontFamilies.default.regular,
+    },
+    footerSpace: { height: 28 },
+    jumpButton: {
+        position: 'absolute' as const,
+        right: 14,
+        bottom: 12,
+        height: 40,
+        paddingHorizontal: 12,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 6,
+        borderRadius: 4,
+        backgroundColor: theme.semantic.surface,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    jumpText: {
+        color: theme.semantic.textPrimary,
+        fontSize: 11,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    pressed: { backgroundColor: theme.semantic.surfaceSelected },
+    empty: {
+        flex: 1,
+        minHeight: 260,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        gap: 8,
+        paddingHorizontal: 38,
+    },
+    emptyIcon: {
+        width: 48,
+        height: 48,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    emptyTitle: {
+        color: theme.semantic.textPrimary,
+        fontSize: 15,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    emptySubtitle: {
+        color: theme.semantic.textSecondary,
+        fontSize: 12,
+        lineHeight: 18,
+        textAlign: 'center' as const,
+        fontFamily: FontFamilies.default.regular,
+    },
+}));
 
 export const TerminalBlockTranscript = React.memo(function TerminalBlockTranscript(props: TerminalBlockTranscriptProps) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const listRef = React.useRef<SectionList<TerminalCommandBlock, TranscriptSection>>(null);
     const followingBottomRef = React.useRef(true);
     const [showJumpToLatest, setShowJumpToLatest] = React.useState(false);
@@ -123,140 +305,182 @@ export const TerminalBlockTranscript = React.memo(function TerminalBlockTranscri
         setShowJumpToLatest(false);
     }, []);
 
+    const statusPresentation = React.useCallback((block: TerminalCommandBlock) => {
+        if (block.status === 'running') {
+            return { color: theme.semantic.status.info, icon: 'sync-outline' as const, label: 'RUNNING' };
+        }
+        if (block.status === 'waiting') {
+            return { color: theme.semantic.status.warning, icon: 'alert-circle-outline' as const, label: 'INPUT' };
+        }
+        if (block.status === 'succeeded') {
+            return { color: theme.semantic.status.success, icon: 'checkmark-circle-outline' as const, label: 'DONE' };
+        }
+        return { color: theme.semantic.status.error, icon: 'close-circle-outline' as const, label: `EXIT ${block.exitCode ?? 1}` };
+    }, [theme]);
+
+    const renderSectionHeader = React.useCallback(({ section }: { section: TranscriptSection }) => {
+        const block = section.block;
+        const isSelected = selectedBlockId === block.commandId;
+        const isCollapsed = collapsedBlockIds.has(block.commandId);
+        const status = statusPresentation(block);
+        return (
+            <View style={[styles.headerShell, isSelected && styles.headerSelected]}>
+                <Pressable onPress={() => selectBlock(block)}>
+                    <View style={styles.header}>
+                        <View style={styles.headerMain}>
+                            <Text style={styles.prompt}>&gt;</Text>
+                            <View style={styles.headerContent}>
+                                <Text style={styles.command} numberOfLines={isCollapsed ? 1 : 0}>
+                                    {block.command}
+                                </Text>
+                                <View style={styles.metaRow}>
+                                    <View style={styles.statusGroup}>
+                                        <Ionicons name={status.icon} size={11} color={status.color} />
+                                        <Text style={[styles.status, { color: status.color }]}>{status.label}</Text>
+                                    </View>
+                                    {block.durationMs !== undefined ? (
+                                        <Text style={styles.duration}>{formatDuration(block.durationMs)}</Text>
+                                    ) : null}
+                                    {block.cwd ? (
+                                        <Text style={styles.cwd} numberOfLines={1}>{block.cwd}</Text>
+                                    ) : null}
+                                </View>
+                            </View>
+                        </View>
+                        <Pressable
+                            onPress={() => toggleCollapsed(block.commandId)}
+                            style={styles.collapseButton}
+                            accessibilityRole="button"
+                            accessibilityLabel={isCollapsed ? 'Expand block' : 'Collapse block'}
+                        >
+                            <Ionicons
+                                name={isCollapsed ? 'chevron-down' : 'chevron-up'}
+                                size={16}
+                                color={theme.semantic.textMuted}
+                            />
+                        </Pressable>
+                    </View>
+                </Pressable>
+                {!isCollapsed && isSelected ? (
+                    <View style={styles.actions}>
+                        <ActionButton
+                            icon="copy-outline"
+                            label="Copy"
+                            onPress={() => props.onCopyCommand(block)}
+                        />
+                        <ActionButton
+                            icon="copy"
+                            label="Output"
+                            onPress={() => props.onCopyOutput(block)}
+                            disabled={!terminalBlockOutputText(block)}
+                        />
+                        <ActionButton
+                            icon="play"
+                            label="Rerun"
+                            onPress={() => props.onRerun(block)}
+                        />
+                        <ActionButton
+                            icon={props.favoriteCommandIds.has(block.commandId) ? 'star' : 'star-outline'}
+                            label="Fav"
+                            active={props.favoriteCommandIds.has(block.commandId)}
+                            onPress={() => props.onToggleFavorite(block)}
+                        />
+                        {block.status !== 'running' && block.rawPreferred ? (
+                            <ActionButton
+                                icon="terminal-outline"
+                                label="Raw"
+                                onPress={() => props.onOpenRaw(block)}
+                            />
+                        ) : null}
+                    </View>
+                ) : null}
+            </View>
+        );
+    }, [collapsedBlockIds, props, selectedBlockId, statusPresentation, styles, theme]);
+
+    const renderItem = React.useCallback(({ item, section }: { item: TerminalCommandBlock; section: TranscriptSection }) => {
+        const isSelected = selectedBlockId === item.commandId;
+        const output = terminalBlockOutputText(item);
+        return (
+            <View style={[styles.outputShell, isSelected && styles.outputSelected]}>
+                {output ? (
+                    <Text
+                        selectable
+                        style={[styles.output, { fontSize: props.fontSize }]}
+                    >
+                        {output}
+                    </Text>
+                ) : (
+                    <Text style={styles.emptyOutput}>No output</Text>
+                )}
+                {item.rawPreferred && item.status !== 'running' ? (
+                    <Pressable
+                        style={styles.rawBanner}
+                        onPress={() => props.onOpenRaw(item)}
+                        accessibilityRole="button"
+                        accessibilityLabel="View in raw terminal"
+                    >
+                        <Ionicons name="terminal-outline" size={18} color={theme.semantic.textPrimary} />
+                        <View style={styles.rawBannerText}>
+                            <Text style={styles.rawTitle}>Interactive terminal</Text>
+                            <Text style={styles.rawSubtitle}>This command uses a full-screen terminal. Switch to RAW to view and interact.</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={17} color={theme.semantic.textMuted} />
+                    </Pressable>
+                ) : null}
+            </View>
+        );
+    }, [props.fontSize, props, selectedBlockId, styles, theme]);
+
     return (
         <View style={styles.root}>
             <SectionList
                 ref={listRef}
                 sections={sections}
-                keyExtractor={(block) => block.commandId}
-                stickySectionHeadersEnabled
-                contentInsetAdjustmentBehavior="automatic"
-                keyboardShouldPersistTaps="handled"
+                keyExtractor={(item) => item.commandId}
+                renderItem={renderItem}
+                renderSectionHeader={renderSectionHeader}
+                contentContainerStyle={styles.content}
                 onScroll={onScroll}
-                scrollEventThrottle={32}
-                onContentSizeChange={() => {
-                    if (followingBottomRef.current) {
-                        requestAnimationFrame(() => listRef.current?.getScrollResponder()?.scrollToEnd({ animated: false }));
-                    }
-                }}
-                contentContainerStyle={props.blocks.length === 0 ? styles.emptyContent : styles.content}
-                ListEmptyComponent={<EmptyTranscript />}
-                renderSectionHeader={({ section }) => (
-                    <BlockHeader
-                        block={section.block}
-                        localTerminalId={props.localTerminalId}
-                        selected={selectedBlockId === section.block.commandId}
-                        collapsed={collapsedBlockIds.has(section.block.commandId)}
-                        favorite={props.favoriteCommandIds.has(section.block.commandId)}
-                        onSelect={() => selectBlock(section.block)}
-                        onToggleCollapsed={() => toggleCollapsed(section.block.commandId)}
-                        onCopyCommand={() => props.onCopyCommand(section.block)}
-                        onCopyOutput={() => props.onCopyOutput(section.block)}
-                        onRerun={() => props.onRerun(section.block)}
-                        onToggleFavorite={() => props.onToggleFavorite(section.block)}
-                        onOpenRaw={() => props.onOpenRaw(section.block)}
-                    />
-                )}
-                renderItem={({ item }) => (
-                    <BlockOutput
-                        block={item}
-                        localTerminalId={props.localTerminalId}
-                        fontSize={props.fontSize}
-                        selected={selectedBlockId === item.commandId}
-                        onOpenRaw={() => props.onOpenRaw(item)}
-                    />
-                )}
+                scrollEventThrottle={60}
+                stickySectionHeadersEnabled={false}
+                showsVerticalScrollIndicator={false}
                 ListFooterComponent={<View style={styles.footerSpace} />}
+                ListEmptyComponent={
+                    <View style={styles.emptyContent}>
+                        <EmptyTranscript />
+                    </View>
+                }
             />
             {showJumpToLatest ? (
                 <Pressable
+                    style={styles.jumpButton}
                     onPress={scrollToLatest}
                     accessibilityRole="button"
-                    accessibilityLabel="Jump to latest command"
-                    style={({ pressed }) => [styles.jumpButton, pressed && styles.pressed]}
+                    accessibilityLabel="Jump to latest"
                 >
-                    <Ionicons name="arrow-down" size={17} color={palette.text} />
-                    <Text style={styles.jumpText}>最新</Text>
+                    <Ionicons name="arrow-down" size={14} color={theme.semantic.textPrimary} />
+                    <Text style={styles.jumpText}>Latest</Text>
                 </Pressable>
             ) : null}
         </View>
     );
 });
 
-function BlockHeader(props: {
-    block: TerminalCommandBlock;
-    localTerminalId: string;
-    selected: boolean;
-    collapsed: boolean;
-    favorite: boolean;
-    onSelect: () => void;
-    onToggleCollapsed: () => void;
-    onCopyCommand: () => void;
-    onCopyOutput: () => void;
-    onRerun: () => void;
-    onToggleFavorite: () => void;
-    onOpenRaw: () => void;
-}) {
-    const status = statusPresentation(props.block);
-    const isLocal = props.block.terminalId === undefined || props.block.terminalId === props.localTerminalId;
-    return (
-        <View style={[styles.headerShell, props.selected && styles.headerSelected]}>
-            <View style={styles.header}>
-                <Pressable
-                    onPress={props.onSelect}
-                    onLongPress={props.onSelect}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select command ${props.block.command}`}
-                    style={({ pressed }) => [styles.headerMain, pressed && styles.pressed]}
-                >
-                    <Text style={styles.prompt}>›</Text>
-                    <View style={styles.headerContent}>
-                        <Text selectable style={styles.command} numberOfLines={2}>{props.block.command}</Text>
-                        <View style={styles.metaRow}>
-                            <View style={styles.statusGroup}>
-                                <Ionicons name={status.icon} size={12} color={status.color} />
-                                <Text style={[styles.status, { color: status.color }]}>{status.label}</Text>
-                                <Text style={styles.duration}>· {props.block.status === 'waiting' ? 'waiting' : formatDuration(props.block.durationMs)}</Text>
-                            </View>
-                            <Text style={styles.deviceLabel}>{isLocal ? '本机' : '其他设备'}</Text>
-                            {props.block.cwd ? <Text selectable style={styles.cwd} numberOfLines={1}>{props.block.cwd}</Text> : null}
-                        </View>
-                    </View>
-                </Pressable>
-                <Pressable
-                    onPress={props.onToggleCollapsed}
-                    hitSlop={6}
-                    accessibilityRole="button"
-                    accessibilityLabel={props.collapsed ? 'Expand command output' : 'Collapse command output'}
-                    style={({ pressed }) => [styles.collapseButton, pressed && styles.pressed]}
-                >
-                    <Ionicons name={props.collapsed ? 'chevron-down' : 'chevron-up'} size={17} color={palette.textMuted} />
-                </Pressable>
-            </View>
-            {props.selected ? (
-                <View style={styles.actions}>
-                    <BlockAction icon="code-slash-outline" label="命令" onPress={props.onCopyCommand} />
-                    <BlockAction icon="copy-outline" label="输出" onPress={props.onCopyOutput} />
-                    <BlockAction icon="refresh-outline" label="重跑" onPress={props.onRerun} />
-                    <BlockAction
-                        icon={props.favorite ? 'bookmark' : 'bookmark-outline'}
-                        label={props.favorite ? '已收藏' : '收藏'}
-                        onPress={props.onToggleFavorite}
-                        disabled={props.block.endedAt === undefined}
-                    />
-                    <BlockAction icon="terminal-outline" label="RAW" onPress={props.onOpenRaw} disabled={!isLocal} />
-                </View>
-            ) : null}
-        </View>
-    );
-}
-
-function BlockAction(props: {
+function ActionButton(props: {
     icon: keyof typeof Ionicons.glyphMap;
     label: string;
     onPress: () => void;
     disabled?: boolean;
+    active?: boolean;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const color = props.disabled
+        ? theme.semantic.textMuted
+        : props.active
+            ? theme.semantic.textPrimary
+            : theme.semantic.textSecondary;
     return (
         <Pressable
             onPress={props.onPress}
@@ -265,108 +489,27 @@ function BlockAction(props: {
             accessibilityLabel={props.label}
             style={({ pressed }) => [
                 styles.action,
-                pressed && styles.pressed,
+                pressed && !props.disabled && styles.pressed,
                 props.disabled && styles.disabled,
             ]}
         >
-            <Ionicons name={props.icon} size={15} color={palette.textMuted} />
-            <Text style={styles.actionText}>{props.label}</Text>
+            <Ionicons name={props.icon} size={13} color={color} />
+            <Text style={[styles.actionText, { color }]}>{props.label}</Text>
         </Pressable>
     );
 }
 
-function BlockOutput(props: {
-    block: TerminalCommandBlock;
-    localTerminalId: string;
-    fontSize: number;
-    selected: boolean;
-    onOpenRaw: () => void;
-}) {
-    const output = React.useMemo(() => terminalBlockOutputText(props.block), [props.block]);
-    const isLocal = props.block.terminalId === undefined || props.block.terminalId === props.localTerminalId;
-    return (
-        <View style={[styles.outputShell, props.selected && styles.outputSelected]}>
-            {output ? (
-                <Text selectable style={[styles.output, { fontSize: props.fontSize, lineHeight: Math.round(props.fontSize * 1.55) }]}>
-                    {output}
-                </Text>
-            ) : (
-                <Text style={styles.emptyOutput}>
-                    {props.block.status === 'running' || props.block.status === 'waiting' ? '等待输出…' : '无输出'}
-                </Text>
-            )}
-            {props.block.rawPreferred ? (
-                <Pressable
-                    onPress={props.onOpenRaw}
-                    disabled={!isLocal}
-                    style={({ pressed }) => [styles.rawBanner, pressed && styles.pressed, !isLocal && styles.disabled]}
-                >
-                    <Ionicons name="terminal-outline" size={16} color={palette.warning} />
-                    <View style={styles.rawBannerText}>
-                        <Text style={styles.rawTitle}>交互式终端</Text>
-                        <Text style={styles.rawSubtitle}>此命令使用全屏终端，切换到 RAW 查看和操作</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={17} color={palette.textMuted} />
-                </Pressable>
-            ) : null}
-        </View>
-    );
-}
-
 function EmptyTranscript() {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     return (
         <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-                <Ionicons name="terminal-outline" size={22} color={palette.accent} />
+                <Ionicons name="terminal-outline" size={22} color={theme.semantic.textPrimary} />
             </View>
-            <Text style={styles.emptyTitle}>运行一条命令</Text>
-            <Text style={styles.emptySubtitle}>命令和输出会作为可复制、重跑和收藏的 Block 保存在这里。</Text>
+            <Text style={styles.emptyTitle}>Run a command</Text>
+            <Text style={styles.emptySubtitle}>Commands and output are saved here as copyable, rerunnable, and favoritable Blocks.</Text>
         </View>
     );
 }
 
-const styles = {
-    root: { flex: 1, position: 'relative' as const, backgroundColor: palette.canvas },
-    content: { paddingTop: 4 },
-    emptyContent: { flexGrow: 1 },
-    headerShell: {
-        backgroundColor: palette.canvas,
-        borderTopWidth: 1,
-        borderTopColor: palette.border,
-        borderLeftWidth: 2,
-        borderLeftColor: 'transparent',
-    },
-    headerSelected: { borderLeftColor: palette.accent, backgroundColor: palette.chrome },
-    header: { minHeight: 64, flexDirection: 'row' as const, alignItems: 'flex-start' as const, paddingRight: 6 },
-    headerMain: { flex: 1, minWidth: 0, flexDirection: 'row' as const, alignItems: 'flex-start' as const, gap: 8, paddingLeft: 12, paddingVertical: 10 },
-    prompt: { color: palette.accent, fontSize: 18, lineHeight: 22, fontFamily: 'monospace', fontWeight: '700' as const },
-    headerContent: { flex: 1, minWidth: 0, gap: 7 },
-    command: { color: palette.text, fontSize: 13, lineHeight: 18, fontFamily: 'monospace', fontWeight: '600' as const },
-    metaRow: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, gap: 8 },
-    statusGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4 },
-    status: { fontSize: 9, fontWeight: '800' as const, letterSpacing: 0.45 },
-    deviceLabel: { color: palette.textMuted, fontSize: 9, fontWeight: '700' as const },
-    duration: { color: palette.textMuted, fontSize: 10, fontVariant: ['tabular-nums'] as ('tabular-nums')[] },
-    cwd: { flex: 1, color: palette.textMuted, fontSize: 10, textAlign: 'right' as const, fontFamily: 'monospace' },
-    collapseButton: { width: 36, height: 36, alignItems: 'center' as const, justifyContent: 'center' as const, borderRadius: 9 },
-    actions: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 2, paddingHorizontal: 10, paddingBottom: 8 },
-    action: { minWidth: 54, height: 36, paddingHorizontal: 7, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 4, borderRadius: 8 },
-    actionText: { color: palette.textMuted, fontSize: 10, fontWeight: '600' as const },
-    disabled: { opacity: 0.35 },
-    outputShell: { paddingHorizontal: 16, paddingTop: 7, paddingBottom: 18, backgroundColor: palette.canvas },
-    outputSelected: { borderLeftWidth: 2, borderLeftColor: palette.accent, paddingLeft: 14, backgroundColor: palette.chrome },
-    output: { color: palette.text, fontFamily: 'monospace' },
-    emptyOutput: { color: palette.textMuted, fontSize: 12, fontStyle: 'italic' as const },
-    rawBanner: { minHeight: 54, marginTop: 12, paddingHorizontal: 11, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 9, borderRadius: 10, backgroundColor: palette.chromeRaised, borderWidth: 1, borderColor: palette.border },
-    rawBannerText: { flex: 1, minWidth: 0, gap: 2 },
-    rawTitle: { color: palette.text, fontSize: 12, fontWeight: '700' as const },
-    rawSubtitle: { color: palette.textMuted, fontSize: 10, lineHeight: 14 },
-    footerSpace: { height: 28 },
-    jumpButton: { position: 'absolute' as const, right: 14, bottom: 12, height: 40, paddingHorizontal: 12, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, borderRadius: 20, backgroundColor: palette.controlPressed, borderWidth: 1, borderColor: palette.border },
-    jumpText: { color: palette.text, fontSize: 11, fontWeight: '700' as const },
-    pressed: { backgroundColor: palette.controlPressed },
-    empty: { flex: 1, minHeight: 260, alignItems: 'center' as const, justifyContent: 'center' as const, gap: 8, paddingHorizontal: 38 },
-    emptyIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center' as const, justifyContent: 'center' as const, backgroundColor: palette.chromeRaised },
-    emptyTitle: { color: palette.text, fontSize: 15, fontWeight: '700' as const },
-    emptySubtitle: { color: palette.textMuted, fontSize: 12, lineHeight: 18, textAlign: 'center' as const },
-};

@@ -1,4 +1,4 @@
-import * as React from 'react';
+﻿import * as React from 'react';
 import {
     ActivityIndicator,
     Keyboard,
@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
 import {
     loadTerminalCommandDraft,
@@ -24,8 +25,9 @@ import {
     terminalShortcutData,
     type TerminalShortcut,
 } from './terminalInput';
-import { TERMINAL_VISUAL_THEME as palette } from './terminalVisualTheme';
+import { TERMINAL_VISUAL_THEME as terminalPalette } from './terminalVisualTheme';
 import { TerminalShortcutSheet } from './terminal-shortcut-sheet';
+import { FontFamilies } from '@/constants/Typography';
 
 export type TerminalConnectionState = 'connected' | 'connecting' | 'disconnected';
 
@@ -51,12 +53,6 @@ interface TerminalCommandDockProps {
     onOpenHistory: () => void;
 }
 
-const STATUS_COLORS: Record<TerminalConnectionState, string> = {
-    connected: palette.success,
-    connecting: palette.warning,
-    disconnected: palette.danger,
-};
-
 const SHORTCUTS: Array<{
     id: TerminalShortcut;
     label?: string;
@@ -71,7 +67,262 @@ const SHORTCUTS: Array<{
     { id: 'right', icon: 'arrow-forward' },
 ];
 
+const stylesheet = StyleSheet.create((theme) => ({
+    toolbar: {
+        minHeight: 52,
+        paddingHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        backgroundColor: theme.semantic.surface,
+        borderBottomWidth: 1,
+        borderBottomColor: theme.semantic.border,
+        zIndex: 20,
+    },
+    statusGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7 },
+    statusDot: { width: 7, height: 7, borderRadius: 4 },
+    statusText: {
+        color: theme.semantic.textPrimary,
+        fontSize: 12,
+        fontFamily: FontFamilies.default.semiBold,
+    },
+    securePill: {
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 3,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 4,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    secureText: {
+        color: theme.semantic.textMuted,
+        fontSize: 9,
+        fontFamily: FontFamilies.mono.semiBold,
+        letterSpacing: 0.5,
+    },
+    toolbarActions: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
+    copiedText: {
+        color: theme.semantic.status.success,
+        fontSize: 11,
+        fontFamily: FontFamilies.default.semiBold,
+        marginRight: 2,
+    },
+    iconButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+    },
+    compactIconButton: {
+        width: 42,
+        height: 38,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    controlPressed: { backgroundColor: theme.semantic.surfaceSelected },
+    controlDisabled: { opacity: 0.45 },
+    modalBackdrop: {
+        flex: 1,
+        position: 'relative' as const,
+        zIndex: 40,
+        justifyContent: 'flex-end' as const,
+        backgroundColor: theme.dark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.35)',
+    },
+    actionSheet: {
+        position: 'relative' as const,
+        zIndex: 50,
+        elevation: 0,
+        paddingHorizontal: 14,
+        paddingTop: 10,
+        backgroundColor: theme.semantic.surface,
+        borderTopLeftRadius: 0,
+        borderTopRightRadius: 0,
+        borderWidth: 1,
+        borderBottomWidth: 0,
+        borderColor: theme.semantic.border,
+    },
+    desktopMenu: {
+        position: 'absolute' as const,
+        top: 48,
+        right: 8,
+        width: 270,
+        paddingHorizontal: 10,
+        paddingVertical: 10,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surface,
+        zIndex: 50,
+        elevation: 0,
+    },
+    sheetHandle: {
+        width: 34,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: theme.semantic.border,
+        alignSelf: 'center' as const,
+        marginBottom: 12,
+    },
+    sheetHeader: {
+        minHeight: 44,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        marginBottom: 4,
+    },
+    sheetTitle: {
+        color: theme.semantic.textPrimary,
+        fontSize: 15,
+        fontFamily: FontFamilies.default.semiBold,
+        marginLeft: 4,
+    },
+    actionRow: {
+        minHeight: 48,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 12,
+        paddingHorizontal: 12,
+        borderRadius: 4,
+    },
+    actionLabel: {
+        color: theme.semantic.textPrimary,
+        fontSize: 14,
+        fontFamily: FontFamilies.default.regular,
+    },
+    actionLabelDestructive: {
+        color: theme.semantic.status.error,
+    },
+    fontRow: {
+        minHeight: 52,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'space-between' as const,
+        paddingHorizontal: 12,
+    },
+    fontLabel: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, flex: 1 },
+    stepper: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
+    dock: {
+        backgroundColor: theme.semantic.surface,
+        borderTopWidth: 1,
+        borderTopColor: theme.semantic.border,
+        paddingTop: 7,
+    },
+    shortcutRow: { gap: 8, paddingHorizontal: 10, paddingBottom: 7 },
+    shortcutButton: {
+        minWidth: 40,
+        height: 38,
+        paddingHorizontal: 9,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    shortcutButtonActive: {
+        borderColor: theme.semantic.borderStrong,
+        backgroundColor: theme.semantic.surfaceSelected,
+    },
+    modeButton: {
+        height: 38,
+        paddingHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        gap: 5,
+        borderRadius: 4,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    modeButtonActive: {
+        borderColor: theme.semantic.borderStrong,
+        backgroundColor: theme.semantic.surfaceSelected,
+    },
+    modeText: {
+        color: theme.semantic.textMuted,
+        fontSize: 9,
+        fontFamily: FontFamilies.mono.semiBold,
+        letterSpacing: 0.5,
+    },
+    modeTextActive: { color: theme.semantic.textPrimary },
+    directoryContext: {
+        maxWidth: 150,
+        height: 38,
+        paddingHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 6,
+        borderRadius: 4,
+        backgroundColor: theme.semantic.surfaceMuted,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+    },
+    directoryText: {
+        flexShrink: 1,
+        color: theme.semantic.textSecondary,
+        fontSize: 10,
+        fontFamily: FontFamilies.mono.regular,
+    },
+    shortcutText: {
+        color: theme.semantic.textMuted,
+        fontSize: 10,
+        fontFamily: FontFamilies.mono.semiBold,
+        letterSpacing: 0.35,
+    },
+    shortcutTextActive: { color: theme.semantic.textPrimary },
+    commandBar: {
+        minHeight: 46,
+        marginHorizontal: 10,
+        flexDirection: 'row' as const,
+        alignItems: 'center' as const,
+        gap: 8,
+        paddingLeft: 12,
+        paddingRight: 5,
+        borderRadius: 4,
+        borderWidth: 1,
+        borderColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surfaceMuted,
+    },
+    prompt: {
+        color: theme.semantic.textPrimary,
+        fontSize: 16,
+        fontFamily: FontFamilies.mono.semiBold,
+    },
+    commandInput: {
+        flex: 1,
+        minWidth: 0,
+        height: 44,
+        color: theme.semantic.textPrimary,
+        fontSize: 13,
+        fontFamily: FontFamilies.mono.regular,
+        paddingVertical: 0,
+    },
+    sendButton: {
+        width: 38,
+        height: 38,
+        borderRadius: 4,
+        alignItems: 'center' as const,
+        justifyContent: 'center' as const,
+        backgroundColor: theme.semantic.control,
+        borderWidth: 1,
+        borderColor: theme.semantic.control,
+    },
+    sendButtonDisabled: { backgroundColor: theme.semantic.surfaceMuted, borderColor: theme.semantic.border, opacity: 0.62 },
+    sendButtonPressed: { transform: [{ scale: 0.96 }] },
+}));
+
 export const TerminalToolbar = React.memo(function TerminalToolbar(props: TerminalToolbarProps) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const [menuVisible, setMenuVisible] = React.useState(false);
     const safeArea = useSafeAreaInsets();
     const statusText = props.connectionState === 'connected'
@@ -79,6 +330,12 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
         : props.connectionState === 'connecting'
             ? t('terminal.connecting')
             : t('terminal.disconnected');
+
+    const statusColor = props.connectionState === 'connected'
+        ? theme.colors.status.connected
+        : props.connectionState === 'connecting'
+            ? theme.colors.status.connecting
+            : theme.colors.status.disconnected;
 
     const actionsPanel = (
         <>
@@ -120,7 +377,7 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
             />
             <View style={styles.fontRow}>
                 <View style={styles.fontLabel}>
-                    <Ionicons name="text-outline" size={18} color={palette.textMuted} />
+                    <Ionicons name="text-outline" size={18} color={theme.semantic.textMuted} />
                     <Text style={styles.actionLabel}>{t('terminal.fontSizeIncrease')}</Text>
                 </View>
                 <View style={styles.stepper}>
@@ -145,13 +402,13 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
         <View style={styles.toolbar}>
             <View style={styles.statusGroup}>
                 {props.connectionState === 'connecting' ? (
-                    <ActivityIndicator size={12} color={STATUS_COLORS.connecting} />
+                    <ActivityIndicator size={12} color={statusColor} />
                 ) : (
-                    <View style={[styles.statusDot, { backgroundColor: STATUS_COLORS[props.connectionState] }]} />
+                    <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
                 )}
                 <Text style={styles.statusText}>{statusText}</Text>
                 <View style={styles.securePill}>
-                    <Ionicons name="lock-closed" size={10} color={palette.textMuted} />
+                    <Ionicons name="lock-closed" size={10} color={theme.semantic.textMuted} />
                     <Text style={styles.secureText}>E2E</Text>
                 </View>
             </View>
@@ -194,6 +451,8 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
 });
 
 export const TerminalCommandDock = React.memo(function TerminalCommandDock(props: TerminalCommandDockProps) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const safeArea = useSafeAreaInsets();
     const [command, setCommand] = React.useState(() => loadTerminalCommandDraft(props.sessionId));
     const [shortcutSheetVisible, setShortcutSheetVisible] = React.useState(false);
@@ -246,7 +505,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 <ShortcutButton
                     label="CTRL"
                     active={props.ctrlActive}
-                    accessibilityLabel={props.ctrlActive ? '取消 Ctrl 组合键' : '启用 Ctrl 组合键'}
+                    accessibilityLabel={props.ctrlActive ? 'Disable Ctrl modifier' : 'Enable Ctrl modifier'}
                     onPress={props.onToggleCtrl}
                 />
                 {SHORTCUTS.map((shortcut) => (
@@ -259,7 +518,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 ))}
                 <ShortcutButton
                     icon="keypad-outline"
-                    accessibilityLabel="更多按键"
+                    accessibilityLabel="More keys"
                     onPress={() => {
                         Keyboard.dismiss();
                         setShortcutSheetVisible(true);
@@ -270,18 +529,18 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
             </ScrollView>
 
             {props.viewMode === 'blocks' ? <View style={styles.commandBar}>
-                <Text style={styles.prompt}>›</Text>
+                <Text style={styles.prompt}>&gt;</Text>
                 <TextInput
                     value={command}
                     onChangeText={updateCommand}
                     onSubmitEditing={submitCommand}
                     placeholder={t('commandPalette.placeholder')}
-                    placeholderTextColor={palette.textMuted}
+                    placeholderTextColor={theme.semantic.textMuted}
                     style={styles.commandInput}
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="send"
-                    selectionColor={palette.accent}
+                    selectionColor={theme.semantic.focus}
                     accessibilityLabel={t('commandPalette.placeholder')}
                 />
                 <Pressable
@@ -296,7 +555,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                         pressed && command.trim().length > 0 && styles.sendButtonPressed,
                     ]}
                 >
-                    <Ionicons name="arrow-up" size={18} color={palette.text} />
+                    <Ionicons name="arrow-up" size={18} color={theme.semantic.textInverse} />
                 </Pressable>
             </View> : null}
         </View>
@@ -310,7 +569,10 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
 });
 
 function DockModeButton(props: { mode: TerminalViewMode; disabled: boolean; onPress: () => void }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const isBlocks = props.mode === 'blocks';
+    const iconColor = isBlocks ? theme.semantic.textPrimary : theme.semantic.textMuted;
     return (
         <Pressable
             onPress={props.onPress}
@@ -324,17 +586,19 @@ function DockModeButton(props: { mode: TerminalViewMode; disabled: boolean; onPr
                 props.disabled && styles.controlDisabled,
             ]}
         >
-            <Ionicons name={isBlocks ? 'list-outline' : 'terminal-outline'} size={14} color={isBlocks ? palette.accent : palette.textMuted} />
+            <Ionicons name={isBlocks ? 'list-outline' : 'terminal-outline'} size={14} color={iconColor} />
             <Text style={[styles.modeText, isBlocks && styles.modeTextActive]}>{isBlocks ? 'BLOCKS' : 'RAW'}</Text>
         </Pressable>
     );
 }
 
 function DirectoryContext(props: { cwd: string }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const leaf = props.cwd.split(/[\\/]/u).filter(Boolean).pop() ?? props.cwd;
     return (
         <View style={styles.directoryContext} accessibilityLabel={`Current directory ${props.cwd}`}>
-            <Ionicons name="folder-outline" size={14} color={palette.textMuted} />
+            <Ionicons name="folder-outline" size={14} color={theme.semantic.textMuted} />
             <Text style={styles.directoryText} numberOfLines={1}>{leaf}</Text>
         </View>
     );
@@ -347,6 +611,9 @@ function ChromeIconButton(props: {
     disabled?: boolean;
     compact?: boolean;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const color = props.disabled ? theme.semantic.textMuted : theme.semantic.textPrimary;
     return (
         <Pressable
             onPress={props.onPress}
@@ -363,7 +630,7 @@ function ChromeIconButton(props: {
             <Ionicons
                 name={props.icon}
                 size={props.compact ? 18 : 19}
-                color={props.disabled ? palette.textMuted : palette.text}
+                color={color}
             />
         </Pressable>
     );
@@ -376,7 +643,10 @@ function ShortcutButton(props: {
     active?: boolean;
     onPress: () => void;
 }) {
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
     const accessibilityLabel = props.accessibilityLabel ?? props.label ?? props.icon ?? 'Terminal shortcut';
+    const iconColor = props.active ? theme.semantic.textPrimary : theme.semantic.textMuted;
     return (
         <Pressable
             onPress={props.onPress}
@@ -390,7 +660,7 @@ function ShortcutButton(props: {
             ]}
         >
             {props.icon ? (
-                <Ionicons name={props.icon} size={15} color={props.active ? palette.accent : palette.textMuted} />
+                <Ionicons name={props.icon} size={15} color={iconColor} />
             ) : (
                 <Text style={[styles.shortcutText, props.active && styles.shortcutTextActive]}>{props.label}</Text>
             )}
@@ -405,7 +675,9 @@ function ActionRow(props: {
     destructive?: boolean;
     disabled?: boolean;
 }) {
-    const color = props.destructive ? palette.danger : palette.text;
+    const { theme } = useUnistyles();
+    const styles = stylesheet;
+    const color = props.destructive ? theme.semantic.status.error : theme.semantic.textPrimary;
     return (
         <Pressable
             onPress={props.onPress}
@@ -414,207 +686,7 @@ function ActionRow(props: {
             style={({ pressed }) => [styles.actionRow, pressed && styles.controlPressed, props.disabled && styles.controlDisabled]}
         >
             <Ionicons name={props.icon} size={19} color={color} />
-            <Text style={[styles.actionLabel, { color }]}>{props.label}</Text>
+            <Text style={[styles.actionLabel, props.destructive && styles.actionLabelDestructive]}>{props.label}</Text>
         </Pressable>
     );
 }
-
-const styles = {
-    toolbar: {
-        minHeight: 52,
-        paddingHorizontal: 10,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'space-between' as const,
-        backgroundColor: palette.chrome,
-        borderBottomWidth: 1,
-        borderBottomColor: palette.border,
-        zIndex: 20,
-    },
-    statusGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7 },
-    statusDot: { width: 7, height: 7, borderRadius: 4 },
-    statusText: { color: palette.text, fontSize: 12, fontWeight: '600' as const },
-    securePill: {
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        gap: 3,
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 6,
-        backgroundColor: palette.control,
-    },
-    secureText: { color: palette.textMuted, fontSize: 9, fontWeight: '700' as const, letterSpacing: 0.5 },
-    toolbarActions: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
-    copiedText: { color: palette.success, fontSize: 11, marginRight: 2 },
-    iconButton: {
-        width: 44,
-        height: 44,
-        borderRadius: 11,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-    },
-    compactIconButton: {
-        width: 42,
-        height: 38,
-        borderRadius: 8,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        backgroundColor: palette.control,
-    },
-    controlPressed: { backgroundColor: palette.controlPressed },
-    controlDisabled: { opacity: 0.45 },
-    modalBackdrop: {
-        flex: 1,
-        position: 'relative' as const,
-        zIndex: 40,
-        justifyContent: 'flex-end' as const,
-        backgroundColor: 'rgba(0, 0, 0, 0.58)',
-    },
-    actionSheet: {
-        position: 'relative' as const,
-        zIndex: 50,
-        elevation: 24,
-        paddingHorizontal: 14,
-        paddingTop: 10,
-        backgroundColor: palette.chromeRaised,
-        borderTopLeftRadius: 20,
-        borderTopRightRadius: 20,
-        borderWidth: 1,
-        borderBottomWidth: 0,
-        borderColor: palette.border,
-    },
-    desktopMenu: {
-        position: 'absolute' as const,
-        top: 48,
-        right: 8,
-        width: 270,
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: palette.border,
-        backgroundColor: palette.chromeRaised,
-        zIndex: 50,
-        elevation: 24,
-        shadowColor: '#000000',
-        shadowOpacity: 0.42,
-        shadowRadius: 18,
-        shadowOffset: { width: 0, height: 10 },
-    },
-    sheetHandle: {
-        width: 34,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: palette.border,
-        alignSelf: 'center' as const,
-        marginBottom: 12,
-    },
-    sheetHeader: {
-        minHeight: 44,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'space-between' as const,
-        marginBottom: 4,
-    },
-    sheetTitle: { color: palette.text, fontSize: 15, fontWeight: '700' as const, marginLeft: 4 },
-    actionRow: {
-        minHeight: 48,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        gap: 12,
-        paddingHorizontal: 12,
-        borderRadius: 10,
-    },
-    actionLabel: { color: palette.text, fontSize: 14, fontWeight: '500' as const },
-    fontRow: {
-        minHeight: 52,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'space-between' as const,
-        paddingHorizontal: 12,
-    },
-    fontLabel: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12, flex: 1 },
-    stepper: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 8 },
-    dock: {
-        backgroundColor: palette.chrome,
-        borderTopWidth: 1,
-        borderTopColor: palette.border,
-        paddingTop: 7,
-    },
-    shortcutRow: { gap: 8, paddingHorizontal: 10, paddingBottom: 7 },
-    shortcutButton: {
-        minWidth: 40,
-        height: 38,
-        paddingHorizontal: 9,
-        borderRadius: 8,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        backgroundColor: palette.control,
-        borderWidth: 1,
-        borderColor: palette.border,
-    },
-    shortcutButtonActive: { borderColor: palette.accent, backgroundColor: 'rgba(184, 107, 255, 0.14)' },
-    modeButton: {
-        height: 38,
-        paddingHorizontal: 10,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        gap: 5,
-        borderRadius: 8,
-        backgroundColor: palette.control,
-        borderWidth: 1,
-        borderColor: palette.border,
-    },
-    modeButtonActive: { borderColor: palette.accent, backgroundColor: 'rgba(184, 107, 255, 0.10)' },
-    modeText: { color: palette.textMuted, fontSize: 9, fontWeight: '800' as const, letterSpacing: 0.5 },
-    modeTextActive: { color: palette.accent },
-    directoryContext: {
-        maxWidth: 150,
-        height: 38,
-        paddingHorizontal: 10,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        gap: 6,
-        borderRadius: 8,
-        backgroundColor: palette.control,
-        borderWidth: 1,
-        borderColor: palette.border,
-    },
-    directoryText: { flexShrink: 1, color: palette.textMuted, fontSize: 10, fontFamily: 'monospace' },
-    shortcutText: { color: palette.textMuted, fontSize: 10, fontWeight: '700' as const, letterSpacing: 0.35 },
-    shortcutTextActive: { color: palette.accent },
-    commandBar: {
-        minHeight: 46,
-        marginHorizontal: 10,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        gap: 8,
-        paddingLeft: 12,
-        paddingRight: 5,
-        borderRadius: 13,
-        borderWidth: 1,
-        borderColor: palette.border,
-        backgroundColor: palette.chromeRaised,
-    },
-    prompt: { color: palette.accent, fontSize: 16, fontWeight: '700' as const, fontFamily: 'monospace' },
-    commandInput: {
-        flex: 1,
-        minWidth: 0,
-        height: 44,
-        color: palette.text,
-        fontSize: 13,
-        fontFamily: 'monospace',
-        paddingVertical: 0,
-    },
-    sendButton: {
-        width: 38,
-        height: 38,
-        borderRadius: 10,
-        alignItems: 'center' as const,
-        justifyContent: 'center' as const,
-        backgroundColor: palette.accentStrong,
-    },
-    sendButtonDisabled: { backgroundColor: palette.control, opacity: 0.62 },
-    sendButtonPressed: { transform: [{ scale: 0.96 }] },
-};

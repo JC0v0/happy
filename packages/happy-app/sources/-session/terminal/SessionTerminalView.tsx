@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { ActivityIndicator, Keyboard, Text, useWindowDimensions, View } from 'react-native';
+import { useUnistyles } from 'react-native-unistyles';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Clipboard from 'expo-clipboard';
@@ -24,7 +25,7 @@ import { Text as UiText } from '@/components/ui/text';
 import { subscribeTerminalOutput } from './terminalOutputBus';
 import { TerminalOrderer, type TerminalMetadataEvent } from './terminalOrdering';
 import { TerminalRecordMux, terminalEventBelongsToDevice } from './terminalRecordMux';
-import { DEFAULT_TERMINAL_ANSI_COLORS } from './terminalTheme';
+import { DEFAULT_TERMINAL_ANSI_COLORS_DARK, DEFAULT_TERMINAL_ANSI_COLORS_LIGHT } from './terminalTheme';
 import { loadTerminalWebviewAssets, type TerminalWebviewAssets } from './terminalWebviewAsset';
 import { TERMINAL_TOUCH_SCROLL_SCRIPT } from './terminalTouchScroll';
 import { TerminalCommandDock, TerminalToolbar, type TerminalConnectionState } from './TerminalToolbar';
@@ -42,9 +43,11 @@ import {
 } from './terminalCommandState';
 import { TerminalTranscriptDecoder, terminalBlockOutputText, terminalTranscriptText } from './terminalTranscript';
 import { useTerminalModifierInput } from './use-terminal-modifiers';
-import { TERMINAL_VISUAL_THEME as palette } from './terminalVisualTheme';
+import { resolveTerminalPalette } from './terminalVisualTheme';
 import { SHARED_TERMINAL_COLS, SHARED_TERMINAL_ROWS } from './terminalSharedGrid';
 import type { TerminalAttachResponse, TerminalExecuteResponse } from '@slopus/happy-wire';
+import { SkiaTerminalView } from './skia/SkiaTerminalView';
+import { useSkiaTerminal } from './skia/useSkiaTerminal';
 
 /** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
@@ -63,7 +66,7 @@ const COPIED_FEEDBACK_MS = 2000;
 
 function buildHtml(
     assets: TerminalWebviewAssets,
-    colors: { background: string; foreground: string; selection: string },
+    colors: { background: string; foreground: string; selection: string; ansi: Record<string, string> },
     initialFontSize: number,
 ): string {
     // Escape the script-terminator sequence so the inlined JS bundles can't
@@ -72,7 +75,7 @@ function buildHtml(
     const bg = JSON.stringify(colors.background);
     const fg = JSON.stringify(colors.foreground);
     const sel = JSON.stringify(colors.selection);
-    const ansi = JSON.stringify(DEFAULT_TERMINAL_ANSI_COLORS);
+    const ansi = JSON.stringify(colors.ansi);
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -89,6 +92,7 @@ ${assets.css}
 }
 html,body{margin:0;padding:0;height:100%;background:${colors.background};overflow:hidden;-webkit-user-select:none;user-select:none;}
 #term-container{width:100%;height:100%;padding:4px;box-sizing:border-box;touch-action:none;overscroll-behavior:contain;}
+.xterm .xterm-viewport{background-color:${colors.background};}
 </style>
 </head>
 <body>
@@ -133,7 +137,7 @@ html,body{margin:0;padding:0;height:100%;background:${colors.background};overflo
     }
   }
   // App -> WebView control bridge (toolbar actions, host theme sync).
-  window.__happyTermSetTheme = function(theme){ term.options.theme = theme; };
+  window.__happyTermSetTheme = function(theme){ term.options.theme = theme; var vp=document.querySelector('.xterm-viewport'); if(vp&&theme.background)vp.style.backgroundColor=theme.background; };
   window.__happyTermClear = function(){ term.clear(); };
   window.__happyTermReset = function(){ term.reset(); };
   window.__happyTermSetFontSize = function(size){ happyFontZoom = size - happyBaseFontSize; fitSharedGrid(false); };
@@ -288,6 +292,15 @@ interface TerminalControls {
 export const SessionTerminalView = React.memo(function SessionTerminalView(props: { session: Session }) {
     const { width: windowWidth } = useWindowDimensions();
     const sessionId = props.session.id;
+    const { theme } = useUnistyles();
+
+    const terminalPalette = React.useMemo(
+        () => resolveTerminalPalette(theme.semantic, theme.dark ? 'dark' : 'light'),
+        [theme],
+    );
+    const themeRef = React.useRef(theme);
+    themeRef.current = theme;
+
     const terminalIdRef = React.useRef(loadOrCreateTerminalDeviceId());
     const terminalId = terminalIdRef.current;
     const webviewRef = React.useRef<WebView>(null);
@@ -376,10 +389,13 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
     // mount only - rebuilding would reload the WebView and drop terminal state.
     React.useEffect(() => {
         let cancelled = false;
+        const variant = theme.dark ? 'dark' : 'light';
+        const variantAnsi = variant === 'dark' ? DEFAULT_TERMINAL_ANSI_COLORS_DARK : DEFAULT_TERMINAL_ANSI_COLORS_LIGHT;
         const colors = {
-            background: palette.canvas,
-            foreground: palette.text,
-            selection: palette.selection,
+            background: terminalPalette.canvas,
+            foreground: terminalPalette.text,
+            selection: terminalPalette.selection,
+            ansi: variantAnsi,
         };
         loadTerminalWebviewAssets()
             .then((assets) => {
@@ -483,15 +499,15 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             }
             const synced = response.theme;
             const themeObj = {
-                ...DEFAULT_TERMINAL_ANSI_COLORS,
+                ...DEFAULT_TERMINAL_ANSI_COLORS_DARK,
                 ...Object.fromEntries(
                     Object.entries(synced).filter(([, v]) => v != null),
                 ),
-                background: palette.canvas,
-                foreground: palette.text,
-                cursor: palette.accent,
-                cursorAccent: palette.canvas,
-                selectionBackground: palette.selection,
+                background: terminalPalette.canvas,
+                foreground: terminalPalette.text,
+                cursor: terminalPalette.accent,
+                cursorAccent: terminalPalette.canvas,
+                selectionBackground: terminalPalette.selection,
             };
             inject(`window.__happyTermSetTheme(${JSON.stringify(themeObj)});`);
         };
@@ -834,7 +850,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
 
     return (
         <KeyboardAvoidingView
-            style={{ flex: 1, backgroundColor: palette.canvas }}
+            style={{ flex: 1, backgroundColor: terminalPalette.canvas }}
             behavior="height"
             automaticOffset
         >
@@ -860,13 +876,13 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                             left: 0,
                             opacity: effectiveViewMode === 'raw' ? 1 : 0,
                             borderTopWidth: 1,
-                            borderTopColor: palette.border,
+                            borderTopColor: terminalPalette.border,
                         }}
                     >
                     <WebView
                         ref={webviewRef}
                         source={{ html }}
-                        style={{ flex: 1, backgroundColor: palette.canvas }}
+                        style={{ flex: 1, backgroundColor: terminalPalette.canvas }}
                         scrollEnabled={false}
                         javaScriptEnabled={true}
                         onMessage={(event) => messageHandlerRef.current(event)}
@@ -880,7 +896,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                     </View>
                 ) : effectiveViewMode === 'raw' ? (
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator color={palette.textMuted} />
+                    <ActivityIndicator color={terminalPalette.textMuted} />
                     </View>
                 ) : null}
                 {effectiveViewMode === 'blocks' ? (

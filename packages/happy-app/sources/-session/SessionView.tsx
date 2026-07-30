@@ -1,16 +1,16 @@
-import { ChatHeaderView } from '@/components/ChatHeaderView';
+﻿import { ChatHeaderView } from '@/components/ChatHeaderView';
 import { Avatar } from '@/components/Avatar';
 import { useIsDataReady, useSession } from '@/sync/storage';
 import { t } from '@/text';
 import { useDeviceType, useHeaderHeight, useIsLandscape } from '@/utils/responsive';
 import { SessionTerminalView } from '@/-session/terminal/SessionTerminalView';
-import { TERMINAL_VISUAL_THEME } from '@/-session/terminal/terminalVisualTheme';
+import { resolveTerminalPalette } from '@/-session/terminal/terminalVisualTheme';
 import { getSessionAvatarId, getSessionName } from '@/utils/sessionUtils';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useNavigateBackFromSession } from '@/hooks/useNavigateToSession';
 import * as React from 'react';
 import { useMemo } from 'react';
-import { ActivityIndicator, Platform, Text, View } from 'react-native';
+import { ActivityIndicator, Platform, Text, View, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUnistyles } from 'react-native-unistyles';
 
@@ -20,14 +20,19 @@ import { useUnistyles } from 'react-native-unistyles';
  */
 export const SessionView = React.memo((props: { id: string }) => {
     const sessionId = props.id;
-    const router = useRouter();
     const session = useSession(sessionId);
+    const navigateBack = useNavigateBackFromSession(session?.metadata?.machineId);
     const isDataReady = useIsDataReady();
     const { theme } = useUnistyles();
     const safeArea = useSafeAreaInsets();
     const isLandscape = useIsLandscape();
     const deviceType = useDeviceType();
     const headerHeight = useHeaderHeight();
+
+    const terminalPalette = useMemo(
+        () => resolveTerminalPalette(theme.semantic, theme.dark ? 'dark' : 'light'),
+        [theme],
+    );
 
     const headerProps = useMemo(() => {
         if (!isDataReady) {
@@ -51,7 +56,7 @@ export const SessionView = React.memo((props: { id: string }) => {
 
     return (
         <>
-            {/* Status bar shadow for landscape mode */}
+            {/* Stable terminal boundary for landscape safe areas. */}
             {isLandscape && deviceType === 'phone' && (
                 <View style={{
                     position: 'absolute',
@@ -59,16 +64,10 @@ export const SessionView = React.memo((props: { id: string }) => {
                     left: 0,
                     right: 0,
                     height: safeArea.top,
-                    backgroundColor: isTerminal ? TERMINAL_VISUAL_THEME.chrome : theme.colors.surface,
+                    backgroundColor: isTerminal ? terminalPalette.chrome : theme.colors.surface,
                     zIndex: 1000,
-                    shadowColor: theme.colors.shadow.color,
-                    shadowOffset: {
-                        width: 0,
-                        height: 2,
-                    },
-                    shadowOpacity: theme.colors.shadow.opacity,
-                    shadowRadius: 3,
-                    elevation: 5,
+                    borderBottomWidth: StyleSheet.hairlineWidth,
+                    borderBottomColor: isTerminal ? terminalPalette.border : theme.semantic.border,
                 }} />
             )}
 
@@ -94,9 +93,9 @@ export const SessionView = React.memo((props: { id: string }) => {
                                 clientId={session.metadata?.client?.id}
                             />
                         ) : undefined}
-                        onBackPress={() => router.back()}
-                        backgroundColor={isTerminal ? TERMINAL_VISUAL_THEME.chrome : undefined}
-                        tintColor={isTerminal ? TERMINAL_VISUAL_THEME.text : undefined}
+                        onBackPress={navigateBack}
+                        backgroundColor={isTerminal ? terminalPalette.chrome : undefined}
+                        tintColor={isTerminal ? terminalPalette.text : undefined}
                     />
                 </View>
             )}
@@ -105,7 +104,7 @@ export const SessionView = React.memo((props: { id: string }) => {
             <View style={{
                 flex: 1,
                 paddingTop: !hideHeader ? safeArea.top + headerHeight : 0,
-                backgroundColor: isTerminal ? TERMINAL_VISUAL_THEME.canvas : theme.colors.surface,
+                backgroundColor: isTerminal ? terminalPalette.canvas : theme.colors.surface,
             }}>
                 {!isDataReady ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
