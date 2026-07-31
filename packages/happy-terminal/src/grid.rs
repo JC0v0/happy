@@ -74,26 +74,6 @@ impl Screen {
         }
     }
 
-    /// Scroll up by `n` lines, moving rows to scrollback.
-    pub fn scroll_up(&mut self, n: usize) {
-        if n == 0 || self.rows.is_empty() {
-            return;
-        }
-        let n = n.min(self.rows.len());
-        // Move top n rows to scrollback.
-        for _ in 0..n {
-            let mut row = self.rows.remove(0);
-            row.clear();
-            // The removed row (with content) goes to scrollback.
-            // Actually we need to save the content before clearing.
-            // Let me fix: save content, then reuse the cleared row.
-        }
-        // Actually, let me redo this properly.
-        // We need to: take the top n rows (with content) -> scrollback,
-        // then add n blank rows at the bottom.
-        // The above approach is wrong. Let me rewrite.
-    }
-
     /// Scroll up by `n` lines, moving top rows to scrollback and adding
     /// blank rows at the bottom.
     pub fn scroll_up_proper(&mut self, n: usize) {
@@ -128,11 +108,6 @@ impl Screen {
         for row in &mut self.rows {
             row.clear();
         }
-    }
-
-    /// Get a cell at (row, col). Returns None if out of bounds.
-    pub fn cell(&self, row: usize, col: usize) -> Option<&Cell> {
-        self.rows.get(row)?.cells.get(col)
     }
 
     /// Get a mutable cell at (row, col).

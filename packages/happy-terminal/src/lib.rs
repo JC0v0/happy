@@ -37,6 +37,8 @@ struct RenderData {
     cursor_visible: bool,
     cols: usize,
     rows_count: usize,
+    /// Number of rows held in scrollback history (above the viewport).
+    scrollback_count: usize,
 }
 
 fn color_rgb(idx: u8) -> u32 {
@@ -129,8 +131,61 @@ pub unsafe extern "C" fn terminal_render(ptr: *mut Terminal) -> *mut std::ffi::c
         cursor_visible: t.cursor_visible,
         cols: t.screen.cols,
         rows_count: t.screen.rows_count,
+        scrollback_count: t.screen.scrollback.len(),
     };
 
+    let json = serde_json::to_string(&data).unwrap_or_else(|_| "{}".to_string());
+    CString::new(json).unwrap_or_else(|_| CString::new("{}").unwrap()).into_raw()
+}
+
+/// Number of scrollback rows currently retained.
+#[no_mangle]
+pub unsafe extern "C" fn terminal_scrollback_len(ptr: *mut Terminal) -> u32 {
+    if ptr.is_null() { return 0; }
+    (*ptr).screen.scrollback.len() as u32
+}
+
+/// Render a viewport `scroll_offset` rows above the live edge.
+///
+/// `scroll_offset = 0` renders the live viewport (identical to terminal_render).
+/// `scroll_offset = k` shifts the window up by k rows into scrollback history.
+/// The cursor is hidden whenever the view is scrolled away from the live edge.
+/// Returns a malloc'd C string; JS must call terminal_free_string.
+#[no_mangle]
+pub unsafe extern "C" fn terminal_render_scrolled(ptr: *mut Terminal, scroll_offset: u32) -> *mut std::ffi::c_char {
+    if ptr.is_null() { return std::ptr::null_mut(); }
+    let t = &*ptr;
+    let sb = t.screen.scrollback.len();
+    let off = (scroll_offset as usize).min(sb);
+
+    let to_row_data = |row: &Row| RowData {
+        cells: row.cells.iter().map(|cell| {
+            let (fg_idx, bg_idx) = if cell.has_attr(ATTR_REVERSE) { (cell.bg, cell.fg) } else { (cell.fg, cell.bg) };
+            CellData { ch: cell.ch.to_string(), fg: color_rgb(fg_idx), bg: color_rgb(bg_idx), attrs: cell.attrs }
+        }).collect(),
+    };
+
+    let rows: Vec<RowData> = (0..t.screen.rows_count)
+        .map(|i| {
+            // idx < 0 reaches into scrollback, idx >= 0 into the live viewport.
+            let idx = i as isize - off as isize;
+            if idx < 0 {
+                to_row_data(&t.screen.scrollback[sb + idx as usize])
+            } else {
+                to_row_data(&t.screen.rows[idx as usize])
+            }
+        })
+        .collect();
+
+    let data = RenderData {
+        rows,
+        cursor_row: t.cursor_row,
+        cursor_col: t.cursor_col,
+        cursor_visible: t.cursor_visible && off == 0,
+        cols: t.screen.cols,
+        rows_count: t.screen.rows_count,
+        scrollback_count: sb,
+    };
     let json = serde_json::to_string(&data).unwrap_or_else(|_| "{}".to_string());
     CString::new(json).unwrap_or_else(|_| CString::new("{}").unwrap()).into_raw()
 }

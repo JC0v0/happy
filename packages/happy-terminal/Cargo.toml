@@ -12,13 +12,8 @@ crate-type = ["cdylib", "rlib"]
 vte = "0.13"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-wasm-bindgen = "0.2"
-serde-wasm-bindgen = "0.6"
 
 [profile.release]
 opt-level = "s"
 lto = true
 strip = true
-
-[package.metadata.wasm-pack.profile.release]
-wasm-opt = false
