@@ -1,5 +1,6 @@
 import type { Session } from '@/sync/storageTypes';
 import {
+    loadTerminalHistory,
     upsertTerminalHistoryEntry,
     type PersistedTerminalHistoryEntry,
 } from '@/sync/persistence';
@@ -33,4 +34,11 @@ export function persistCompletedTerminalCommand(
     const { favorite: _favorite, ...persisted } = entry;
     upsertTerminalHistoryEntry(persisted);
     return entry;
+}
+
+/**
+ * Recent terminal commands (most-recent first) for input history navigation.
+ */
+export function loadTerminalHistoryCommands(): string[] {
+    return loadTerminalHistory().map((entry) => entry.command);
 }

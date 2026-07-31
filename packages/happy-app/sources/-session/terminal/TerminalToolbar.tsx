@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { t } from '@/text';
+import { loadTerminalHistoryCommands } from './terminalHistory';
 import {
     loadTerminalCommandDraft,
     saveTerminalCommandDraft,
@@ -300,11 +301,13 @@ const stylesheet = StyleSheet.create((theme) => ({
     commandInput: {
         flex: 1,
         minWidth: 0,
-        height: 44,
+        minHeight: 44,
+        maxHeight: 120,
         color: theme.semantic.textPrimary,
         fontSize: 13,
         fontFamily: FontFamilies.mono.regular,
-        paddingVertical: 0,
+        paddingVertical: 8,
+        textAlignVertical: 'top',
     },
     sendButton: {
         width: 38,
@@ -476,6 +479,38 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
         saveTerminalCommandDraft(props.sessionId, '');
     }, [command, props]);
 
+    const historyRef = React.useRef<string[]>([]);
+    const historyIndexRef = React.useRef<number>(-1);
+    const historyDraftRef = React.useRef<string>('');
+    React.useEffect(() => {
+        historyRef.current = loadTerminalHistoryCommands();
+        historyIndexRef.current = -1;
+    }, []);
+    const navigateHistory = React.useCallback((direction: 'up' | 'down') => {
+        const history = historyRef.current;
+        if (history.length === 0) return;
+        if (direction === 'up') {
+            if (historyIndexRef.current === -1) {
+                historyDraftRef.current = command;
+                historyIndexRef.current = 0;
+            } else if (historyIndexRef.current < history.length - 1) {
+                historyIndexRef.current += 1;
+            } else {
+                return;
+            }
+        } else {
+            if (historyIndexRef.current === -1) return;
+            if (historyIndexRef.current > 0) {
+                historyIndexRef.current -= 1;
+            } else {
+                historyIndexRef.current = -1;
+                setCommand(historyDraftRef.current);
+                return;
+            }
+        }
+        setCommand(history[historyIndexRef.current] ?? '');
+    }, [command]);
+
     const pasteToTerminal = React.useCallback(() => {
         Clipboard.getStringAsync()
             .then((value) => {
@@ -528,18 +563,26 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 <ShortcutButton icon="chevron-down" onPress={() => Keyboard.dismiss()} />
             </ScrollView>
 
-            {props.viewMode === 'blocks' ? <View style={styles.commandBar}>
+            <View style={styles.commandBar}>
                 <Text style={styles.prompt}>&gt;</Text>
                 <TextInput
                     value={command}
                     onChangeText={updateCommand}
                     onSubmitEditing={submitCommand}
+                    onKeyPress={(e) => {
+                        if (e.nativeEvent.key === 'ArrowUp') {
+                            navigateHistory('up');
+                        } else if (e.nativeEvent.key === 'ArrowDown') {
+                            navigateHistory('down');
+                        }
+                    }}
                     placeholder={t('commandPalette.placeholder')}
                     placeholderTextColor={theme.semantic.textMuted}
                     style={styles.commandInput}
                     autoCapitalize="none"
                     autoCorrect={false}
                     returnKeyType="send"
+                    multiline
                     selectionColor={theme.semantic.focus}
                     accessibilityLabel={t('commandPalette.placeholder')}
                 />
@@ -557,7 +600,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 >
                     <Ionicons name="arrow-up" size={18} color={theme.semantic.textInverse} />
                 </Pressable>
-            </View> : null}
+            </View>
         </View>
         <TerminalShortcutSheet
             visible={shortcutSheetVisible}
