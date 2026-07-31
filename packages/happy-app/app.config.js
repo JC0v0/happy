@@ -88,6 +88,7 @@ export default {
                 monochromeImage: "./sources/assets/images/icon-monochrome.png",
                 backgroundColor: "#18171C"
             },
+            jsEngine: "jsc",
             permissions: [
                 "android.permission.ACCESS_NETWORK_STATE",
                 "android.permission.POST_NOTIFICATIONS",
