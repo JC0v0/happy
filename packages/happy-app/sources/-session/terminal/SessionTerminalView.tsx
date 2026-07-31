@@ -330,6 +330,12 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             .map((entry) => entry.id.slice(sessionId.length + 1)),
     ));
 
+    // Skia renderer feature flag. When on, the raw terminal view is drawn by
+    // the WASM terminal model + Skia instead of the WebView xterm.js, and the
+    // Skia view owns scroll/input/resize for the terminal surface.
+    const [skiaEnabled, setSkiaEnabled] = React.useState(false);
+    const { ready: skiaReady, termRef: skiaTermRef, resize: skiaResize } = useSkiaTerminal(80, 24);
+
     const isConnected = props.session.presence === 'online' && props.session.active;
     const connectionState: TerminalConnectionState = !isConnected
         ? 'disconnected'
@@ -337,6 +343,14 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             ? 'connecting'
             : 'connected';
     const [html, setHtml] = React.useState<string | null>(null);
+
+    // Grid geometry reported by the Skia view. Resize the WASM model and tell
+    // the host PTY to match so reflow stays consistent across both ends.
+    const handleSkiaGridSize = React.useCallback((cols: number, rows: number) => {
+        skiaResize(cols, rows);
+        apiSocket.sessionRPC(sessionId, 'terminal-resize', { t: 'resize', terminalId, cols, rows })
+            .catch((error) => console.warn('[terminal] terminal-resize failed:', error));
+    }, [sessionId, terminalId, skiaResize]);
 
     const sendRawTerminalInput = React.useCallback((data: string) => {
         if (data.length === 0) {
@@ -522,6 +536,18 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 pendingRenderEvents.push({ type: 'write', data: event.data });
                 if (webviewReady) {
                     scheduleFlush();
+                }
+                // Feed the Skia WASM terminal in parallel so it can render the
+                // same stream. The WebView path remains the primary renderer
+                // until the Skia flag is enabled.
+                if (skiaTermRef.current) {
+                    try {
+                        const bytes = decodeBase64(event.data, 'base64');
+                        skiaTermRef.current.write(bytes);
+                    } catch (e) {
+                        // Ignore malformed chunks; the WASM parser is tolerant
+                        // but the decode itself can throw on bad input.
+                    }
                 }
             } else if (event.type === 'metadata') {
                 pendingRenderEvents.push({ type: 'metadata', event: event.event });
@@ -861,9 +887,19 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                 onCopyAll={copyAll}
                 onClear={clearVisibleTerminal}
                 onFontSizeChange={(delta) => controlsRef.current?.changeFontSize(delta)}
+                skiaEnabled={skiaEnabled}
+                onToggleSkia={() => setSkiaEnabled((v) => !v)}
             />
             <View style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-                {html ? (
+                {skiaEnabled && skiaReady ? (
+                    <SkiaTerminalView
+                        termHandle={skiaTermRef.current}
+                        fontSize={fontSize}
+                        palette={terminalPalette}
+                        onInput={sendTerminalInput}
+                        onGridSizeChange={handleSkiaGridSize}
+                    />
+                ) : html ? (
                     <View
                         pointerEvents={effectiveViewMode === 'raw' ? 'auto' : 'none'}
                         accessibilityElementsHidden={effectiveViewMode !== 'raw'}

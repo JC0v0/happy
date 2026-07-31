@@ -39,6 +39,8 @@ interface TerminalToolbarProps {
     onCopyAll: () => void;
     onClear: () => void;
     onFontSizeChange: (delta: number) => void;
+    skiaEnabled?: boolean;
+    onToggleSkia?: () => void;
 }
 
 interface TerminalCommandDockProps {
@@ -378,6 +380,16 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
                     props.onClear();
                 }}
             />
+            {props.onToggleSkia ? (
+                <ActionRow
+                    icon={props.skiaEnabled ? 'flash' : 'flash-outline'}
+                    label={props.skiaEnabled ? 'Skia Renderer (On)' : 'Skia Renderer (Off)'}
+                    onPress={() => {
+                        setMenuVisible(false);
+                        props.onToggleSkia!();
+                    }}
+                />
+            ) : null}
             <View style={styles.fontRow}>
                 <View style={styles.fontLabel}>
                     <Ionicons name="text-outline" size={18} color={theme.semantic.textMuted} />

@@ -20,6 +20,8 @@ interface WasmExports {
     terminal_write(ptr: number, dataPtr: number, dataLen: number): void;
     terminal_resize(ptr: number, cols: number, rows: number): void;
     terminal_render(ptr: number): number;
+    terminal_render_scrolled(ptr: number, scrollOffset: number): number;
+    terminal_scrollback_len(ptr: number): number;
     terminal_free_string(ptr: number): void;
     terminal_clear(ptr: number): void;
     terminal_cols(ptr: number): number;
@@ -34,6 +36,7 @@ export interface RenderData {
     cursor_visible: boolean;
     cols: number;
     rows_count: number;
+    scrollback_count: number;
 }
 
 let wasmModule: WasmExports | null = null;
@@ -93,7 +96,20 @@ export class TerminalHandle {
     }
 
     render(): RenderData | null {
-        const jsonPtr = wasmModule!.terminal_render(this.ptr);
+        return this.parseRender(wasmModule!.terminal_render(this.ptr));
+    }
+
+    /** Render the viewport scrolled up by `scrollOffset` rows into history. */
+    renderScrolled(scrollOffset: number): RenderData | null {
+        return this.parseRender(wasmModule!.terminal_render_scrolled(this.ptr, scrollOffset));
+    }
+
+    /** Number of scrollback rows available to scroll into. */
+    scrollbackLen(): number {
+        return wasmModule!.terminal_scrollback_len(this.ptr);
+    }
+
+    private parseRender(jsonPtr: number): RenderData | null {
         if (!jsonPtr) return null;
         const mem = new Uint8Array(wasmModule!.memory.buffer);
         let len = 0;
@@ -118,9 +134,19 @@ export class TerminalHandle {
 export function useSkiaTerminal(initialCols: number, initialRows: number): {
     ready: boolean;
     termRef: React.MutableRefObject<TerminalHandle | null>;
+    /** Resize the WASM grid. Safe to call before ready; applied once loaded. */
+    resize: (cols: number, rows: number) => void;
 } {
     const [ready, setReady] = React.useState(false);
     const termRef = React.useRef<TerminalHandle | null>(null);
+    const sizeRef = React.useRef({ cols: initialCols, rows: initialRows });
+
+    const resize = React.useCallback((cols: number, rows: number) => {
+        if (cols <= 0 || rows <= 0) return;
+        if (cols === sizeRef.current.cols && rows === sizeRef.current.rows) return;
+        sizeRef.current = { cols, rows };
+        termRef.current?.resize(cols, rows);
+    }, []);
 
     React.useEffect(() => {
         if (typeof WebAssembly === 'undefined') {
@@ -131,7 +157,7 @@ export function useSkiaTerminal(initialCols: number, initialRows: number): {
         loadWasm()
             .then(() => {
                 if (cancelled) return;
-                termRef.current = new TerminalHandle(initialCols, initialRows);
+                termRef.current = new TerminalHandle(sizeRef.current.cols, sizeRef.current.rows);
                 setReady(true);
             })
             .catch((err: any) => console.warn('[skia] WASM load failed:', err?.message ?? err));
@@ -143,5 +169,5 @@ export function useSkiaTerminal(initialCols: number, initialRows: number): {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    return { ready, termRef };
+    return { ready, termRef, resize };
 }
