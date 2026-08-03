@@ -5,10 +5,12 @@ import { useAuth } from '@/auth/AuthContext';
 import { decodeBase64 } from '@/encryption/base64';
 import { encryptBox } from '@/encryption/libsodium';
 import { authApprove } from '@/auth/authApprove';
+import { authGetToken } from '@/auth/authGetToken';
 import { useCheckScannerPermissions } from '@/hooks/useCheckCameraPermissions';
 import { Modal } from '@/modal';
 import { t } from '@/text';
 import { sync } from '@/sync/sync';
+import { apiSocket } from '@/sync/apiSocket';
 
 interface UseConnectTerminalOptions {
     onSuccess?: () => void;
@@ -35,7 +37,15 @@ export function useConnectTerminal(options?: UseConnectTerminalOptions) {
             responseV2Bundle[0] = 0;
             responseV2Bundle.set(sync.encryption.contentDataKey, 1);
             const responseV2 = encryptBox(responseV2Bundle, publicKey);
-            await authApprove(auth.credentials!.token, publicKey, responseV1, responseV2);
+            // The web app may have a token issued by a different server (for
+            // example after switching from production to a local instance).
+            // Re-authenticate the existing device key against the active
+            // server before approving the terminal request.
+            const secret = decodeBase64(auth.credentials!.secret, 'base64url');
+            const activeServerToken = await authGetToken(secret);
+            await auth.login(activeServerToken, auth.credentials!.secret);
+            apiSocket.updateToken(activeServerToken);
+            await authApprove(activeServerToken, publicKey, responseV1, responseV2);
             
             Modal.alert(t('common.success'), t('modals.terminalConnectedSuccessfully'), [
                 { 

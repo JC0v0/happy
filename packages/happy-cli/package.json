@@ -14,90 +14,39 @@
   "bin": {
     "happy": "./bin/happy.mjs"
   },
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.cts",
-  "exports": {
-    ".": {
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      },
-      "import": {
-        "types": "./dist/index.d.mts",
-        "default": "./dist/index.mjs"
-      }
-    },
-    "./lib": {
-      "require": {
-        "types": "./dist/lib.d.cts",
-        "default": "./dist/lib.cjs"
-      },
-      "import": {
-        "types": "./dist/lib.d.mts",
-        "default": "./dist/lib.mjs"
-      }
-    }
-  },
   "files": [
-    "dist",
     "bin",
     "scripts",
     "tools/archives",
     "tools/licenses",
+    "tools/cli",
     "tools/host-agent",
+    "tools/server",
+    "tools/webapp",
     "package.json"
   ],
   "scripts": {
-    "typecheck": "tsc --noEmit",
     "bundle:server": "node scripts/bundle-server.cjs",
     "bundle:server:all": "node scripts/bundle-server.cjs --all-platforms",
     "bundle:webapp": "node scripts/bundle-webapp.cjs",
-    "build": "shx rm -rf dist && tsc --noEmit && pkgroll",
+    "build": "pnpm run native:stage",
+    "native:build": "node scripts/build-native-cli.cjs",
+    "native:stage": "node scripts/build-native-cli.cjs --stage",
+    "native:verify-staged": "node scripts/verify-native-cli-binaries.cjs",
     "host-agent:build": "node scripts/build-host-agent.cjs",
     "host-agent:stage": "node scripts/build-host-agent.cjs --stage",
     "host-agent:verify-staged": "node scripts/verify-host-agent-binaries.cjs",
-    "test": "pnpm run build && vitest run --project unit",
+    "test": "pnpm run rust:test",
+    "rust:test": "cargo test --locked --manifest-path Cargo.toml",
     "cli:install": "node scripts/install-local.cjs",
-    "prepublishOnly": "pnpm host-agent:verify-staged && pnpm test",
+    "prepublishOnly": "pnpm native:verify-staged && pnpm host-agent:verify-staged && pnpm test",
     "postinstall": "node scripts/unpack-tools.cjs"
   },
   "dependencies": {
-    "@paralleldrive/cuid2": "^2.2.2",
-    "@slopus/happy-wire": "workspace:*",
-    "@stablelib/hex": "^2.0.1",
-    "@types/cross-spawn": "^6.0.6",
-    "@types/qrcode-terminal": "^0.12.2",
-    "@types/react": "^19.2.7",
-    "axios": "^1.13.2",
-    "chalk": "^5.6.2",
-    "cross-spawn": "^7.0.6",
-    "expo-server-sdk": "^3.15.0",
-    "fastify": "^5.6.2",
-    "fastify-type-provider-zod": "^6.1.0",
-    "ink": "^6.5.1",
-    "open": "^10.2.0",
-    "ps-list": "^8.1.1",
-    "qrcode-terminal": "^0.12.0",
-    "react": "^19.2.0",
-    "socket.io-client": "^4.8.1",
-    "tar": "^7.5.2",
-    "tweetnacl": "^1.0.3",
-    "zod": "^4.0.0"
+    "tar": "^7.5.2"
   },
   "devDependencies": {
-    "@eslint/compat": "^1",
-    "@types/node": ">=20",
-    "cross-env": "^10.1.0",
-    "dotenv": "^16.6.1",
-    "eslint": "^9",
-    "eslint-config-prettier": "^10",
-    "pkgroll": "^2.14.2",
-    "shx": "^0.3.3",
-    "ts-node": "^10",
-    "tsx": "^4.20.6",
-    "typescript": "5.9.3",
-    "vitest": "^3.2.4"
+    "tsx": "^4.20.6"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"

@@ -6,7 +6,12 @@ on:
     paths:
       - "packages/happy-host-agent/**"
       - "packages/happy-cli/package.json"
+      - "packages/happy-cli/Cargo.toml"
+      - "packages/happy-cli/Cargo.lock"
+      - "packages/happy-cli/rust/**"
       - "packages/happy-cli/src/terminal/**"
+      - "packages/happy-cli/scripts/build-native-cli.cjs"
+      - "packages/happy-cli/scripts/verify-native-cli-binaries.cjs"
       - "packages/happy-cli/scripts/build-host-agent.cjs"
       - "packages/happy-cli/scripts/unpack-tools.cjs"
       - "packages/happy-cli/scripts/verify-host-agent-binaries.cjs"
@@ -17,7 +22,12 @@ on:
     paths:
       - "packages/happy-host-agent/**"
       - "packages/happy-cli/package.json"
+      - "packages/happy-cli/Cargo.toml"
+      - "packages/happy-cli/Cargo.lock"
+      - "packages/happy-cli/rust/**"
       - "packages/happy-cli/src/terminal/**"
+      - "packages/happy-cli/scripts/build-native-cli.cjs"
+      - "packages/happy-cli/scripts/verify-native-cli-binaries.cjs"
       - "packages/happy-cli/scripts/build-host-agent.cjs"
       - "packages/happy-cli/scripts/unpack-tools.cjs"
       - "packages/happy-cli/scripts/verify-host-agent-binaries.cjs"
@@ -88,10 +98,17 @@ jobs:
           --target ${{ matrix.target }}
           --platform ${{ matrix.platform }}
           --arch ${{ matrix.arch }}
+          && node packages/happy-cli/scripts/build-native-cli.cjs
+          --stage
+          --target ${{ matrix.target }}
+          --platform ${{ matrix.platform }}
+          --arch ${{ matrix.arch }}
       - uses: actions/upload-artifact@v4
         with:
           name: host-agent-${{ matrix.platform }}-${{ matrix.arch }}
-          path: packages/happy-cli/tools/host-agent
+          path: |
+            packages/happy-cli/tools/host-agent
+            packages/happy-cli/tools/cli
           if-no-files-found: error
 
   package:
@@ -102,7 +119,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: host-agent-*
-          path: packages/happy-cli/tools/host-agent
+          path: packages/happy-cli/tools
           merge-multiple: true
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -111,6 +128,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter happy host-agent:verify-staged
+      - run: pnpm --filter happy native:verify-staged
       - run: pnpm --filter @slopus/happy-wire build
       - run: pnpm --filter happy build
       - run: pnpm --filter happy pack --pack-destination packages/happy-cli

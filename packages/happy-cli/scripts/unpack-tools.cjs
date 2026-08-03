@@ -60,6 +60,21 @@ function prepareHostAgent(toolsDir) {
     }
 }
 
+function prepareNativeCli(toolsDir) {
+    if (os.platform() === 'win32') {
+        return;
+    }
+    const nativeCliPath = path.join(
+        toolsDir,
+        'cli',
+        os.platform() + '-' + os.arch(),
+        'happy'
+    );
+    if (fs.existsSync(nativeCliPath)) {
+        fs.chmodSync(nativeCliPath, 0o755);
+    }
+}
+
 /**
  * Check if tools are already unpacked for current platform
  */
@@ -131,6 +146,7 @@ async function unpackTools() {
         const archivesDir = path.join(toolsDir, 'archives');
         const unpackedPath = path.join(toolsDir, 'unpacked');
         prepareHostAgent(toolsDir);
+        prepareNativeCli(toolsDir);
         
         // Check if already unpacked
         if (areToolsUnpacked(toolsDir)) {
@@ -169,7 +185,7 @@ async function unpackTools() {
 }
 
 // Export for use as module
-module.exports = { unpackTools, getPlatformDir, getToolsDir, prepareHostAgent };
+module.exports = { unpackTools, getPlatformDir, getToolsDir, prepareHostAgent, prepareNativeCli };
 
 // Run if executed directly
 if (require.main === module) {

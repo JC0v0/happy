@@ -3,12 +3,16 @@
 **/.DS_Store
 /.idea
 /dist
+/target
 /tmp
 /node_modules
 oclif.manifest.json
 
 # Unpacked binaries (keep archives)
 /tools/unpacked/
+
+# Staged native release binaries are produced by CI/package builds.
+/tools/cli/
 
 # Bundled artifacts produced by scripts/bundle-{server,webapp}.cjs.
 # Committed to npm via .npmignore allowlist, but never to git.
