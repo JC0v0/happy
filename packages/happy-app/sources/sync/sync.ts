@@ -35,15 +35,9 @@ import {
     trackGitHubConnected,
     trackMessageSent,
     tracking,
-    trackPaywallCancelled,
-    trackPaywallError,
-    trackPaywallPresented,
-    trackPaywallPurchased,
-    trackPaywallRestored,
 } from '@/track';
 import type { MessageSentSource } from '@/track';
 import { parseToken } from '@/utils/parseToken';
-import { RevenueCat, LogLevel, PaywallResult } from './revenueCat';
 import { getServerUrl } from './serverConfig';
 import { config } from '@/config';
 import { log } from '@/log';
@@ -128,7 +122,6 @@ class Sync {
     private artifactDataKeys = new Map<string, Uint8Array>(); // Store artifact data encryption keys internally
     private settingsSync: InvalidateSync;
     private profileSync: InvalidateSync;
-    private purchasesSync: InvalidateSync;
     private machinesSync: InvalidateSync;
     private pushTokenSync: InvalidateSync;
     private nativeUpdateSync: InvalidateSync;
@@ -142,7 +135,6 @@ class Sync {
     private backgroundSendTimeout: ReturnType<typeof setTimeout> | null = null;
     private backgroundSendNotificationId: string | null = null;
     private backgroundSendStartedAt: number | null = null;
-    revenueCatInitialized = false;
 
     // Generic locking mechanism
     private recalculationLockCount = 0;
@@ -152,7 +144,6 @@ class Sync {
         this.sessionsSync = new InvalidateSync(this.fetchSessions);
         this.settingsSync = new InvalidateSync(this.syncSettings);
         this.profileSync = new InvalidateSync(this.fetchProfile);
-        this.purchasesSync = new InvalidateSync(this.syncPurchases);
         this.machinesSync = new InvalidateSync(this.fetchMachines);
         this.nativeUpdateSync = new InvalidateSync(this.fetchNativeUpdate);
         this.artifactsSync = new InvalidateSync(this.fetchArtifactsList);
@@ -188,7 +179,6 @@ class Sync {
                     this.failPendingOutboxMessages('Message failed to send in background after 30s. Please retry.');
                 }
                 log.log('📱 App became active');
-                this.purchasesSync.invalidate();
                 this.profileSync.invalidate();
                 this.machinesSync.invalidate();
                 this.pushTokenSync.invalidate();
@@ -231,9 +221,6 @@ class Sync {
 
         // Await profile sync to have fresh profile
         await this.profileSync.awaitQueue();
-
-        // Await purchases sync to have fresh purchases
-        await this.purchasesSync.awaitQueue();
     }
 
     async restore(credentials: AuthCredentials, encryption: Encryption) {
@@ -251,22 +238,11 @@ class Sync {
         // Subscribe to updates
         this.subscribeToUpdates();
 
-        // Sync initial PostHog opt-out state with stored settings
-        if (tracking) {
-            const currentSettings = storage.getState().settings;
-            if (currentSettings.analyticsOptOut) {
-                tracking.optOut();
-            } else {
-                tracking.optIn();
-            }
-        }
-
         // Invalidate sync
         log.log('🔄 #init: Invalidating all syncs');
         this.sessionsSync.invalidate();
         this.settingsSync.invalidate();
         this.profileSync.invalidate();
-        this.purchasesSync.invalidate();
         this.machinesSync.invalidate();
         this.pushTokenSync.invalidate();
         this.nativeUpdateSync.invalidate();
@@ -763,129 +739,12 @@ class Sync {
         this.pendingSettings = { ...this.pendingSettings, ...delta };
         savePendingSettings(this.pendingSettings);
 
-        // Sync PostHog opt-out state if it was changed
-        if (tracking && 'analyticsOptOut' in delta) {
-            const currentSettings = storage.getState().settings;
-            if (currentSettings.analyticsOptOut) {
-                tracking.optOut();
-            } else {
-                tracking.optIn();
-            }
-        }
-
         // Invalidate settings sync
         this.settingsSync.invalidate();
     }
 
-    refreshPurchases = () => {
-        this.purchasesSync.invalidate();
-    }
-
     refreshProfile = async () => {
         await this.profileSync.invalidateAndAwait();
-    }
-
-    purchaseProduct = async (productId: string): Promise<{ success: boolean; error?: string }> => {
-        try {
-            // Check if RevenueCat is initialized
-            if (!this.revenueCatInitialized) {
-                return { success: false, error: 'RevenueCat not initialized' };
-            }
-
-            // Fetch the product
-            const products = await RevenueCat.getProducts([productId]);
-            if (products.length === 0) {
-                return { success: false, error: `Product '${productId}' not found` };
-            }
-
-            // Purchase the product
-            const product = products[0];
-            const { customerInfo } = await RevenueCat.purchaseStoreProduct(product);
-
-            // Update local purchases data
-            storage.getState().applyPurchases(customerInfo);
-
-            return { success: true };
-        } catch (error: any) {
-            // Check if user cancelled
-            if (error.userCancelled) {
-                return { success: false, error: 'Purchase cancelled' };
-            }
-
-            // Return the error message
-            return { success: false, error: error.message || 'Purchase failed' };
-        }
-    }
-
-    getOfferings = async (): Promise<{ success: boolean; offerings?: any; error?: string }> => {
-        try {
-            // Check if RevenueCat is initialized
-            if (!this.revenueCatInitialized) {
-                return { success: false, error: 'RevenueCat not initialized' };
-            }
-
-            // Fetch offerings
-            const offerings = await RevenueCat.getOfferings();
-
-            // Return the offerings data
-            return {
-                success: true,
-                offerings: {
-                    current: offerings.current,
-                    all: offerings.all
-                }
-            };
-        } catch (error: any) {
-            return { success: false, error: error.message || 'Failed to fetch offerings' };
-        }
-    }
-
-    presentPaywall = async (flow?: string): Promise<{ success: boolean; purchased?: boolean; error?: string }> => {
-        try {
-            // Check if RevenueCat is initialized
-            if (!this.revenueCatInitialized) {
-                const error = 'RevenueCat not initialized';
-                trackPaywallError(error, flow);
-                return { success: false, error };
-            }
-
-            // Track paywall presentation
-            trackPaywallPresented(flow);
-
-            // Present the paywall (with flow custom variable if specified)
-            const result = await RevenueCat.presentPaywall(
-                flow ? { customVariables: { flow } } : undefined
-            );
-
-            // Handle the result
-            switch (result) {
-                case PaywallResult.PURCHASED:
-                    trackPaywallPurchased(flow);
-                    // Refresh customer info after purchase
-                    await this.syncPurchases();
-                    return { success: true, purchased: true };
-                case PaywallResult.RESTORED:
-                    trackPaywallRestored(flow);
-                    // Refresh customer info after restore
-                    await this.syncPurchases();
-                    return { success: true, purchased: true };
-                case PaywallResult.CANCELLED:
-                    trackPaywallCancelled(flow);
-                    return { success: true, purchased: false };
-                case PaywallResult.NOT_PRESENTED:
-                    trackPaywallError('Paywall not presented', flow);
-                    return { success: false, error: 'Paywall not available on this platform' };
-                case PaywallResult.ERROR:
-                default:
-                    const errorMsg = 'Failed to present paywall';
-                    trackPaywallError(errorMsg, flow);
-                    return { success: false, error: errorMsg };
-            }
-        } catch (error: any) {
-            const errorMessage = error.message || 'Failed to present paywall';
-            trackPaywallError(errorMessage, flow);
-            return { success: false, error: errorMessage };
-        }
     }
 
     async assumeUsers(userIds: string[]): Promise<void> {
@@ -1600,11 +1459,6 @@ class Sync {
                     // Update local storage with merged result at server's version
                     this.applyServerSettings(mergedSettings, data.currentVersion);
 
-                    // Sync tracking state with merged settings
-                    if (tracking) {
-                        mergedSettings.analyticsOptOut ? tracking.optOut() : tracking.optIn();
-                    }
-
                     // Log and retry
                     console.log('settings version-mismatch, retrying', {
                         serverVersion: data.currentVersion,
@@ -1656,15 +1510,6 @@ class Sync {
 
         // Apply settings to storage, re-layering any pending local changes on top
         this.applyServerSettings(parsedSettings, data.settingsVersion);
-
-        // Sync PostHog opt-out state with settings
-        if (tracking) {
-            if (parsedSettings.analyticsOptOut) {
-                tracking.optOut();
-            } else {
-                tracking.optIn();
-            }
-        }
     }
 
     private fetchProfile = async () => {
@@ -1755,57 +1600,6 @@ class Sync {
         } catch (error) {
             console.log('[fetchNativeUpdate] Error:', error);
             storage.getState().applyNativeUpdateStatus(null);
-        }
-    }
-
-    private syncPurchases = async () => {
-        try {
-            // Initialize RevenueCat if not already done
-            if (!this.revenueCatInitialized) {
-                // Get the appropriate API key based on platform
-                let apiKey: string | undefined;
-
-                if (Platform.OS === 'ios') {
-                    apiKey = config.revenueCatAppleKey;
-                } else if (Platform.OS === 'android') {
-                    apiKey = config.revenueCatGoogleKey;
-                } else if (Platform.OS === 'web') {
-                    apiKey = config.revenueCatStripeKey;
-                }
-
-                if (!apiKey) {
-                    console.log(`RevenueCat: No API key found for platform ${Platform.OS}`);
-                    return;
-                }
-
-                // Configure RevenueCat
-                if (__DEV__) {
-                    RevenueCat.setLogLevel(LogLevel.DEBUG);
-                }
-
-                // Initialize with the public ID as user ID
-                RevenueCat.configure({
-                    apiKey,
-                    appUserID: this.serverID, // In server this is a CUID, which we can assume is globaly unique even between servers
-                    useAmazon: false,
-                });
-
-                this.revenueCatInitialized = true;
-                console.log('RevenueCat initialized successfully');
-            }
-
-            // Sync purchases
-            await RevenueCat.syncPurchases();
-
-            // Fetch customer info
-            const customerInfo = await RevenueCat.getCustomerInfo();
-
-            // Apply to storage (storage handles the transformation)
-            storage.getState().applyPurchases(customerInfo);
-
-        } catch (error) {
-            console.error('Failed to sync purchases:', error);
-            // Don't throw - purchases are optional
         }
     }
 

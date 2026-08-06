@@ -2,7 +2,6 @@ import { MMKV } from 'react-native-mmkv';
 import { randomUUID } from 'expo-crypto';
 import { Settings, settingsDefaults, settingsParse, settingsToSyncPayload, SettingsSchema } from './settings';
 import { LocalSettings, localSettingsDefaults, localSettingsParse } from './localSettings';
-import { Purchases, purchasesDefaults, purchasesParse } from './purchases';
 import { Profile, profileDefaults, profileParse } from './profile';
 
 type PermissionModeKey = string;
@@ -132,24 +131,6 @@ export function loadThemePreference(): 'light' | 'dark' | 'adaptive' {
         }
     }
     return localSettingsDefaults.themePreference;
-}
-
-export function loadPurchases(): Purchases {
-    const purchases = mmkv.getString('purchases');
-    if (purchases) {
-        try {
-            const parsed = JSON.parse(purchases);
-            return purchasesParse(parsed);
-        } catch (e) {
-            console.error('Failed to parse purchases', e);
-            return { ...purchasesDefaults };
-        }
-    }
-    return { ...purchasesDefaults };
-}
-
-export function savePurchases(purchases: Purchases) {
-    mmkv.set('purchases', JSON.stringify(purchases));
 }
 
 export function loadSessionDrafts(): Record<string, string> {

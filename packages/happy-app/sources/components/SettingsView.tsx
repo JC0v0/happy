@@ -1,4 +1,4 @@
-import { View, ScrollView, Pressable, Platform } from 'react-native';
+import { View, ScrollView, Platform } from 'react-native';
 import { openExternalUrl } from '@/utils/openExternalUrl';
 import { Image } from 'expo-image';
 import * as React from 'react';
@@ -12,18 +12,16 @@ import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
 import { useConnectTerminal } from '@/hooks/useConnectTerminal';
-import { useEntitlement, useLocalSettingMutable, useSetting } from '@/sync/storage';
+import { useLocalSettingMutable } from '@/sync/storage';
 import { sync } from '@/sync/sync';
 import { isUsingCustomServer } from '@/sync/serverConfig';
-import { trackPaywallButtonClicked, trackWhatsNewClicked } from '@/track';
+import { trackWhatsNewClicked } from '@/track';
 import { Modal } from '@/modal';
 import { useMultiClick } from '@/hooks/useMultiClick';
 import { useAllMachines } from '@/sync/storage';
 import { isMachineOnline } from '@/utils/machineUtils';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { layout } from '@/components/layout';
-import { useHappyAction } from '@/hooks/useHappyAction';
-import { getGitHubOAuthParams, disconnectGitHub } from '@/sync/apiGithub';
 import { useProfile } from '@/sync/storage';
 import { getDisplayName, getAvatarUrl, getBio } from '@/sync/profile';
 import { Avatar } from '@/components/Avatar';
@@ -86,7 +84,6 @@ export const SettingsView = React.memo(function SettingsView() {
     const versionSubtitle = formatBuildSubtitle(getBuildConfig());
     const auth = useAuth();
     const [devModeEnabled, setDevModeEnabled] = useLocalSettingMutable('devModeEnabled');
-    const isPro = __DEV__ || useEntitlement('pro');
     const isCustomServer = isUsingCustomServer();
     const [showOfflineMachines, setShowOfflineMachines] = React.useState(false);
     const allMachinesWithOffline = useAllMachines({ includeOffline: true });
@@ -107,22 +104,8 @@ export const SettingsView = React.memo(function SettingsView() {
 
     const { connectTerminal, connectWithUrl, isLoading } = useConnectTerminal();
 
-    const handleGitHub = async () => {
-        await openExternalUrl('https://github.com/slopus/happy');
-    };
-
     const handleReportIssue = async () => {
-        await openExternalUrl('https://github.com/slopus/happy/issues');
-    };
-
-    const handleSubscribe = async () => {
-        trackPaywallButtonClicked('voluntary_support');
-        const result = await sync.presentPaywall('voluntary_support');
-        if (!result.success) {
-            console.error('Failed to present paywall:', result.error);
-        } else if (result.purchased) {
-            console.log('Purchase successful!');
-        }
+        await openExternalUrl('https://github.com/jc0v0/happy/issues');
     };
 
     // Use the multi-click hook for version clicks
@@ -137,27 +120,6 @@ export const SettingsView = React.memo(function SettingsView() {
     }, {
         requiredClicks: 10,
         resetTimeout: 2000
-    });
-
-    // Connection status
-    const isGitHubConnected = !!profile.github;
-
-    // GitHub connection
-    const [connectingGitHub, connectGitHub] = useHappyAction(async () => {
-        const params = await getGitHubOAuthParams(auth.credentials!);
-        await openExternalUrl(params.url);
-    });
-
-    // GitHub disconnection
-    const [disconnectingGitHub, handleDisconnectGitHub] = useHappyAction(async () => {
-        const confirmed = await Modal.confirm(
-            t('modals.disconnectGithub'),
-            t('modals.disconnectGithubConfirm'),
-            { confirmText: t('modals.disconnect'), destructive: true }
-        );
-        if (confirmed) {
-            await disconnectGitHub(auth.credentials!);
-        }
     });
 
     return (
@@ -239,35 +201,6 @@ export const SettingsView = React.memo(function SettingsView() {
             )}
 
             {/* Support Us */}
-            <ItemGroup>
-                <Item
-                    title={t('settings.supportUs')}
-                    subtitle={isPro ? t('settings.supportUsSubtitlePro') : t('settings.supportUsSubtitle')}
-                    icon={<Ionicons name="heart" size={29} color="#FF3B30" />}
-                    showChevron={false}
-                    onPress={isPro ? undefined : handleSubscribe}
-                />
-            </ItemGroup>
-
-            <ItemGroup title={t('settings.connectedAccounts')}>
-                <Item
-                    title={t('settings.github')}
-                    subtitle={isGitHubConnected
-                        ? t('settings.githubConnected', { login: profile.github?.login! })
-                        : t('settings.connectGithubAccount')
-                    }
-                    icon={
-                        <Ionicons
-                            name="logo-github"
-                            size={29}
-                            color={isGitHubConnected ? theme.colors.status.connected : theme.colors.textSecondary}
-                        />
-                    }
-                    onPress={isGitHubConnected ? handleDisconnectGitHub : connectGitHub}
-                    loading={connectingGitHub || disconnectingGitHub}
-                    showChevron={false}
-                />
-            </ItemGroup>
 
             {/* Machines (sorted: online first, then last seen desc) */}
             {allMachinesWithOffline.length > 0 && (
@@ -379,33 +312,10 @@ export const SettingsView = React.memo(function SettingsView() {
                     }}
                 />
                 <Item
-                    title={t('settings.github')}
-                    icon={<Ionicons name="logo-github" size={29} color={theme.colors.text} />}
-                    detail="slopus/happy"
-                    onPress={handleGitHub}
-                />
-                <Item
                     title={t('settings.reportIssue')}
                     icon={<Ionicons name="bug-outline" size={29} color="#FF3B30" />}
                     onPress={handleReportIssue}
                 />
-                <Item
-                    title={t('settings.privacyPolicy')}
-                    icon={<Ionicons name="shield-checkmark-outline" size={29} color="#007AFF" />}
-                    onPress={() => openExternalUrl('https://happy.engineering/privacy/')}
-                />
-                <Item
-                    title={t('settings.termsOfService')}
-                    icon={<Ionicons name="document-text-outline" size={29} color="#007AFF" />}
-                    onPress={() => openExternalUrl('https://github.com/slopus/happy/blob/main/TERMS.md')}
-                />
-                {Platform.OS === 'ios' && (
-                    <Item
-                        title={t('settings.eula')}
-                        icon={<Ionicons name="document-text-outline" size={29} color="#007AFF" />}
-                        onPress={() => openExternalUrl('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/')}
-                    />
-                )}
                 <Item
                     title={t('common.version')}
                     subtitle={versionSubtitle}

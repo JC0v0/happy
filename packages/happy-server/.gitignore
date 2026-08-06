@@ -2,3 +2,6 @@ webapp/
 data/
 .logs/
 *.tgz
+# PGlite WASM runtime files copied from node_modules at dev startup
+pglite.wasm
+pglite.data

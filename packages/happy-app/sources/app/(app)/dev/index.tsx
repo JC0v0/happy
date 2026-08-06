@@ -384,12 +384,6 @@ export default function DevScreen() {
             {/* System */}
             <ItemGroup title={devText('System', '系统', '系統')}>
                 <Item
-                    title={devText('Purchases', '购买信息', '購買資訊')}
-                    subtitle={devText('View subscriptions and entitlements', '查看订阅和可用权益', '查看訂閱和可用權益')}
-                    icon={<Ionicons name="card-outline" size={28} color="#007AFF" />}
-                    onPress={() => router.push('/dev/purchases')}
-                />
-                <Item
                     title={devText('Expo Constants', 'Expo 常量', 'Expo 常數')}
                     subtitle={devText('View expoConfig, manifests, and system constants', '查看 expoConfig、清单和系统常量', '查看 expoConfig、資訊清單和系統常數')}
                     icon={<Ionicons name="information-circle-outline" size={28} color="#007AFF" />}

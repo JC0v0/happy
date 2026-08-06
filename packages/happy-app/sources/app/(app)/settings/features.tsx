@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
-import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
+import { useSettingMutable } from '@/sync/storage';
 import { Switch } from '@/components/Switch';
 import { localizedText, t } from '@/text';
 import { useUnistyles } from 'react-native-unistyles';
@@ -11,8 +11,6 @@ import { useUnistyles } from 'react-native-unistyles';
 export default function FeaturesSettingsScreen() {
     const { theme } = useUnistyles();
     const [experiments, setExperiments] = useSettingMutable('experiments');
-    const [analyticsOptOut, setAnalyticsOptOut] = useSettingMutable('analyticsOptOut');
-    const [commandPaletteEnabled, setCommandPaletteEnabled] = useLocalSettingMutable('commandPaletteEnabled');
     const [hideInactiveSessions, setHideInactiveSessions] = useSettingMutable('hideInactiveSessions');
     const [sortSessionsByActivity, setSortSessionsByActivity] = useSettingMutable('sortSessionsByActivity');
 
@@ -71,46 +69,6 @@ export default function FeaturesSettingsScreen() {
                     showChevron={false}
                 />
             </ItemGroup>
-
-            {/* Privacy */}
-            <ItemGroup
-                title={t('settingsFeatures.privacy')}
-                footer={t('settingsFeatures.privacyDescription')}
-            >
-                <Item
-                    title={t('settingsFeatures.disableAnalytics')}
-                    subtitle={analyticsOptOut ? t('settingsFeatures.analyticsDisabled') : t('settingsFeatures.analyticsEnabled')}
-                    icon={<Ionicons name="analytics-outline" size={24} color={theme.semantic.status.error} />}
-                    rightElement={
-                        <Switch
-                            value={analyticsOptOut}
-                            onValueChange={setAnalyticsOptOut}
-                        />
-                    }
-                    showChevron={false}
-                />
-            </ItemGroup>
-
-            {/* Web-only Features */}
-            {Platform.OS === 'web' && (
-                <ItemGroup
-                    title={t('settingsFeatures.webFeatures')}
-                    footer={t('settingsFeatures.webFeaturesDescription')}
-                >
-                    <Item
-                        title={t('settingsFeatures.commandPalette')}
-                        subtitle={commandPaletteEnabled ? t('settingsFeatures.commandPaletteEnabled') : t('settingsFeatures.commandPaletteDisabled')}
-                        icon={<Ionicons name="keypad-outline" size={24} color={theme.semantic.focus} />}
-                        rightElement={
-                            <Switch
-                                value={commandPaletteEnabled}
-                                onValueChange={setCommandPaletteEnabled}
-                            />
-                        }
-                        showChevron={false}
-                    />
-                </ItemGroup>
-            )}
         </ItemList>
     );
 }
