@@ -201,10 +201,6 @@ export default function RootLayout() {
                 options={{ headerTitle: localizedText('QR Code Test', '二维码测试', 'QR Code 測試') }}
             />
             <Stack.Screen
-                name="dev/purchases"
-                options={{ headerTitle: localizedText('Purchases', '购买信息', '購買資訊') }}
-            />
-            <Stack.Screen
                 name="dev/expo-constants"
                 options={{ headerTitle: localizedText('Expo Constants', 'Expo 配置信息', 'Expo 設定資訊') }}
             />
