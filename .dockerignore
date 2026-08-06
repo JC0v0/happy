@@ -1,14 +1,22 @@
-.git
-.DS_Store
-.claude
-.dev
-node_modules
+# Dependencies & build artifacts (never needed in the build context)
 **/node_modules
-**/dist
-**/.claude
-**/.expo
-**/.turbo
-**/.next
-**/ios/Pods
-**/src-tauri/target
 **/target
+**/dist
+**/build
+**/.expo
+**/.eas
+**/.metro
+
+# VCS & local scratch
+.git
+.gitignore
+.tmp
+environments
+.rust-cli-smoke
+.rust-cli-smoke-final
+
+# Editor / OS noise
+.vscode
+.idea
+*.log
+.DS_Store
