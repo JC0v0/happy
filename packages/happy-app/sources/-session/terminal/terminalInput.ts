@@ -56,6 +56,15 @@ export function terminalCommandData(command: string): string | null {
     return normalized === null ? null : `${normalized}\r`;
 }
 
+/**
+ * Wrap clipboard text in bracketed-paste markers when the active program has
+ * enabled bracketed paste (CSI ? 2004 h). Unwrapped multiline input would be
+ * executed line-by-line by TUIs and shells that opt into bracketed paste.
+ */
+export function wrapPasteForTerminal(text: string, bracketedPaste: boolean): string {
+    return bracketedPaste ? `\x1b[200~${text}\x1b[201~` : text;
+}
+
 /** Complete command without transport-specific Enter bytes. */
 export function terminalCommandText(command: string): string | null {
     const trimmed = command.trim();

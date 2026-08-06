@@ -26,6 +26,8 @@ import {
     terminalShortcutData,
     type TerminalShortcut,
 } from './terminalInput';
+import { wrapPasteForTerminal } from './terminalInput';
+import { getTerminalModes } from './terminalModes';
 import { TERMINAL_VISUAL_THEME as terminalPalette } from './terminalVisualTheme';
 import { TerminalShortcutSheet } from './terminal-shortcut-sheet';
 import { FontFamilies } from '@/constants/Typography';
@@ -527,7 +529,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
         Clipboard.getStringAsync()
             .then((value) => {
                 if (value.length > 0) {
-                    props.onSendInput(value);
+                    props.onSendInput(wrapPasteForTerminal(value, getTerminalModes().bracketedPaste));
                 }
             })
             .catch((error) => console.warn('[terminal] Paste failed:', error));

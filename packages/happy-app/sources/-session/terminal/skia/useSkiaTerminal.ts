@@ -23,12 +23,20 @@ interface WasmExports {
     terminal_render_scrolled(ptr: number, scrollOffset: number): number;
     terminal_scrollback_len(ptr: number): number;
     terminal_free_string(ptr: number): void;
+    terminal_take_events(ptr: number): number;
     terminal_clear(ptr: number): void;
     terminal_cols(ptr: number): number;
     terminal_rows(ptr: number): number;
 }
 
-export interface CellData { ch: string; fg: number; bg: number; attrs: number; }
+export interface CellData { ch: string; fg: number; bg: number; attrs: number; link?: string | null; }
+export interface TerminalModesData {
+    active_alt: boolean;
+    bracketed_paste: boolean;
+    auto_wrap: boolean;
+    insert_mode: boolean;
+    cursor_visible: boolean;
+}
 export interface RenderData {
     rows: { cells: CellData[] }[];
     cursor_row: number;
@@ -37,6 +45,13 @@ export interface RenderData {
     cols: number;
     rows_count: number;
     scrollback_count: number;
+    modes?: TerminalModesData;
+}
+
+/** OSC event surfaced to the app (window title, clipboard write). */
+export interface TerminalOscEvent {
+    type: 'title' | 'clipboard';
+    value: string;
 }
 
 let wasmModule: WasmExports | null = null;
@@ -107,6 +122,23 @@ export class TerminalHandle {
     /** Number of scrollback rows available to scroll into. */
     scrollbackLen(): number {
         return wasmModule!.terminal_scrollback_len(this.ptr);
+    }
+
+    /** Take pending OSC events (title/clipboard) and clear the queue. */
+    takeEvents(): TerminalOscEvent[] {
+        const ptr = wasmModule!.terminal_take_events(this.ptr);
+        if (!ptr) return [];
+        const mem = new Uint8Array(wasmModule!.memory.buffer);
+        let len = 0;
+        while (mem[ptr + len] !== 0) len++;
+        const json = new TextDecoder().decode(mem.slice(ptr, ptr + len));
+        wasmModule!.terminal_free_string(ptr);
+        try {
+            const parsed = JSON.parse(json);
+            return Array.isArray(parsed) ? parsed as TerminalOscEvent[] : [];
+        } catch {
+            return [];
+        }
     }
 
     private parseRender(jsonPtr: number): RenderData | null {

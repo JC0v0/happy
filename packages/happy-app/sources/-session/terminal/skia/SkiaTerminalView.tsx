@@ -30,7 +30,8 @@ import {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Asset } from 'expo-asset';
 import { readAsStringAsync } from 'expo-file-system/legacy';
-import type { RenderData, TerminalHandle } from './useSkiaTerminal';
+import type { RenderData, TerminalHandle, TerminalOscEvent } from './useSkiaTerminal';
+import { setTerminalModes } from '../terminalModes';
 import { hardwareKeyToTerminalInput } from './skiaHardwareKeys';
 import type { TerminalPalette } from '../terminalVisualTheme';
 
@@ -45,11 +46,22 @@ export interface SkiaTerminalViewProps {
     onInput: (data: string) => void;
     /** Report grid geometry changes (cols/rows derived from measured px). */
     onGridSizeChange: (cols: number, rows: number) => void;
+    /** OSC events (window title, clipboard writes) surfaced by the WASM model. */
+    onOscEvent?: (events: TerminalOscEvent[]) => void;
 }
 
 const CELL_WIDTH_RATIO = 0.6;
 const CELL_HEIGHT_RATIO = 1.2;
 const SCROLL_SNAP_THRESHOLD = 4;
+
+// Mirrors cell.rs ATTR_* bitflags.
+const ATTR_UNDERLINE = 4;
+const ATTR_DIM = 16;
+const ATTR_STRIKE = 32;
+
+function colorWithAlpha(c: Float32Array, alpha: number): Float32Array {
+    return new Float32Array([c[0], c[1], c[2], alpha]);
+}
 
 function toSkiaColor(rgb: number): Float32Array {
     const r = (rgb >> 16) & 0xff;
@@ -115,7 +127,7 @@ async function loadTerminalFont(fontSize: number): Promise<FontCache | null> {
 export const SkiaTerminalView = React.memo(function SkiaTerminalView(
     props: SkiaTerminalViewProps,
 ): React.ReactElement {
-    const { termHandle, fontSize = 13, palette, onInput, onGridSizeChange } = props;
+    const { termHandle, fontSize = 13, palette, onInput, onGridSizeChange, onOscEvent } = props;
     const [font, setFont] = React.useState<SkFont | null>(null);
     const [renderData, setRenderData] = React.useState<RenderData | null>(null);
     const [scrollOffset, setScrollOffset] = React.useState(0);
@@ -123,6 +135,9 @@ export const SkiaTerminalView = React.memo(function SkiaTerminalView(
     const inputRef = React.useRef<TextInput>(null);
     const scrollOffsetRef = React.useRef(0);
     scrollOffsetRef.current = scrollOffset;
+    const activeAltRef = React.useRef(false);
+    const onOscEventRef = React.useRef(onOscEvent);
+    React.useEffect(() => { onOscEventRef.current = onOscEvent; }, [onOscEvent]);
 
     const cellWidth = fontSize * CELL_WIDTH_RATIO;
     const cellHeight = fontSize * CELL_HEIGHT_RATIO;
@@ -162,7 +177,22 @@ export const SkiaTerminalView = React.memo(function SkiaTerminalView(
                 scrollOffsetRef.current = off;
                 setScrollOffset(off);
             }
-            setRenderData(off > 0 ? termHandle.renderScrolled(off) : termHandle.render());
+            const snapshot = off > 0 ? termHandle.renderScrolled(off) : termHandle.render();
+            if (snapshot?.modes) {
+                activeAltRef.current = snapshot.modes.active_alt;
+                setTerminalModes({
+                    activeAlt: snapshot.modes.active_alt,
+                    bracketedPaste: snapshot.modes.bracketed_paste,
+                    autoWrap: snapshot.modes.auto_wrap,
+                    insertMode: snapshot.modes.insert_mode,
+                    cursorVisible: snapshot.modes.cursor_visible,
+                });
+            }
+            setRenderData(snapshot);
+            const events = termHandle.takeEvents();
+            if (events.length > 0 && onOscEventRef.current) {
+                onOscEventRef.current(events);
+            }
         }, 16);
         return () => clearInterval(id);
     }, [termHandle]);
@@ -171,7 +201,7 @@ export const SkiaTerminalView = React.memo(function SkiaTerminalView(
     // scroll position. A scroll gesture sets the offset; new output doesn't
     // force-scroll unless we're already at the bottom.
     const scrollBy = React.useCallback((deltaRows: number) => {
-        if (!termHandle) return;
+        if (!termHandle || activeAltRef.current) return;
         const maxScroll = termHandle.scrollbackLen();
         const next = Math.max(0, Math.min(maxScroll, scrollOffsetRef.current + deltaRows));
         if (next !== scrollOffsetRef.current) {
@@ -288,16 +318,52 @@ export const SkiaTerminalView = React.memo(function SkiaTerminalView(
                             && scrollOffset === 0
                             && row === renderData.cursor_row
                             && c === renderData.cursor_col;
+                        const hasLink = !!cell.link;
+                        let color: Float32Array;
+                        if (isCursor) {
+                            color = canvasBg;
+                        } else if (hasLink) {
+                            color = toSkiaColor(hexToRgb(palette.accent));
+                        } else {
+                            color = toSkiaColor(cell.fg);
+                        }
+                        if ((cell.attrs & ATTR_DIM) !== 0 && !isCursor) {
+                            color = colorWithAlpha(color, 0.55);
+                        }
                         elements.push(
                             React.createElement(SkiaText, {
                                 key: `fg-${row}-${c}`,
                                 x: c * cellWidth,
                                 y: y + cellHeight * 0.8,
                                 text: cell.ch,
-                                color: isCursor ? canvasBg : toSkiaColor(cell.fg),
+                                color,
                                 font,
                             }),
                         );
+                        if ((cell.attrs & ATTR_UNDERLINE) !== 0 || hasLink) {
+                            elements.push(
+                                React.createElement(Rect, {
+                                    key: `ul-${row}-${c}`,
+                                    x: c * cellWidth,
+                                    y: y + cellHeight - 2,
+                                    width: cellWidth,
+                                    height: 1,
+                                    color,
+                                }),
+                            );
+                        }
+                        if ((cell.attrs & ATTR_STRIKE) !== 0) {
+                            elements.push(
+                                React.createElement(Rect, {
+                                    key: `st-${row}-${c}`,
+                                    x: c * cellWidth,
+                                    y: y + cellHeight * 0.55,
+                                    width: cellWidth,
+                                    height: 1,
+                                    color,
+                                }),
+                            );
+                        }
                     }
                 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { terminalCommandData, terminalCommandText, terminalShortcutData } from './terminalInput';
+import { terminalCommandData, terminalCommandText, terminalShortcutData, wrapPasteForTerminal } from './terminalInput';
 
 describe('terminal input helpers', () => {
     it('turns a submitted command into PTY input', () => {
@@ -46,5 +46,21 @@ describe('terminal input helpers', () => {
         expect(terminalShortcutData('f4')).toBe('\u001bOS');
         expect(terminalShortcutData('f5')).toBe('\u001b[15~');
         expect(terminalShortcutData('f12')).toBe('\u001b[24~');
+    });
+});
+
+
+describe('wrapPasteForTerminal', () => {
+    it('passes text through unchanged when bracketed paste is off', () => {
+        expect(wrapPasteForTerminal('echo hi', false)).toBe('echo hi');
+    });
+
+    it('wraps text in bracketed-paste markers when the mode is on', () => {
+        expect(wrapPasteForTerminal('line1\nline2', true)).toBe('\u001b[200~line1\nline2\u001b[201~');
+    });
+
+    it('handles empty clipboard text', () => {
+        expect(wrapPasteForTerminal('', true)).toBe('\u001b[200~\u001b[201~');
+        expect(wrapPasteForTerminal('', false)).toBe('');
     });
 });

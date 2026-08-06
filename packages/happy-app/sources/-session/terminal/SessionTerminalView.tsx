@@ -2,6 +2,7 @@ import * as React from 'react';
 import { ActivityIndicator, Keyboard, Text, useWindowDimensions, View } from 'react-native';
 import { useUnistyles } from 'react-native-unistyles';
 import { WebView, type WebViewMessageEvent } from 'react-native-webview';
+import { useNavigation } from '@react-navigation/native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -48,6 +49,7 @@ import { SHARED_TERMINAL_COLS, SHARED_TERMINAL_ROWS } from './terminalSharedGrid
 import type { TerminalAttachResponse, TerminalExecuteResponse } from '@slopus/happy-wire';
 import { SkiaTerminalView } from './skia/SkiaTerminalView';
 import { useSkiaTerminal } from './skia/useSkiaTerminal';
+import type { TerminalOscEvent } from './skia/useSkiaTerminal';
 
 /** Keystroke text (UTF-16 JS string from xterm onData) -> base64 UTF-8 bytes. */
 function textToBase64(text: string): string {
@@ -306,6 +308,28 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
     const webviewRef = React.useRef<WebView>(null);
     const messageHandlerRef = React.useRef<MessageHandler>(() => {});
     const controlsRef = React.useRef<TerminalControls | null>(null);
+    const initSentRef = React.useRef(false);
+    const navigation = useNavigation();
+    const navigationRef = React.useRef(navigation);
+    navigationRef.current = navigation;
+
+    const handleOscEvent = React.useCallback((events: TerminalOscEvent[]) => {
+        for (const event of events) {
+            if (event.type === 'title') {
+                navigationRef.current?.setOptions({ title: event.value });
+            } else if (event.type === 'clipboard') {
+                try {
+                    const bytes = decodeBase64(event.value, 'base64');
+                    const text = new TextDecoder().decode(bytes);
+                    if (text) {
+                        void Clipboard.setStringAsync(text);
+                    }
+                } catch (error) {
+                    console.warn('[terminal] OSC52 clipboard decode failed:', error);
+                }
+            }
+        }
+    }, []);
     const capabilitiesRef = React.useRef<TerminalAttachResponse['capabilities']>(undefined);
     const fontSizeRef = React.useRef(loadTerminalFontSize(windowWidth <= PHONE_MAX_WIDTH ? PHONE_FONT_SIZE : DEFAULT_FONT_SIZE));
     const restoredBlockSessionRef = React.useRef<string | null>(null);
@@ -598,6 +622,14 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
             )
                 .then((response) => {
                     applySyncedTheme(response);
+                    // One-time terminal init on the first attach of this view
+                    // mount: enable bracketed paste, show the cursor, reset SGR.
+                    // Intentionally no `ESC[?1049l` - that would pop a running
+                    // full-screen TUI out of the alternate screen on re-attach.
+                    if (!initSentRef.current) {
+                        initSentRef.current = true;
+                        sendTerminalInput('\x1b[?2004h\x1b[?25h\x1b[0m');
+                    }
                     capabilitiesRef.current = response.capabilities;
                     const supportsBlocks = (response.capabilities?.protocolVersion ?? 0) >= 2
                         && response.capabilities?.structuredCommands === true;
@@ -898,6 +930,7 @@ export const SessionTerminalView = React.memo(function SessionTerminalView(props
                         palette={terminalPalette}
                         onInput={sendTerminalInput}
                         onGridSizeChange={handleSkiaGridSize}
+                        onOscEvent={handleOscEvent}
                     />
                 ) : html ? (
                     <View
