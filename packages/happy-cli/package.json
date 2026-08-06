@@ -26,6 +26,7 @@
     "package.json"
   ],
   "scripts": {
+    "cli": "node bin/happy.mjs",
     "bundle:server": "node scripts/bundle-server.cjs",
     "bundle:server:all": "node scripts/bundle-server.cjs --all-platforms",
     "bundle:webapp": "node scripts/bundle-webapp.cjs",
