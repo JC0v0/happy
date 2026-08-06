@@ -52,7 +52,7 @@ impl RpcHandlerRegistry {
 
         if let Some(socket) = self.socket.read().await.clone() {
             socket
-                .emit("rpc-register", json!({ "method": prefixed_method }))
+                .emit_retry("rpc-register", json!({ "method": prefixed_method }))
                 .await?;
         }
         Ok(())
@@ -63,7 +63,7 @@ impl RpcHandlerRegistry {
         self.handlers.write().await.remove(&prefixed_method);
         if let Some(socket) = self.socket.read().await.clone() {
             socket
-                .emit("rpc-unregister", json!({ "method": prefixed_method }))
+                .emit_retry("rpc-unregister", json!({ "method": prefixed_method }))
                 .await?;
         }
         Ok(())
@@ -87,7 +87,7 @@ impl RpcHandlerRegistry {
             .collect::<Vec<_>>();
         for method in methods {
             socket
-                .emit("rpc-register", json!({ "method": method }))
+                .emit_retry("rpc-register", json!({ "method": method }))
                 .await?;
         }
         Ok(())

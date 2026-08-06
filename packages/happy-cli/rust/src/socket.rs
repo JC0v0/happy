@@ -9,6 +9,12 @@ use tf_rust_socketio::TransportType;
 use tf_rust_socketio::asynchronous::{Client, ClientBuilder};
 use tokio::sync::{Mutex, broadcast, oneshot};
 
+/// How many times an idempotent emit is retried across transient transport
+/// failures (e.g. the websocket upgrade racing the first rpc-register).
+const EMIT_RETRY_ATTEMPTS: usize = 4;
+/// Base backoff (ms) before the first retry; each retry doubles the wait.
+const EMIT_RETRY_BASE_DELAY_MS: u64 = 250;
+
 #[derive(Debug, Clone)]
 pub struct InboundEvent {
     pub name: String,
@@ -92,6 +98,34 @@ impl HappySocket {
             .emit(event, data)
             .await
             .with_context(|| format!("failed to emit Socket.IO event {event}"))
+    }
+
+    /// Retry an idempotent fire-and-forget emit across transient transport
+    /// failures. The engine client auto-reconnects, so a short backoff lets
+    /// the transport settle before the next attempt. Only use for events whose
+    /// payload is safe to deliver more than once (the RPC registry).
+    pub async fn emit_retry(&self, event: &str, data: Value) -> Result<()> {
+        let mut last_error: Option<anyhow::Error> = None;
+        for attempt in 0..EMIT_RETRY_ATTEMPTS {
+            match self.client.emit(event, data.clone()).await {
+                Ok(()) => return Ok(()),
+                Err(error) => {
+                    last_error = Some(error.into());
+                    if attempt + 1 < EMIT_RETRY_ATTEMPTS {
+                        tokio::time::sleep(Duration::from_millis(
+                            EMIT_RETRY_BASE_DELAY_MS * (attempt as u64 + 1),
+                        ))
+                        .await;
+                    }
+                }
+            }
+        }
+        Err(anyhow::anyhow!(
+            "failed to emit Socket.IO event {event} after {EMIT_RETRY_ATTEMPTS} attempts: {}",
+            last_error
+                .map(|e| format!("{e:#}"))
+                .unwrap_or_else(|| "unknown error".to_owned())
+        ))
     }
 
     pub async fn emit_volatile(&self, event: &str, data: Value) -> Result<()> {
