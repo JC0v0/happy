@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { RoundButton } from '@/components/RoundButton';
 import { Typography } from '@/constants/Typography';
 import { encodeBase64 } from '@/encryption/base64';
-import { generateAuthKeyPair, authQRStart } from '@/auth/authQRStart';
+import { generateAuthKeyPair, authQRStart, type AuthQRStartFailure } from '@/auth/authQRStart';
 import { authQRWait } from '@/auth/authQRWait';
 import { layout } from '@/components/layout';
 import { Modal } from '@/modal';
@@ -62,6 +62,19 @@ const stylesheet = StyleSheet.create((theme) => ({
     },
 }));
 
+function authQRStartErrorMessage(failure?: AuthQRStartFailure): string {
+    switch (failure) {
+        case 'network':
+            return t('errors.networkError');
+        case 'unauthorized':
+            return t('errors.authenticationFailed');
+        case 'server':
+            return t('errors.serverError');
+        default:
+            return t('errors.unknownError');
+    }
+}
+
 export default function Restore() {
     const { theme } = useUnistyles();
     const styles = stylesheet;
@@ -83,9 +96,9 @@ export default function Restore() {
                 setIsWaitingForAuth(true);
 
                 // Send authentication request
-                const success = await authQRStart(keypair);
-                if (!success) {
-                    Modal.alert(t('common.error'), t('errors.authenticationFailed'));
+                const result = await authQRStart(keypair);
+                if (!result.ok) {
+                    Modal.alert(t('common.error'), authQRStartErrorMessage(result.failure));
                     setIsWaitingForAuth(false);
                     return;
                 }

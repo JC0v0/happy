@@ -8,12 +8,22 @@ const LOG_SERVER_KEY = 'log-server-url';
 const DEFAULT_SERVER_URL = 'https://121.40.138.143:443';
 
 export function getServerUrl(): string {
-    // Explicit env var or runtime config overrides any stored value,
-    // so local dev servers (--host 0.0.0.0) always take effect.
-    const override = (globalThis as any).__HAPPY_CONFIG__?.serverUrl ||
-                     process.env.EXPO_PUBLIC_HAPPY_SERVER_URL;
-    if (override) return override;
-    return serverConfigStorage.getString(SERVER_KEY) ||
+    // Priority: 1) runtime-injected config, 2) explicit user setting,
+    // 3) build-time default (EXPO_PUBLIC_HAPPY_SERVER_URL, inlined by Expo),
+    // 4) hardcoded fallback.
+    //
+    // The user setting must beat the build-time default: a dev build bakes
+    // EXPO_PUBLIC_HAPPY_SERVER_URL (e.g. http://127.0.0.1:3005) into the
+    // bundle, which is unreachable from a physical device. Pointing the app
+    // at the dev machine's LAN address from Dev > Server only works if the
+    // stored value wins over the inlined one.
+    const injected = (globalThis as any).__HAPPY_CONFIG__?.serverUrl;
+    if (injected) return injected;
+
+    const stored = serverConfigStorage.getString(SERVER_KEY);
+    if (stored) return stored;
+
+    return process.env.EXPO_PUBLIC_HAPPY_SERVER_URL ||
            DEFAULT_SERVER_URL;
 }
 

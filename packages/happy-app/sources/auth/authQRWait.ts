@@ -10,9 +10,16 @@ export interface AuthCredentials {
     token: string;
 }
 
+// Tolerate a few consecutive poll failures before giving up: a single transient
+// network blip during the (long) wait-for-approval phase shouldn't fail the
+// whole restore/link flow with a confusing "authentication failed".
+const MAX_CONSECUTIVE_ERRORS = 5;
+
 export async function authQRWait(keypair: QRAuthKeyPair, onProgress?: (dots: number) => void, shouldCancel?: () => boolean): Promise<AuthCredentials | null> {
     let dots = 0;
+    let consecutiveErrors = 0;
     const serverUrl = getServerUrl();
+    const endpoint = `${serverUrl}/v1/auth/account/request`;
 
     while (true) {
         if (shouldCancel && shouldCancel()) {
@@ -20,7 +27,7 @@ export async function authQRWait(keypair: QRAuthKeyPair, onProgress?: (dots: num
         }
 
         try {
-            const response = await axios.post(`${serverUrl}/v1/auth/account/request`, {
+            const response = await axios.post(endpoint, {
                 publicKey: encodeBase64(keypair.publicKey),
             }, {
                 headers: {
@@ -28,13 +35,15 @@ export async function authQRWait(keypair: QRAuthKeyPair, onProgress?: (dots: num
                 }
             });
 
+            consecutiveErrors = 0;
+
             if (response.data.state === 'authorized') {
                 const token = response.data.token as string;
                 const encryptedResponse = decodeBase64(response.data.response);
                 
                 const decrypted = decryptBox(encryptedResponse, keypair.secretKey);
                 if (decrypted) {
-                    console.log('\n\n✓ Authentication successful\n');
+                    console.log('\n\nAuthentication successful\n');
                     return {
                         secret: decrypted,
                         token: token
@@ -45,8 +54,14 @@ export async function authQRWait(keypair: QRAuthKeyPair, onProgress?: (dots: num
                 }
             }
         } catch (error) {
-            console.log('\n\nFailed to check authentication status. Please try again.');
-            return null;
+            consecutiveErrors++;
+            const detail = axios.isAxiosError(error)
+                ? `${error.message}${error.response ? ` (HTTP ${error.response.status})` : ''}`
+                : error instanceof Error ? error.message : String(error);
+            console.log(`\n\nFailed to check authentication status (${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${detail}`);
+            if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                return null;
+            }
         }
 
         // Call progress callback if provided
