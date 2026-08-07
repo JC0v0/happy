@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 import { loadTerminalHistoryCommands } from './terminalHistory';
 import {
     loadTerminalCommandDraft,
@@ -85,7 +85,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         zIndex: 20,
     },
     statusGroup: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 7 },
-    statusDot: { width: 7, height: 7, borderRadius: 4 },
+    statusDot: { width: 7, height: 7, borderRadius: 999 },
     statusText: {
         color: theme.semantic.textPrimary,
         fontSize: 12,
@@ -351,7 +351,7 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
                 <Text style={styles.sheetTitle}>{t('terminal.title')}</Text>
                 <ChromeIconButton
                     icon="close"
-                    label="Close terminal actions"
+                    label={localizedText('Close terminal actions', '关闭终端操作', '關閉終端機操作')}
                     onPress={() => setMenuVisible(false)}
                     compact
                 />
@@ -385,7 +385,9 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
             {props.onToggleSkia ? (
                 <ActionRow
                     icon={props.skiaEnabled ? 'flash' : 'flash-outline'}
-                    label={props.skiaEnabled ? 'Skia Renderer (On)' : 'Skia Renderer (Off)'}
+                    label={props.skiaEnabled
+                        ? localizedText('Skia Renderer (On)', 'Skia 渲染器（开）', 'Skia 渲染器（開）')
+                        : localizedText('Skia Renderer (Off)', 'Skia 渲染器（关）', 'Skia 渲染器（關）')}
                     onPress={() => {
                         setMenuVisible(false);
                         props.onToggleSkia!();
@@ -439,7 +441,7 @@ export const TerminalToolbar = React.memo(function TerminalToolbar(props: Termin
                 />
                 <ChromeIconButton
                     icon="ellipsis-horizontal"
-                    label="More terminal actions"
+                    label={localizedText('More terminal actions', '更多终端操作', '更多終端機操作')}
                     onPress={() => setMenuVisible((visible) => !visible)}
                 />
             </View>
@@ -554,7 +556,9 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 <ShortcutButton
                     label="CTRL"
                     active={props.ctrlActive}
-                    accessibilityLabel={props.ctrlActive ? 'Disable Ctrl modifier' : 'Enable Ctrl modifier'}
+                    accessibilityLabel={props.ctrlActive
+                        ? localizedText('Disable Ctrl modifier', '关闭 Ctrl 修饰键', '關閉 Ctrl 修飾鍵')
+                        : localizedText('Enable Ctrl modifier', '启用 Ctrl 修饰键', '啟用 Ctrl 修飾鍵')}
                     onPress={props.onToggleCtrl}
                 />
                 {SHORTCUTS.map((shortcut) => (
@@ -567,7 +571,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                 ))}
                 <ShortcutButton
                     icon="keypad-outline"
-                    accessibilityLabel="More keys"
+                    accessibilityLabel={localizedText('More keys', '更多按键', '更多按鍵')}
                     onPress={() => {
                         Keyboard.dismiss();
                         setShortcutSheetVisible(true);
@@ -605,7 +609,7 @@ export const TerminalCommandDock = React.memo(function TerminalCommandDock(props
                     disabled={command.trim().length === 0}
                     hitSlop={3}
                     accessibilityRole="button"
-                    accessibilityLabel="Send command"
+                    accessibilityLabel={localizedText('Send command', '发送命令', '傳送命令')}
                     style={({ pressed }) => [
                         styles.sendButton,
                         command.trim().length === 0 && styles.sendButtonDisabled,
@@ -635,7 +639,9 @@ function DockModeButton(props: { mode: TerminalViewMode; disabled: boolean; onPr
             onPress={props.onPress}
             disabled={props.disabled}
             accessibilityRole="button"
-            accessibilityLabel={isBlocks ? 'Switch to raw terminal' : 'Switch to command blocks'}
+            accessibilityLabel={isBlocks
+                ? localizedText('Switch to raw terminal', '切换到原始终端', '切換到原始終端機')
+                : localizedText('Switch to command blocks', '切换到命令块', '切換到命令區塊')}
             style={({ pressed }) => [
                 styles.modeButton,
                 isBlocks && styles.modeButtonActive,
@@ -654,7 +660,7 @@ function DirectoryContext(props: { cwd: string }) {
     const styles = stylesheet;
     const leaf = props.cwd.split(/[\\/]/u).filter(Boolean).pop() ?? props.cwd;
     return (
-        <View style={styles.directoryContext} accessibilityLabel={`Current directory ${props.cwd}`}>
+        <View style={styles.directoryContext} accessibilityLabel={`${localizedText('Current directory', '当前目录', '目前目錄')} ${props.cwd}`}>
             <Ionicons name="folder-outline" size={14} color={theme.semantic.textMuted} />
             <Text style={styles.directoryText} numberOfLines={1}>{leaf}</Text>
         </View>
@@ -702,7 +708,7 @@ function ShortcutButton(props: {
 }) {
     const { theme } = useUnistyles();
     const styles = stylesheet;
-    const accessibilityLabel = props.accessibilityLabel ?? props.label ?? props.icon ?? 'Terminal shortcut';
+    const accessibilityLabel = props.accessibilityLabel ?? props.label ?? props.icon ?? localizedText('Terminal shortcut', '终端快捷键', '終端機快速鍵');
     const iconColor = props.active ? theme.semantic.textPrimary : theme.semantic.textMuted;
     return (
         <Pressable

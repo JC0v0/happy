@@ -117,7 +117,7 @@ export default React.memo(() => {
                                 icon={profile.avatar?.url ? (
                                     <Image
                                         source={{ uri: profile.avatar.url }}
-                                        style={{ width: 29, height: 29, borderRadius: 14.5 }}
+                                        style={{ width: 29, height: 29, borderRadius: 999 }}
                                         placeholder={{ thumbhash: profile.avatar.thumbhash }}
                                         contentFit="cover"
                                         transition={200}

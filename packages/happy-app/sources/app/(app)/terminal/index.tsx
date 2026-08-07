@@ -2,7 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Text } from '@/components/StyledText';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Typography } from '@/constants/Typography';
+import { Typography, TypeScale } from '@/constants/Typography';
 import { RoundButton } from '@/components/RoundButton';
 import { useConnectTerminal } from '@/hooks/useConnectTerminal';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,7 +65,7 @@ export default function TerminalScreen() {
                             />
                             <Text style={{
                                 ...Typography.default('semiBold'),
-                                fontSize: 16,
+                                ...TypeScale.title,
                                 color: theme.colors.textDestructive,
                                 textAlign: 'center',
                                 marginBottom: 8
@@ -107,7 +107,7 @@ export default function TerminalScreen() {
                         />
                         <Text style={{
                             ...Typography.default('semiBold'),
-                            fontSize: 20,
+                            ...TypeScale.heading,
                             textAlign: 'center',
                             marginBottom: 12,
                             color: theme.colors.text

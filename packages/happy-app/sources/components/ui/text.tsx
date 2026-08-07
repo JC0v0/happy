@@ -7,7 +7,7 @@ import { Typography, TypeScale } from '@/constants/Typography';
  * shadcn-style text component. `variant` maps to the design-system text roles
  * (mirrors the muted/foreground tokens used across the app).
  */
-export type TextVariant = 'default' | 'muted' | 'small' | 'xs' | 'title' | 'description' | 'label' | 'mono' | 'display';
+export type TextVariant = 'default' | 'muted' | 'small' | 'xs' | 'title' | 'description' | 'label' | 'mono' | 'display' | 'headline' | 'heading' | 'subtitle';
 
 const Text = React.forwardRef<
     React.ElementRef<typeof RNText>,
@@ -58,6 +58,21 @@ const styles = StyleSheet.create((theme) => ({
         ...Typography.default('semiBold'),
         ...TypeScale.display,
         color: theme.semantic.textPrimary,
+    },
+    headline: {
+        ...Typography.default('semiBold'),
+        ...TypeScale.headline,
+        color: theme.semantic.textPrimary,
+    },
+    heading: {
+        ...Typography.default('semiBold'),
+        ...TypeScale.heading,
+        color: theme.semantic.textPrimary,
+    },
+    subtitle: {
+        ...Typography.default(),
+        ...TypeScale.subtitle,
+        color: theme.semantic.textSecondary,
     },
 }));
 

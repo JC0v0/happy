@@ -344,6 +344,7 @@ export const en: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Type a command or search...',
+        noResults: 'No commands found',
     },
 
     server: {
@@ -418,7 +419,7 @@ export const en: TranslationStructure = {
         cliVersionOutdated: 'CLI Update Required',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Version ${currentVersion} installed. Update to ${requiredVersion} or later`,
-        updateCliInstructions: 'Please run npm install -g happy@latest',
+        updateCliInstructions: 'This fork is not published to npm. Update the CLI from source (see the repo README).',
         deleteSession: 'Delete Session',
         deleteSessionSubtitle: 'Permanently remove this session',
         deleteSessionConfirm: 'Delete Session Permanently?',
@@ -433,14 +434,6 @@ export const en: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Ready to code?',
-            installCli: 'Install the Happy CLI',
-            runIt: 'Run it',
-            scanQrCode: 'Scan the QR code',
-            openCamera: 'Open Camera',
-        },
         agentGoalBar: {
             currentGoal: 'Current goal',
             accessibilityLabel: ({ goal }: { goal: string }) => `Current goal: ${goal}`,
@@ -831,7 +824,7 @@ export const en: TranslationStructure = {
     machine: {
         launchNewSessionInDirectory: 'Launch New Session in Directory',
         offlineUnableToSpawn: 'Launcher disabled while machine is offline',
-        offlineHelp: '• Make sure your computer is online\n• Run `happy daemon status` to diagnose\n• Are you running the latest CLI version? Upgrade with `npm install -g happy@latest`',
+        offlineHelp: '• Make sure your computer is online\n• Run `happy daemon status` to diagnose\n• Running the latest CLI? This fork updates from source — pull the latest code and rebuild (see the repo README)',
         daemon: 'Daemon',
         status: 'Status',
         stopDaemon: 'Stop Daemon',

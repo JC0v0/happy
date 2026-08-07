@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, TextInput, StyleSheet, Platform } from 'react-native';
+import { View, TextInput, Platform } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
 import { Typography } from '@/constants/Typography';
 import { t } from '@/text';
+import { useUnistyles } from 'react-native-unistyles';
 
 interface CommandPaletteInputProps {
     value: string;
@@ -11,6 +13,7 @@ interface CommandPaletteInputProps {
 }
 
 export function CommandPaletteInput({ value, onChangeText, onKeyPress, inputRef }: CommandPaletteInputProps) {
+    const { theme } = useUnistyles();
     const handleKeyDown = React.useCallback((e: any) => {
         if (Platform.OS === 'web' && onKeyPress) {
             const key = e.nativeEvent.key;
@@ -32,7 +35,7 @@ export function CommandPaletteInput({ value, onChangeText, onKeyPress, inputRef 
                 value={value}
                 onChangeText={onChangeText}
                 placeholder={t('commandPalette.placeholder')}
-                placeholderTextColor="#999"
+                placeholderTextColor={theme.semantic.textMuted}
                 autoFocus
                 autoCorrect={false}
                 autoCapitalize="none"
@@ -44,17 +47,17 @@ export function CommandPaletteInput({ value, onChangeText, onKeyPress, inputRef 
     );
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create((theme) => ({
     container: {
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(0, 0, 0, 0.06)',
-        backgroundColor: '#FAFAFA',
+        borderBottomColor: theme.semantic.border,
+        backgroundColor: theme.semantic.surfaceMuted,
     },
     input: {
         paddingHorizontal: 32,
         paddingVertical: 24,
         fontSize: 20,
-        color: '#000',
+        color: theme.semantic.textPrimary,
         letterSpacing: -0.3,
         // Remove outline on web
         ...(Platform.OS === 'web' ? {
@@ -62,4 +65,4 @@ const styles = StyleSheet.create({
             outlineWidth: 0,
         } as any : {}),
     },
-});
+}));

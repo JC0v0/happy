@@ -93,11 +93,6 @@ export const lightTheme = {
                 inactive: '#767577',
             },
         },
-        fab: {
-            background: '#000000',
-            backgroundPressed: '#1a1a1a',
-            icon: '#FFFFFF',
-        },
         radio: {
             active: '#007AFF',
             inactive: '#C0C0C0',
@@ -293,11 +288,6 @@ export const darkTheme = {
             background: darkSemantic.canvas,
             chevron: darkSemantic.textMuted,
             sectionTitle: darkSemantic.textSecondary,
-        },
-        fab: {
-            background: '#FFFFFF',
-            backgroundPressed: '#f0f0f0',
-            icon: '#000000',
         },
         radio: {
             active: '#0A84FF',

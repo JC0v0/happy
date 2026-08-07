@@ -360,7 +360,7 @@ export const ru: TranslationStructure = {
         cliVersionOutdated: 'Требуется обновление CLI',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Установлена версия ${currentVersion}. Обновите до ${requiredVersion} или новее`,
-        updateCliInstructions: 'Пожалуйста, выполните npm install -g happy@latest',
+        updateCliInstructions: 'Этот форк не опубликован в npm. Обновите CLI из исходного кода (см. README репозитория).',
         deleteSession: 'Удалить сессию',
         deleteSessionSubtitle: 'Удалить эту сессию навсегда',
         deleteSessionConfirm: 'Удалить сессию навсегда?',
@@ -374,14 +374,6 @@ export const ru: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Готовы к программированию?',
-            installCli: 'Установите Happy CLI',
-            runIt: 'Запустите его',
-            scanQrCode: 'Отсканируйте QR-код',
-            openCamera: 'Открыть камеру',
-        },
         agentGoalBar: {
             currentGoal: 'Текущая цель',
             accessibilityLabel: ({ goal }: { goal: string }) => `Текущая цель: ${goal}`,
@@ -453,6 +445,7 @@ export const ru: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Введите команду или поиск...',
+        noResults: 'Команды не найдены',
     },
 
     agentInput: {
@@ -820,7 +813,7 @@ export const ru: TranslationStructure = {
 
     machine: {
         offlineUnableToSpawn: 'Запуск отключен: машина offline',
-        offlineHelp: '• Убедитесь, что компьютер online\n• Выполните `happy daemon status` для диагностики\n• Используете последнюю версию CLI? Обновите командой `npm install -g happy@latest`',
+        offlineHelp: '• Убедитесь, что компьютер online\n• Выполните `happy daemon status` для диагностики\n• У вас последняя версия CLI? Этот форк обновляется из исходного кода — загрузите свежий код и пересоберите (см. README репозитория)',
         launchNewSessionInDirectory: 'Запустить новую сессию в папке',
         daemon: 'Daemon',
         status: 'Статус',

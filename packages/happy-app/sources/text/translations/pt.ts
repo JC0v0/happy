@@ -329,6 +329,7 @@ export const pt: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Digite um comando ou pesquise...',
+        noResults: 'Nenhum comando encontrado',
     },
 
     server: {
@@ -403,7 +404,7 @@ export const pt: TranslationStructure = {
         cliVersionOutdated: 'Atualização do CLI necessária',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Versão ${currentVersion} instalada. Atualize para ${requiredVersion} ou posterior`,
-        updateCliInstructions: 'Por favor execute npm install -g happy@latest',
+        updateCliInstructions: 'Este fork não é publicado no npm. Atualize a CLI a partir do código-fonte (veja o README do repositório).',
         deleteSession: 'Excluir sessão',
         deleteSessionSubtitle: 'Remover permanentemente esta sessão',
         deleteSessionConfirm: 'Excluir sessão permanentemente?',
@@ -418,14 +419,6 @@ export const pt: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Pronto para programar?',
-            installCli: 'Instale o Happy CLI',
-            runIt: 'Execute',
-            scanQrCode: 'Escaneie o código QR',
-            openCamera: 'Abrir câmera',
-        },
         agentGoalBar: {
             currentGoal: 'Objetivo atual',
             accessibilityLabel: ({ goal }: { goal: string }) => `Objetivo atual: ${goal}`,
@@ -815,7 +808,7 @@ export const pt: TranslationStructure = {
 
     machine: {
         offlineUnableToSpawn: 'Inicializador desativado enquanto a máquina está offline',
-        offlineHelp: '• Verifique se seu computador está online\n• Execute `happy daemon status` para diagnosticar\n• Você está usando a versão mais recente do CLI? Atualize com `npm install -g happy@latest`',
+        offlineHelp: '• Verifique se seu computador está online\n• Execute `happy daemon status` para diagnosticar\n• Está com a versão mais recente da CLI? Este fork é atualizado a partir do código-fonte — baixe o código mais recente e recompile (veja o README do repositório)',
         launchNewSessionInDirectory: 'Iniciar nova sessão no diretório',
         daemon: 'Daemon',
         status: 'Status',

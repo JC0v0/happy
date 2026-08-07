@@ -359,6 +359,7 @@ export const zhHant: TranslationStructure = {
 
     commandPalette: {
         placeholder: '輸入命令或搜尋...',
+        noResults: '找不到命令',
     },
 
     server: {
@@ -433,7 +434,7 @@ export const zhHant: TranslationStructure = {
         cliVersionOutdated: '需要更新 CLI',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `已安裝版本 ${currentVersion}。請更新到 ${requiredVersion} 或更高版本`,
-        updateCliInstructions: '請執行 npm install -g happy@latest',
+        updateCliInstructions: '此 fork 未發佈到 npm，請從原始碼更新 CLI（參見儲存庫 README）。',
         deleteSession: '刪除工作階段',
         deleteSessionSubtitle: '永久刪除此工作階段',
         deleteSessionConfirm: '永久刪除工作階段？',
@@ -448,14 +449,6 @@ export const zhHant: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: '準備開始寫程式？',
-            installCli: '安裝 Happy CLI',
-            runIt: '執行它',
-            scanQrCode: '掃描 QR Code',
-            openCamera: '開啟相機',
-        },
         agentGoalBar: {
             currentGoal: '目前目標',
             accessibilityLabel: ({ goal }: { goal: string }) => `目前目標：${goal}`,
@@ -846,7 +839,7 @@ export const zhHant: TranslationStructure = {
     machine: {
         launchNewSessionInDirectory: '在目錄中啟動新工作階段',
         offlineUnableToSpawn: '裝置離線時無法啟動',
-        offlineHelp: '• 確保您的電腦在線上\n• 執行 `happy daemon status` 進行診斷\n• 您是否在執行最新的 CLI 版本？請使用 `npm install -g happy@latest` 升級',
+        offlineHelp: '• 確保您的電腦在線上\n• 執行 `happy daemon status` 進行診斷\n• CLI 是否為最新版本？此 fork 透過原始碼更新——拉取最新程式碼並重新建置（參見儲存庫 README）',
         daemon: '守護程序',
         status: '狀態',
         stopDaemon: '停止守護程序',

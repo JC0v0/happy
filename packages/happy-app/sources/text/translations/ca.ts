@@ -330,6 +330,7 @@ export const ca: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Escriu una comanda o cerca...',
+        noResults: 'No s\'han trobat comandes',
     },
 
     server: {
@@ -404,7 +405,7 @@ export const ca: TranslationStructure = {
         cliVersionOutdated: 'Actualització del CLI requerida',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Versió ${currentVersion} instal·lada. Actualitzeu a ${requiredVersion} o posterior`,
-        updateCliInstructions: 'Si us plau executeu npm install -g happy@latest',
+        updateCliInstructions: 'Aquest fork no es publica a npm. Actualitza el CLI des del codi font (consulta el README del repositori).',
         deleteSession: 'Elimina la sessió',
         deleteSessionSubtitle: 'Elimina permanentment aquesta sessió',
         deleteSessionConfirm: 'Eliminar la sessió permanentment?',
@@ -419,14 +420,6 @@ export const ca: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Llest per programar?',
-            installCli: 'Instal·la el Happy CLI',
-            runIt: 'Executa\'l',
-            scanQrCode: 'Escaneja el codi QR',
-            openCamera: 'Obre la càmera',
-        },
         agentGoalBar: {
             currentGoal: 'Objectiu actual',
             accessibilityLabel: ({ goal }: { goal: string }) => `Objectiu actual: ${goal}`,
@@ -816,7 +809,7 @@ export const ca: TranslationStructure = {
 
     machine: {
         offlineUnableToSpawn: 'El llançador està desactivat mentre la màquina està fora de línia',
-        offlineHelp: '• Assegura\'t que l\'ordinador estigui en línia\n• Executa `happy daemon status` per diagnosticar\n• Fas servir l\'última versió del CLI? Actualitza amb `npm install -g happy@latest`',
+        offlineHelp: '• Assegura\'t que l\'ordinador estigui en línia\n• Executa `happy daemon status` per diagnosticar\n• Tens l\'última versió del CLI? Aquest fork s\'actualitza des del codi font: baixa el codi més recent i torna a compilar (consulta el README del repositori)',
         launchNewSessionInDirectory: 'Inicia una nova sessió al directori',
         daemon: 'Dimoni',
         status: 'Estat',

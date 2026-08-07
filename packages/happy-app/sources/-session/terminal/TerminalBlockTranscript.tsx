@@ -10,6 +10,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { FontFamilies } from '@/constants/Typography';
+import { localizedText } from '@/text';
 import type { TerminalCommandBlock } from './terminalCommandState';
 import { terminalBlockOutputText } from './terminalTranscript';
 
@@ -351,7 +352,9 @@ export const TerminalBlockTranscript = React.memo(function TerminalBlockTranscri
                             onPress={() => toggleCollapsed(block.commandId)}
                             style={styles.collapseButton}
                             accessibilityRole="button"
-                            accessibilityLabel={isCollapsed ? 'Expand block' : 'Collapse block'}
+                            accessibilityLabel={isCollapsed
+                                ? localizedText('Expand block', '展开块', '展開區塊')
+                                : localizedText('Collapse block', '折叠块', '摺疊區塊')}
                         >
                             <Ionicons
                                 name={isCollapsed ? 'chevron-down' : 'chevron-up'}
@@ -411,19 +414,19 @@ export const TerminalBlockTranscript = React.memo(function TerminalBlockTranscri
                         {output}
                     </Text>
                 ) : (
-                    <Text style={styles.emptyOutput}>No output</Text>
+                    <Text style={styles.emptyOutput}>{localizedText('No output', '无输出', '無輸出')}</Text>
                 )}
                 {item.rawPreferred && item.status !== 'running' ? (
                     <Pressable
                         style={styles.rawBanner}
                         onPress={() => props.onOpenRaw(item)}
                         accessibilityRole="button"
-                        accessibilityLabel="View in raw terminal"
+                        accessibilityLabel={localizedText('View in raw terminal', '在原始终端中查看', '在原始終端機中檢視')}
                     >
                         <Ionicons name="terminal-outline" size={18} color={theme.semantic.textPrimary} />
                         <View style={styles.rawBannerText}>
-                            <Text style={styles.rawTitle}>Interactive terminal</Text>
-                            <Text style={styles.rawSubtitle}>This command uses a full-screen terminal. Switch to RAW to view and interact.</Text>
+                            <Text style={styles.rawTitle}>{localizedText('Interactive terminal', '交互式终端', '互動式終端機')}</Text>
+                            <Text style={styles.rawSubtitle}>{localizedText('This command uses a full-screen terminal. Switch to RAW to view and interact.', '此命令使用全屏终端。切换到 RAW 模式查看和交互。', '此命令使用全螢幕終端機。切換到 RAW 模式檢視和互動。')}</Text>
                         </View>
                         <Ionicons name="chevron-forward" size={17} color={theme.semantic.textMuted} />
                     </Pressable>
@@ -457,10 +460,10 @@ export const TerminalBlockTranscript = React.memo(function TerminalBlockTranscri
                     style={styles.jumpButton}
                     onPress={scrollToLatest}
                     accessibilityRole="button"
-                    accessibilityLabel="Jump to latest"
+                    accessibilityLabel={localizedText('Jump to latest', '跳转到最新', '跳轉到最新')}
                 >
                     <Ionicons name="arrow-down" size={14} color={theme.semantic.textPrimary} />
-                    <Text style={styles.jumpText}>Latest</Text>
+                    <Text style={styles.jumpText}>{localizedText('Latest', '最新', '最新')}</Text>
                 </Pressable>
             ) : null}
         </View>

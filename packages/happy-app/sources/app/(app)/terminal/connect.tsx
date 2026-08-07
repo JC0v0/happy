@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Platform } from 'react-native';
 import { Text } from '@/components/StyledText';
 import { useRouter } from 'expo-router';
-import { Typography } from '@/constants/Typography';
+import { Typography, TypeScale } from '@/constants/Typography';
 import { RoundButton } from '@/components/RoundButton';
 import { useConnectTerminal } from '@/hooks/useConnectTerminal';
 import { Ionicons } from '@expo/vector-icons';
@@ -68,9 +68,9 @@ export default function TerminalConnectScreen() {
                             color={theme.semantic.textMuted}
                             style={{ marginBottom: 16 }} 
                         />
-                        <Text style={{ 
-                            ...Typography.default('semiBold'), 
-                            fontSize: 18, 
+                        <Text style={{
+                            ...Typography.default('semiBold'),
+                            ...TypeScale.title,
                             textAlign: 'center',
                             marginBottom: 12 
                         }}>
@@ -79,7 +79,7 @@ export default function TerminalConnectScreen() {
                         <Text style={{ 
                             ...Typography.default(), 
                             fontSize: 14, 
-                            color: '#666', 
+                            color: theme.semantic.textSecondary, 
                             textAlign: 'center',
                             lineHeight: 20 
                         }}>
@@ -101,7 +101,7 @@ export default function TerminalConnectScreen() {
                         paddingVertical: 32,
                         paddingHorizontal: 16
                     }}>
-                        <Text style={{ ...Typography.default(), color: '#666' }}>
+                        <Text style={{ ...Typography.default(), color: theme.semantic.textSecondary }}>
                             {t('terminal.processingConnection')}
                         </Text>
                     </View>
@@ -126,9 +126,9 @@ export default function TerminalConnectScreen() {
                             color={theme.semantic.status.error}
                             style={{ marginBottom: 16 }} 
                         />
-                        <Text style={{ 
-                            ...Typography.default('semiBold'), 
-                            fontSize: 16, 
+                        <Text style={{
+                            ...Typography.default('semiBold'),
+                            ...TypeScale.title,
                             color: theme.semantic.status.error,
                             textAlign: 'center',
                             marginBottom: 8 
@@ -138,7 +138,7 @@ export default function TerminalConnectScreen() {
                         <Text style={{ 
                             ...Typography.default(), 
                             fontSize: 14, 
-                            color: '#666', 
+                            color: theme.semantic.textSecondary, 
                             textAlign: 'center',
                             lineHeight: 20 
                         }}>
@@ -166,9 +166,9 @@ export default function TerminalConnectScreen() {
                         color={theme.semantic.focus}
                         style={{ marginBottom: 16 }} 
                     />
-                    <Text style={{ 
-                        ...Typography.default('semiBold'), 
-                        fontSize: 20, 
+                    <Text style={{
+                        ...Typography.default('semiBold'),
+                        ...TypeScale.heading,
                         textAlign: 'center',
                         marginBottom: 12
                     }}>
@@ -177,7 +177,7 @@ export default function TerminalConnectScreen() {
                     <Text style={{ 
                         ...Typography.default(), 
                         fontSize: 14, 
-                        color: '#666', 
+                        color: theme.semantic.textSecondary, 
                         textAlign: 'center',
                         lineHeight: 20 
                     }}>

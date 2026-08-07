@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import MaskedView from '@react-native-masked-view/masked-view';
+import { useUnistyles } from 'react-native-unistyles';
 
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
@@ -25,11 +26,17 @@ interface ShimmerViewProps {
 
 export const ShimmerView = React.memo<ShimmerViewProps>(({
     children,
-    shimmerColors = ['#E0E0E0', '#F0F0F0', '#F8F8F8', '#F0F0F0', '#E0E0E0'],
+    shimmerColors,
     shimmerWidthPercent = 80,
     duration = 1500,
     style,
 }) => {
+    const { theme } = useUnistyles();
+    // Theme-aware shimmer: muted surface base with a raised-surface sweep.
+    const base = theme.semantic.surfaceMuted;
+    const sweep = theme.semantic.surfaceSelected;
+    const peak = theme.semantic.surfaceRaised;
+    const resolvedColors: readonly [string, string, ...string[]] = shimmerColors ?? [base, sweep, peak, sweep, base];
     const shimmerTranslate = useSharedValue(0);
     const containerRef = useAnimatedRef<View>();
 
@@ -75,11 +82,11 @@ export const ShimmerView = React.memo<ShimmerViewProps>(({
                 }
             >
                 {/* Base background */}
-                <View style={[StyleSheet.absoluteFillObject, styles.background]} />
+                <View style={[StyleSheet.absoluteFillObject, { backgroundColor: base }]} />
 
                 {/* Animated shimmer */}
                 <AnimatedLinearGradient
-                    colors={shimmerColors}
+                    colors={resolvedColors}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={[
@@ -96,9 +103,6 @@ const styles = StyleSheet.create({
     maskContainer: {
         flex: 1,
         backgroundColor: 'transparent',
-    },
-    background: {
-        backgroundColor: '#E0E0E0',
     },
     hiddenChildren: {
         opacity: 0,

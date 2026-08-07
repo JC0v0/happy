@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
 import { ItemList } from '@/components/ItemList';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { useSettingMutable, useLocalSettingMutable } from '@/sync/storage';
 import { useRouter } from 'expo-router';
 import * as Localization from 'expo-localization';
 import { useUnistyles, UnistylesRuntime } from 'react-native-unistyles';
 import { Switch } from '@/components/Switch';
-import { Appearance } from 'react-native';
+import { Appearance, View } from 'react-native';
 import * as SystemUI from 'expo-system-ui';
 import { darkTheme, lightTheme } from '@/theme';
 import { t, getLanguageNativeName, SUPPORTED_LANGUAGES } from '@/text';
@@ -22,13 +23,6 @@ const isKnownAvatarStyle = (style: string): style is KnownAvatarStyle => {
 export default function AppearanceSettingsScreen() {
     const { theme } = useUnistyles();
     const router = useRouter();
-    const [viewInline, setViewInline] = useSettingMutable('viewInline');
-    const [expandTodos, setExpandTodos] = useSettingMutable('expandTodos');
-    const [showLineNumbers, setShowLineNumbers] = useSettingMutable('showLineNumbers');
-    const [showLineNumbersInToolViews, setShowLineNumbersInToolViews] = useSettingMutable('showLineNumbersInToolViews');
-    const [wrapLinesInDiffs, setWrapLinesInDiffs] = useSettingMutable('wrapLinesInDiffs');
-    const [diffStyle, setDiffStyle] = useSettingMutable('diffStyle');
-    const [alwaysShowContextSize, setAlwaysShowContextSize] = useSettingMutable('alwaysShowContextSize');
     const [avatarStyle, setAvatarStyle] = useSettingMutable('avatarStyle');
     const [showFlavorIcons, setShowFlavorIcons] = useSettingMutable('showFlavorIcons');
     const [themePreference, setThemePreference] = useLocalSettingMutable('themePreference');
@@ -36,6 +30,25 @@ export default function AppearanceSettingsScreen() {
 
     // Ensure we have a valid style for display, defaulting to gradient for unknown values
     const displayStyle: KnownAvatarStyle = isKnownAvatarStyle(avatarStyle) ? avatarStyle : 'gradient';
+
+    const applyThemePreference = (nextTheme: 'light' | 'dark' | 'adaptive') => {
+        setThemePreference(nextTheme);
+        if (nextTheme === 'adaptive') {
+            // Enable adaptive themes and follow the system theme
+            UnistylesRuntime.setAdaptiveThemes(true);
+            const systemTheme = Appearance.getColorScheme();
+            const color = systemTheme === 'dark' ? darkTheme.colors.groupped.background : lightTheme.colors.groupped.background;
+            UnistylesRuntime.setRootViewBackgroundColor(color);
+            SystemUI.setBackgroundColorAsync(color);
+        } else {
+            // Disable adaptive themes and set explicit theme
+            UnistylesRuntime.setAdaptiveThemes(false);
+            UnistylesRuntime.setTheme(nextTheme);
+            const color = nextTheme === 'dark' ? darkTheme.colors.groupped.background : lightTheme.colors.groupped.background;
+            UnistylesRuntime.setRootViewBackgroundColor(color);
+            SystemUI.setBackgroundColorAsync(color);
+        }
+    };
 
     // Language display
     const getLanguageDisplayText = () => {
@@ -55,38 +68,22 @@ export default function AppearanceSettingsScreen() {
         <ItemList style={{ paddingTop: 0 }}>
 
             {/* Theme Settings */}
-            <ItemGroup title={t('settingsAppearance.theme')} footer={t('settingsAppearance.themeDescription')}>
-                <Item
-                    title={t('settings.appearance')}
-                    subtitle={themePreference === 'adaptive' ? t('settingsAppearance.themeDescriptions.adaptive') : themePreference === 'light' ? t('settingsAppearance.themeDescriptions.light') : t('settingsAppearance.themeDescriptions.dark')}
-                    icon={<Ionicons name="contrast-outline" size={29} color={theme.colors.status.connecting} />}
-                    detail={themePreference === 'adaptive' ? t('settingsAppearance.themeOptions.adaptive') : themePreference === 'light' ? t('settingsAppearance.themeOptions.light') : t('settingsAppearance.themeOptions.dark')}
-                    onPress={() => {
-                        const currentIndex = themePreference === 'adaptive' ? 0 : themePreference === 'light' ? 1 : 2;
-                        const nextIndex = (currentIndex + 1) % 3;
-                        const nextTheme = nextIndex === 0 ? 'adaptive' : nextIndex === 1 ? 'light' : 'dark';
-
-                        // Update the setting
-                        setThemePreference(nextTheme);
-
-                        // Apply the theme change immediately
-                        if (nextTheme === 'adaptive') {
-                            // Enable adaptive themes and set to system theme
-                            UnistylesRuntime.setAdaptiveThemes(true);
-                            const systemTheme = Appearance.getColorScheme();
-                            const color = systemTheme === 'dark' ? darkTheme.colors.groupped.background : lightTheme.colors.groupped.background;
-                            UnistylesRuntime.setRootViewBackgroundColor(color);
-                            SystemUI.setBackgroundColorAsync(color);
-                        } else {
-                            // Disable adaptive themes and set explicit theme
-                            UnistylesRuntime.setAdaptiveThemes(false);
-                            UnistylesRuntime.setTheme(nextTheme);
-                            const color = nextTheme === 'dark' ? darkTheme.colors.groupped.background : lightTheme.colors.groupped.background;
-                            UnistylesRuntime.setRootViewBackgroundColor(color);
-                            SystemUI.setBackgroundColorAsync(color);
-                        }
-                    }}
-                />
+            <ItemGroup
+                title={t('settingsAppearance.theme')}
+                footer={themePreference === 'adaptive' ? t('settingsAppearance.themeDescriptions.adaptive') : themePreference === 'light' ? t('settingsAppearance.themeDescriptions.light') : t('settingsAppearance.themeDescriptions.dark')}
+            >
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <SegmentedControl
+                        accessibilityLabel={t('settingsAppearance.theme')}
+                        options={[
+                            { value: 'adaptive', label: t('settingsAppearance.themeOptions.adaptive'), icon: 'contrast-outline' },
+                            { value: 'light', label: t('settingsAppearance.themeOptions.light'), icon: 'sunny-outline' },
+                            { value: 'dark', label: t('settingsAppearance.themeOptions.dark'), icon: 'moon-outline' },
+                        ]}
+                        value={themePreference}
+                        onChange={applyThemePreference}
+                    />
+                </View>
             </ItemGroup>
 
             {/* Language Settings */}
@@ -102,91 +99,6 @@ export default function AppearanceSettingsScreen() {
             {/* Display Settings */}
             <ItemGroup title={t('settingsAppearance.display')} footer={t('settingsAppearance.displayDescription')}>
                 <Item
-                    title={t('settingsAppearance.inlineToolCalls')}
-                    subtitle={t('settingsAppearance.inlineToolCallsDescription')}
-                    icon={<Ionicons name="code-slash-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={viewInline}
-                            onValueChange={setViewInline}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.expandTodoLists')}
-                    subtitle={t('settingsAppearance.expandTodoListsDescription')}
-                    icon={<Ionicons name="checkmark-done-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={expandTodos}
-                            onValueChange={setExpandTodos}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.showLineNumbersInDiffs')}
-                    subtitle={t('settingsAppearance.showLineNumbersInDiffsDescription')}
-                    icon={<Ionicons name="list-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={showLineNumbers}
-                            onValueChange={setShowLineNumbers}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.showLineNumbersInToolViews')}
-                    subtitle={t('settingsAppearance.showLineNumbersInToolViewsDescription')}
-                    icon={<Ionicons name="code-working-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={showLineNumbersInToolViews}
-                            onValueChange={setShowLineNumbersInToolViews}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.wrapLinesInDiffs')}
-                    subtitle={t('settingsAppearance.wrapLinesInDiffsDescription')}
-                    icon={<Ionicons name="return-down-forward-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={wrapLinesInDiffs}
-                            onValueChange={setWrapLinesInDiffs}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.diffStyle')}
-                    subtitle={t('settingsAppearance.diffStyleDescription')}
-                    icon={<Ionicons name="git-compare-outline" size={24} color={theme.semantic.focus} />}
-                    detail={diffStyle === 'split' ? t('settingsAppearance.diffStyleOptions.split') : t('settingsAppearance.diffStyleOptions.unified')}
-                    onPress={() => setDiffStyle(diffStyle === 'unified' ? 'split' : 'unified')}
-                />
-                <Item
-                    title={t('settingsAppearance.alwaysShowContextSize')}
-                    subtitle={t('settingsAppearance.alwaysShowContextSizeDescription')}
-                    icon={<Ionicons name="analytics-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={alwaysShowContextSize}
-                            onValueChange={setAlwaysShowContextSize}
-                        />
-                    }
-                />
-                <Item
-                    title={t('settingsAppearance.avatarStyle')}
-                    subtitle={t('settingsAppearance.avatarStyleDescription')}
-                    icon={<Ionicons name="person-circle-outline" size={24} color={theme.semantic.focus} />}
-                    detail={displayStyle === 'pixelated' ? t('settingsAppearance.avatarOptions.pixelated') : displayStyle === 'brutalist' ? t('settingsAppearance.avatarOptions.brutalist') : t('settingsAppearance.avatarOptions.gradient')}
-                    onPress={() => {
-                        const currentIndex = displayStyle === 'pixelated' ? 0 : displayStyle === 'gradient' ? 1 : 2;
-                        const nextIndex = (currentIndex + 1) % 3;
-                        const nextStyle = nextIndex === 0 ? 'pixelated' : nextIndex === 1 ? 'gradient' : 'brutalist';
-                        setAvatarStyle(nextStyle);
-                    }}
-                />
-                <Item
                     title={t('settingsAppearance.showFlavorIcons')}
                     subtitle={t('settingsAppearance.showFlavorIconsDescription')}
                     icon={<Ionicons name="apps-outline" size={24} color={theme.semantic.focus} />}
@@ -197,6 +109,22 @@ export default function AppearanceSettingsScreen() {
                         />
                     }
                 />
+            </ItemGroup>
+
+            {/* Avatar Style */}
+            <ItemGroup title={t('settingsAppearance.avatarStyle')} footer={t('settingsAppearance.avatarStyleDescription')}>
+                <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                    <SegmentedControl
+                        accessibilityLabel={t('settingsAppearance.avatarStyle')}
+                        options={[
+                            { value: 'pixelated' as const, label: t('settingsAppearance.avatarOptions.pixelated') },
+                            { value: 'gradient' as const, label: t('settingsAppearance.avatarOptions.gradient') },
+                            { value: 'brutalist' as const, label: t('settingsAppearance.avatarOptions.brutalist') },
+                        ]}
+                        value={displayStyle}
+                        onChange={(nextStyle) => setAvatarStyle(nextStyle)}
+                    />
+                </View>
             </ItemGroup>
         </ItemList>
     );

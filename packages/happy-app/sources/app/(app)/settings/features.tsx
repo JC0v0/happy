@@ -1,4 +1,3 @@
-import { Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Item } from '@/components/Item';
 import { ItemGroup } from '@/components/ItemGroup';
@@ -10,7 +9,6 @@ import { useUnistyles } from 'react-native-unistyles';
 
 export default function FeaturesSettingsScreen() {
     const { theme } = useUnistyles();
-    const [experiments, setExperiments] = useSettingMutable('experiments');
     const [hideInactiveSessions, setHideInactiveSessions] = useSettingMutable('hideInactiveSessions');
     const [sortSessionsByActivity, setSortSessionsByActivity] = useSettingMutable('sortSessionsByActivity');
 
@@ -44,18 +42,6 @@ export default function FeaturesSettingsScreen() {
                 title={t('settingsFeatures.experiments')}
                 footer={t('settingsFeatures.experimentsDescription')}
             >
-                <Item
-                    title={t('settingsFeatures.experimentalFeatures')}
-                    subtitle={experiments ? t('settingsFeatures.experimentalFeaturesEnabled') : t('settingsFeatures.experimentalFeaturesDisabled')}
-                    icon={<Ionicons name="flask-outline" size={24} color={theme.semantic.focus} />}
-                    rightElement={
-                        <Switch
-                            value={experiments}
-                            onValueChange={setExperiments}
-                        />
-                    }
-                    showChevron={false}
-                />
                 <Item
                     title={t('settingsFeatures.hideInactiveSessions')}
                     subtitle={t('settingsFeatures.hideInactiveSessionsSubtitle')}

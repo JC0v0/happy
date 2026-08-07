@@ -8,6 +8,7 @@ import { resolveTerminalPalette } from '@/-session/terminal/terminalVisualTheme'
 import { getSessionAvatarId, getSessionName } from '@/utils/sessionUtils';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigateBackFromSession } from '@/hooks/useNavigateToSession';
+import { Typography, TypeScale } from '@/constants/Typography';
 import * as React from 'react';
 import { useMemo } from 'react';
 import { ActivityIndicator, Platform, Text, View, StyleSheet } from 'react-native';
@@ -113,7 +114,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                 ) : !session ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="trash-outline" size={48} color={theme.colors.textSecondary} />
-                        <Text style={{ color: theme.colors.text, fontSize: 20, marginTop: 16, fontWeight: '600' }}>{t('errors.sessionDeleted')}</Text>
+                        <Text style={{ ...Typography.default('semiBold'), ...TypeScale.heading, color: theme.colors.text, marginTop: 16 }}>{t('errors.sessionDeleted')}</Text>
                         <Text style={{ color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, textAlign: 'center', paddingHorizontal: 32 }}>{t('errors.sessionDeletedDescription')}</Text>
                     </View>
                 ) : isTerminal ? (
@@ -121,7 +122,7 @@ export const SessionView = React.memo((props: { id: string }) => {
                 ) : (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <Ionicons name="terminal-outline" size={48} color={theme.colors.textSecondary} />
-                        <Text style={{ color: theme.colors.text, fontSize: 17, marginTop: 16, fontWeight: '600', textAlign: 'center', paddingHorizontal: 32 }}>{t('terminals.unsupportedFlavor')}</Text>
+                        <Text style={{ ...Typography.default('semiBold'), ...TypeScale.title, color: theme.colors.text, marginTop: 16, textAlign: 'center', paddingHorizontal: 32 }}>{t('terminals.unsupportedFlavor')}</Text>
                     </View>
                 )}
             </View>

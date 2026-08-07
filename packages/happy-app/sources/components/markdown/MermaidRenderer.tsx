@@ -11,7 +11,7 @@ const MAX_DIAGRAM_HEIGHT = 600;
 // Style for Web platform
 const webStyle: any = {
     backgroundColor: '#1a1a1a',
-    borderRadius: 8,
+    borderRadius: 4,
     padding: 16,
     overflow: 'auto',
 };
@@ -211,7 +211,7 @@ const style = StyleSheet.create((theme) => ({
     innerContainer: {
         width: '100%',
         backgroundColor: theme.colors.surfaceHighest,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
     },
     loadingContainer: {
         justifyContent: 'center',
@@ -226,7 +226,7 @@ const style = StyleSheet.create((theme) => ({
     },
     errorContainer: {
         backgroundColor: theme.colors.surfaceHighest,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
         padding: 16,
     },
     errorContent: {

@@ -490,7 +490,7 @@ const style = StyleSheet.create((theme) => ({
 
     codeBlock: {
         backgroundColor: theme.colors.surfaceHighest,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
         marginVertical: 8,
         position: 'relative',
         zIndex: 1,
@@ -540,7 +540,7 @@ const style = StyleSheet.create((theme) => ({
         width: '100%',
         minHeight: 160,
         height: 240,
-        borderRadius: 12,
+        borderRadius: theme.geometry.radius.interactive,
         backgroundColor: theme.colors.surfaceHighest,
     },
     imageCaption: {
@@ -595,7 +595,7 @@ const style = StyleSheet.create((theme) => ({
     },
     optionItem: {
         backgroundColor: theme.colors.surfaceHighest,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderWidth: 1,
@@ -620,7 +620,7 @@ const style = StyleSheet.create((theme) => ({
         marginVertical: 8,
         borderWidth: 1,
         borderColor: theme.colors.divider,
-        borderRadius: 8,
+        borderRadius: theme.geometry.radius.interactive,
         overflow: 'hidden',
         maxWidth: '100%',
         alignSelf: 'flex-start',

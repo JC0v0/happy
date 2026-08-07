@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Pressable, View } from 'react-native';
+import { ActivityIndicator, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Item } from '@/components/Item';
@@ -131,13 +131,22 @@ export const DeviceWorkspace = React.memo(function DeviceWorkspace({
                                     pressed && styles.startButtonPressed,
                                 ]}
                             >
-                                <Ionicons
-                                    name={isSpawning ? 'ellipsis-horizontal' : 'play'}
-                                    size={16}
-                                    color={projection.canSpawn
-                                        ? theme.semantic.textInverse
-                                        : theme.semantic.textMuted}
-                                />
+                                {isSpawning ? (
+                                    <ActivityIndicator
+                                        size="small"
+                                        color={projection.canSpawn
+                                            ? theme.semantic.textInverse
+                                            : theme.semantic.textMuted}
+                                    />
+                                ) : (
+                                    <Ionicons
+                                        name="play"
+                                        size={16}
+                                        color={projection.canSpawn
+                                            ? theme.semantic.textInverse
+                                            : theme.semantic.textMuted}
+                                    />
+                                )}
                             </Pressable>
                         </View>
                     </View>

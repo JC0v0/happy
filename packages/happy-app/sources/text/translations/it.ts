@@ -328,6 +328,7 @@ export const it: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Digita un comando o cerca...',
+        noResults: 'Nessun comando trovato',
     },
 
     server: {
@@ -402,7 +403,7 @@ export const it: TranslationStructure = {
         cliVersionOutdated: 'Aggiornamento CLI richiesto',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Versione ${currentVersion} installata. Aggiorna a ${requiredVersion} o successiva`,
-        updateCliInstructions: 'Esegui npm install -g happy@latest',
+        updateCliInstructions: 'Questo fork non è pubblicato su npm. Aggiorna la CLI dal codice sorgente (vedi il README del repository).',
         deleteSession: 'Elimina sessione',
         deleteSessionSubtitle: 'Rimuovi definitivamente questa sessione',
         deleteSessionConfirm: 'Eliminare definitivamente la sessione?',
@@ -417,14 +418,6 @@ export const it: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Pronto a programmare?',
-            installCli: 'Installa la CLI Happy',
-            runIt: 'Avviala',
-            scanQrCode: 'Scansiona il codice QR',
-            openCamera: 'Apri fotocamera',
-        },
         agentGoalBar: {
             currentGoal: 'Obiettivo attuale',
             accessibilityLabel: ({ goal }: { goal: string }) => `Obiettivo attuale: ${goal}`,
@@ -815,7 +808,7 @@ export const it: TranslationStructure = {
     machine: {
         launchNewSessionInDirectory: 'Avvia nuova sessione nella directory',
         offlineUnableToSpawn: 'Avvio disabilitato quando la macchina è offline',
-        offlineHelp: '• Assicurati che il tuo computer sia online\n• Esegui `happy daemon status` per diagnosticare\n• Stai usando l\'ultima versione della CLI? Aggiorna con `npm install -g happy@latest`',
+        offlineHelp: '• Assicurati che il tuo computer sia online\n• Esegui `happy daemon status` per diagnosticare\n• Hai l\'ultima versione della CLI? Questo fork si aggiorna dal codice sorgente: scarica il codice più recente e ricompila (vedi il README del repository)',
         daemon: 'Daemon',
         status: 'Stato',
         stopDaemon: 'Arresta daemon',

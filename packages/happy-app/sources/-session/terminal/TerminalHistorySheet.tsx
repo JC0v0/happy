@@ -175,7 +175,7 @@ const stylesheet = StyleSheet.create((theme) => ({
         alignItems: 'center' as const,
         gap: 9,
     },
-    exitDot: { width: 7, height: 7, borderRadius: 4 },
+    exitDot: { width: 7, height: 7, borderRadius: 999 },
     rowContent: { flex: 1, minWidth: 0 },
     command: {
         color: theme.semantic.textPrimary,

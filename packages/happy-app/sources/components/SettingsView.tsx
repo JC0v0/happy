@@ -232,7 +232,7 @@ export const SettingsView = React.memo(function SettingsView() {
                                 icon={
                                     <Ionicons
                                         name="desktop-outline"
-                                        size={29}
+                                        size={24}
                                         color={isOnline ? theme.colors.status.connected : theme.colors.status.disconnected}
                                     />
                                 }
@@ -284,7 +284,7 @@ export const SettingsView = React.memo(function SettingsView() {
                 <Item
                     title={t('settings.featuresTitle')}
                     subtitle={t('settings.featuresSubtitle')}
-                    icon={<Ionicons name="flask-outline" size={24} color={theme.semantic.status.warning} />}
+                    icon={<Ionicons name="flask-outline" size={24} color={theme.semantic.focus} />}
                     onPress={() => router.push('/settings/features')}
                 />
             </ItemGroup>
@@ -294,7 +294,7 @@ export const SettingsView = React.memo(function SettingsView() {
                 <ItemGroup title={t('settings.developer')}>
                     <Item
                         title={t('settings.developerTools')}
-                        icon={<Ionicons name="construct-outline" size={29} color="#5856D6" />}
+                        icon={<Ionicons name="construct-outline" size={24} color={theme.semantic.focus} />}
                         onPress={() => router.push('/dev')}
                     />
                 </ItemGroup>
@@ -305,7 +305,7 @@ export const SettingsView = React.memo(function SettingsView() {
                 <Item
                     title={t('settings.whatsNew')}
                     subtitle={t('settings.whatsNewSubtitle')}
-                    icon={<Ionicons name="sparkles-outline" size={29} color="#FF9500" />}
+                    icon={<Ionicons name="sparkles-outline" size={24} color={theme.semantic.focus} />}
                     onPress={() => {
                         trackWhatsNewClicked();
                         router.push('/changelog');
@@ -313,7 +313,7 @@ export const SettingsView = React.memo(function SettingsView() {
                 />
                 <Item
                     title={t('settings.reportIssue')}
-                    icon={<Ionicons name="bug-outline" size={29} color="#FF3B30" />}
+                    icon={<Ionicons name="bug-outline" size={24} color={theme.semantic.focus} />}
                     onPress={handleReportIssue}
                 />
                 <Item
@@ -321,7 +321,7 @@ export const SettingsView = React.memo(function SettingsView() {
                     subtitle={versionSubtitle}
                     subtitleLines={2}
                     detail={versionDetail}
-                    icon={<Ionicons name="information-circle-outline" size={29} color={theme.colors.textSecondary} />}
+                    icon={<Ionicons name="information-circle-outline" size={24} color={theme.semantic.textSecondary} />}
                     onPress={handleVersionClick}
                     showChevron={false}
                 />

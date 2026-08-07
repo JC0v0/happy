@@ -11,7 +11,7 @@ import { generateAuthKeyPair, authQRStart, QRAuthKeyPair } from '@/auth/authQRSt
 import { authQRWait } from '@/auth/authQRWait';
 import { layout } from '@/components/layout';
 import { Modal } from '@/modal';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { QRCode } from '@/components/qr/QRCode';
 
@@ -112,7 +112,11 @@ export default function Restore() {
             <View style={styles.container}>
                 <View style={styles.contentWrapper}>
                     <Text style={styles.instructionText}>
-                        Enter your secret key to restore access to your account.
+                        {localizedText(
+                            'Enter your secret key to restore access to your account.',
+                            '输入您的密钥以恢复账户访问权限。',
+                            '輸入您的密鑰以復原帳戶存取權限。',
+                        )}
                     </Text>
 
                     <TextInput

@@ -90,7 +90,9 @@ interface ExtendedNavigationOptions extends Partial<NativeStackHeaderProps['opti
 }
 
 // Default back button component
-const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> = ({ tintColor = '#000', onPress }) => {
+const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> = ({ tintColor, onPress }) => {
+    const { theme } = useUnistyles();
+    const resolvedTintColor = tintColor ?? theme.semantic.textPrimary;
     return (
         <Pressable
             onPress={onPress}
@@ -106,7 +108,7 @@ const DefaultBackButton: React.FC<{ tintColor?: string; onPress: () => void }> =
             <Ionicons
                 name={Platform.OS === 'ios' ? 'chevron-back' : 'arrow-back'}
                 size={24}
-                color={tintColor}
+                color={resolvedTintColor}
             />
         </Pressable>
     );

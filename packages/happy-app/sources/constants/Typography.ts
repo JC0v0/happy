@@ -79,7 +79,10 @@ export const FontWeights = {
 
 export const TypeScale = {
   display: { fontSize: 28, lineHeight: 34, letterSpacing: -0.6 },
+  headline: { fontSize: 24, lineHeight: 30, letterSpacing: -0.4 },
+  heading: { fontSize: 20, lineHeight: 28, letterSpacing: -0.2 },
   title: { fontSize: 18, lineHeight: 24, letterSpacing: -0.2 },
+  subtitle: { fontSize: 18, lineHeight: 25, letterSpacing: 0 },
   body: { fontSize: 15, lineHeight: 22, letterSpacing: 0 },
   bodySmall: { fontSize: 13, lineHeight: 19, letterSpacing: 0 },
   label: { fontSize: 12, lineHeight: 16, letterSpacing: 0.35 },

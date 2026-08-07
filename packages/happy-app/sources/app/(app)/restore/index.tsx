@@ -9,7 +9,7 @@ import { generateAuthKeyPair, authQRStart, type AuthQRStartFailure } from '@/aut
 import { authQRWait } from '@/auth/authQRWait';
 import { layout } from '@/components/layout';
 import { Modal } from '@/modal';
-import { t } from '@/text';
+import { localizedText, t } from '@/text';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { QRCode } from '@/components/qr/QRCode';
 
@@ -28,12 +28,6 @@ const stylesheet = StyleSheet.create((theme) => ({
         maxWidth: layout.maxWidth,
         paddingVertical: 24,
     },
-    instructionText: {
-        fontSize: 20,
-        color: theme.colors.text,
-        marginBottom: 24,
-        ...Typography.default(),
-    },
     secondInstructionText: {
         fontSize: 16,
         color: theme.colors.textSecondary,
@@ -47,6 +41,17 @@ const stylesheet = StyleSheet.create((theme) => ({
         marginBottom: 16,
         lineHeight: 22,
         textAlign: 'center',
+        ...Typography.default(),
+    },
+    waitingRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 16,
+    },
+    waitingText: {
+        fontSize: 14,
+        color: theme.colors.textSecondary,
         ...Typography.default(),
     },
     textInput: {
@@ -150,10 +155,11 @@ export default function Restore() {
 
                 <View style={{justifyContent: 'flex-end' }}>
                     <Text style={styles.secondInstructionText}>
-                        1. Open Happy on your mobile device{'\n'}
-                        2. Go to Settings → Account{'\n'}
-                        3. Tap "Link New Device"{'\n'}
-                        4. Scan this QR code
+                        {localizedText(
+                            '1. Open Happy on your mobile device\n2. Go to Settings → Account\n3. Tap "Link New Device"\n4. Scan this QR code',
+                            '1. 在移动设备上打开 Happy\n2. 前往 设置 → 账户\n3. 点击“关联新设备”\n4. 扫描此二维码',
+                            '1. 在行動裝置上開啟 Happy\n2. 前往 設定 → 帳戶\n3. 點選「連結新裝置」\n4. 掃描此 QR 碼',
+                        )}
                     </Text>
                 </View>
                 {!authReady && (
@@ -169,8 +175,16 @@ export default function Restore() {
                         backgroundColor={'white'}
                     />
                 )}
+                {authReady && (
+                    <View style={styles.waitingRow}>
+                        <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                        <Text style={styles.waitingText}>
+                            {localizedText('Waiting for approval on your other device', '等待另一台设备确认', '等待另一台裝置確認') + '.'.repeat((waitingDots % 3) + 1)}
+                        </Text>
+                    </View>
+                )}
                 <View style={{ flexGrow: 4, paddingTop: 30 }}>
-                    <RoundButton title="Restore with Secret Key Instead" display='inverted' onPress={() => {
+                    <RoundButton title={localizedText('Restore with Secret Key Instead', '改用密钥恢复', '改用密鑰復原')} display='inverted' onPress={() => {
                         router.push('/restore/manual');
                     }} />
                 </View>

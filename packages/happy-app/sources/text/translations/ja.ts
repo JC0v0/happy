@@ -331,6 +331,7 @@ export const ja: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'コマンドを入力または検索...',
+        noResults: 'コマンドが見つかりません',
     },
 
     server: {
@@ -405,7 +406,7 @@ export const ja: TranslationStructure = {
         cliVersionOutdated: 'CLIの更新が必要',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `バージョン ${currentVersion} がインストールされています。${requiredVersion} 以降に更新してください`,
-        updateCliInstructions: 'npm install -g happy@latest を実行してください',
+        updateCliInstructions: 'このフォークは npm に公開されていません。ソースから CLI を更新してください（リポジトリの README を参照）。',
         deleteSession: 'セッションを削除',
         deleteSessionSubtitle: 'このセッションを完全に削除',
         deleteSessionConfirm: 'セッションを完全に削除しますか？',
@@ -420,14 +421,6 @@ export const ja: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'コーディングを始めますか？',
-            installCli: 'Happy CLIをインストール',
-            runIt: '実行する',
-            scanQrCode: 'QRコードをスキャン',
-            openCamera: 'カメラを開く',
-        },
         agentGoalBar: {
             currentGoal: '現在の目標',
             accessibilityLabel: ({ goal }: { goal: string }) => `現在の目標: ${goal}`,
@@ -818,7 +811,7 @@ export const ja: TranslationStructure = {
     machine: {
         launchNewSessionInDirectory: 'ディレクトリで新しいセッションを起動',
         offlineUnableToSpawn: 'マシンがオフラインのためランチャーは無効です',
-        offlineHelp: '• コンピューターがオンラインであることを確認してください\n• `happy daemon status`を実行して診断してください\n• 最新のCLIバージョンを使用していますか？`npm install -g happy@latest`でアップグレードしてください',
+        offlineHelp: '• コンピューターがオンラインであることを確認してください\n• `happy daemon status`を実行して診断してください\n• CLIは最新ですか？このフォークはソースから更新します。最新コードを取得して再ビルドしてください（リポジトリのREADMEを参照）',
         daemon: 'デーモン',
         status: 'ステータス',
         stopDaemon: 'デーモンを停止',

@@ -9,7 +9,7 @@ import { router, useRouter } from "expo-router";
 import { StyleSheet, useUnistyles } from "react-native-unistyles";
 import { getRandomBytesAsync } from "expo-crypto";
 import { useIsLandscape } from "@/utils/responsive";
-import { Typography } from "@/constants/Typography";
+import { Typography, TypeScale } from "@/constants/Typography";
 import { trackAccountCreated, trackAccountRestored } from '@/track';
 import { HomeHeaderNotAuth } from "@/components/HomeHeader";
 import { MainView } from "@/components/MainView";
@@ -176,13 +176,13 @@ const styles = StyleSheet.create((theme) => ({
     title: {
         marginTop: 16,
         textAlign: 'center',
-        fontSize: 24,
         ...Typography.default('semiBold'),
+        ...TypeScale.headline,
         color: theme.colors.text,
     },
     subtitle: {
         ...Typography.default(),
-        fontSize: 18,
+        ...TypeScale.subtitle,
         color: theme.colors.textSecondary,
         marginTop: 16,
         textAlign: 'center',
@@ -227,13 +227,13 @@ const styles = StyleSheet.create((theme) => ({
     },
     landscapeTitle: {
         textAlign: 'center',
-        fontSize: 24,
         ...Typography.default('semiBold'),
+        ...TypeScale.headline,
         color: theme.colors.text,
     },
     landscapeSubtitle: {
         ...Typography.default(),
-        fontSize: 18,
+        ...TypeScale.subtitle,
         color: theme.colors.textSecondary,
         marginTop: 16,
         textAlign: 'center',

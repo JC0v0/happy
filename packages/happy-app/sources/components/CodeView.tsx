@@ -21,7 +21,7 @@ export const CodeView = React.memo<CodeViewProps>(({
 const styles = StyleSheet.create((theme) => ({
     codeBlock: {
         backgroundColor: theme.colors.surfaceHigh,
-        borderRadius: 6,
+        borderRadius: theme.geometry.radius.interactive,
         padding: 12,
     },
     codeText: {

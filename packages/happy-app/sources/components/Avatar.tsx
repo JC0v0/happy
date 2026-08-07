@@ -37,20 +37,12 @@ const styles = StyleSheet.create((theme) => ({
         bottom: -2,
         right: -2,
         backgroundColor: theme.colors.surface,
-        borderRadius: 100,
+        borderRadius: 999,
         padding: 2,
-        shadowColor: theme.colors.shadow.color,
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
-        elevation: 3,
     },
     rigFlavorIcon: {
         backgroundColor: 'transparent',
         padding: 0,
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
     },
 }));
 

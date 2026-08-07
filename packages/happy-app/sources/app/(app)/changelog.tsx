@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MarkdownView } from '@/components/markdown/MarkdownView';
 import { getChangelogEntries, getLatestTitle, setLastViewedTitle } from '@/changelog';
-import { Typography } from '@/constants/Typography';
+import { Typography, TypeScale } from '@/constants/Typography';
 import { layout } from '@/components/layout';
 import { t } from '@/text';
 
@@ -82,8 +82,7 @@ const styles = StyleSheet.create((theme) => ({
     },
     titleText: {
         ...Typography.default('semiBold'),
-        fontSize: 20,
-        lineHeight: 28,
+        ...TypeScale.heading,
         color: theme.semantic.textPrimary,
         marginBottom: 8,
     },

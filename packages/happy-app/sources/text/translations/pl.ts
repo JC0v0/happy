@@ -347,6 +347,7 @@ export const pl: TranslationStructure = {
 
     commandPalette: {
         placeholder: 'Wpisz polecenie lub wyszukaj...',
+        noResults: 'Nie znaleziono poleceń',
     },
 
     server: {
@@ -421,7 +422,7 @@ export const pl: TranslationStructure = {
         cliVersionOutdated: 'Wymagana aktualizacja CLI',
         cliVersionOutdatedMessage: ({ currentVersion, requiredVersion }: { currentVersion: string; requiredVersion: string }) =>
             `Zainstalowana wersja ${currentVersion}. Zaktualizuj do ${requiredVersion} lub nowszej`,
-        updateCliInstructions: 'Proszę uruchomić npm install -g happy@latest',
+        updateCliInstructions: 'Ten fork nie jest publikowany w npm. Zaktualizuj CLI ze źródeł (zobacz README repozytorium).',
         deleteSession: 'Usuń sesję',
         deleteSessionSubtitle: 'Trwale usuń tę sesję',
         deleteSessionConfirm: 'Usunąć sesję na stałe?',
@@ -435,14 +436,6 @@ export const pl: TranslationStructure = {
     },
 
     components: {
-        emptyMainScreen: {
-            // Used by EmptyMainScreen component
-            readyToCode: 'Gotowy do kodowania?',
-            installCli: 'Zainstaluj Happy CLI',
-            runIt: 'Uruchom je',
-            scanQrCode: 'Zeskanuj kod QR',
-            openCamera: 'Otwórz kamerę',
-        },
         agentGoalBar: {
             currentGoal: 'Bieżący cel',
             accessibilityLabel: ({ goal }: { goal: string }) => `Bieżący cel: ${goal}`,
@@ -832,7 +825,7 @@ export const pl: TranslationStructure = {
 
     machine: {
         offlineUnableToSpawn: 'Launcher wyłączony, gdy maszyna jest offline',
-        offlineHelp: '• Upewnij się, że komputer jest online\n• Uruchom `happy daemon status`, aby zdiagnozować\n• Czy używasz najnowszej wersji CLI? Zaktualizuj poleceniem `npm install -g happy@latest`',
+        offlineHelp: '• Upewnij się, że komputer jest online\n• Uruchom `happy daemon status`, aby zdiagnozować\n• Masz najnowszą wersję CLI? Ten fork aktualizuje się ze źródeł — pobierz najnowszy kod i zbuduj ponownie (zobacz README repozytorium)',
         launchNewSessionInDirectory: 'Uruchom nową sesję w katalogu',
         daemon: 'Daemon',
         status: 'Status',
